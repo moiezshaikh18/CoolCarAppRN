@@ -1,6 +1,7 @@
 // ============================================================
-// Job Sheet Details Screen — Sky Blue & Midnight Navy Luxury Layout
-// Directly matching media_1790189780212.png center screen
+// Job Sheet Details Screen — Cool Car AC Repair Workshop
+// Simple English labels, Mechanic Assignment, Balance Due & Status Management
+// Sky Blue (#6B9FE8) & Midnight Navy (#0C1829) Luxury Aesthetic
 // ============================================================
 
 import React, { useMemo, useState } from 'react';
@@ -20,25 +21,27 @@ import {
   Phone,
   Car,
   ArrowDown,
-  Plus,
   Repeat,
   CheckCircle2,
   Clock,
   Wrench,
   Package,
+  UserCheck,
+  Calendar,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
+import { JobStatus } from '../../src/types/jobSheet.types';
 
 export default function JobSheetDetailsScreen() {
   const { theme, isDark } = useTheme();
   const { currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { jobSheets } = useJobSheetStore();
+  const { jobSheets, updateJobSheet } = useJobSheetStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'items'>('overview');
 
   const job = useMemo(() => {
@@ -46,28 +49,61 @@ export default function JobSheetDetailsScreen() {
     if (found) return found;
     return {
       id: params.id ?? 'JS-2026-001',
-      jobNumber: 'CCG-0001',
+      jobNumber: 'CCG-1024',
       date: 'Today, 11:30 AM',
-      status: 'IN_PROGRESS' as const,
+      status: 'IN_PROGRESS' as JobStatus,
       paymentStatus: 'PARTIALLY_PAID' as const,
       customerName: 'Rajesh Sharma',
       customerPhone: '+91 98201 12345',
       vehicleNumber: 'MH02AB1234',
       vehicleMake: 'Honda',
       vehicleModel: 'City ZX i-VTEC',
-      subtotal: 8500,
-      discount: 500,
-      finalAmount: 8000,
-      totalPaid: 5500,
-      pendingAmount: 2500,
+      assignedMechanicName: 'Irfan Khan (Head AC Mechanic)',
+      subtotal: 5150,
+      discount: 250,
+      finalAmount: 4900,
+      totalPaid: 3000,
+      pendingAmount: 1900,
       items: [
-        { id: '1', name: 'Front Brake Pads Set Replacement', type: 'PART', quantity: 1, unitPrice: 2800, amount: 2800 },
-        { id: '2', name: 'Motul 5W-30 Full Synthetic Oil (4L)', type: 'PART', quantity: 1, unitPrice: 3200, amount: 3200 },
-        { id: '3', name: 'Engine Oil Filter OEM', type: 'PART', quantity: 1, unitPrice: 450, amount: 450 },
-        { id: '4', name: 'Brake Disc Lathe & Inspection Labor', type: 'SERVICE', quantity: 1, unitPrice: 2050, amount: 2050 },
+        { id: '1', name: 'AC Gas Refill (R134a)', type: 'SERVICE' as const, quantity: 1, unitPrice: 1800, amount: 1800 },
+        { id: '2', name: 'Cooling Coil Service & Clean', type: 'SERVICE' as const, quantity: 1, unitPrice: 2500, amount: 2500 },
+        { id: '3', name: 'Cabin AC Filter OEM', type: 'PART' as const, quantity: 1, unitPrice: 450, amount: 450 },
+        { id: '4', name: 'AC Compressor Oil (PAG 46)', type: 'PART' as const, quantity: 1, unitPrice: 350, amount: 350 },
       ],
     };
   }, [params.id, jobSheets]);
+
+  const [currentStatus, setCurrentStatus] = useState<JobStatus>(job.status);
+
+  const handleToggleStatus = () => {
+    const nextStatus: JobStatus =
+      currentStatus === 'OPEN'
+        ? 'IN_PROGRESS'
+        : currentStatus === 'IN_PROGRESS'
+        ? 'COMPLETED'
+        : 'OPEN';
+
+    setCurrentStatus(nextStatus);
+    updateJobSheet(job.id, { status: nextStatus });
+    Alert.alert('Status Updated', `Job Sheet #${job.jobNumber} marked as "${nextStatus.replace('_', ' ')}".`);
+  };
+
+  const getStatusBadge = (status: JobStatus) => {
+    switch (status) {
+      case 'OPEN':
+        return { bg: 'rgba(251, 191, 36, 0.25)', text: '#FBBF24', label: 'Open' };
+      case 'IN_PROGRESS':
+        return { bg: 'rgba(96, 165, 250, 0.25)', text: '#60A5FA', label: 'In Progress' };
+      case 'COMPLETED':
+        return { bg: 'rgba(52, 211, 153, 0.25)', text: '#34D399', label: 'Completed' };
+      case 'CANCELLED':
+        return { bg: 'rgba(248, 113, 113, 0.25)', text: '#F87171', label: 'Cancelled' };
+      default:
+        return { bg: 'rgba(148, 163, 184, 0.25)', text: '#94A3B8', label: status };
+    }
+  };
+
+  const statusStyle = getStatusBadge(currentStatus);
 
   const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
   const sheetBg = isDark ? '#111622' : '#FFFFFF';
@@ -99,12 +135,17 @@ export default function JobSheetDetailsScreen() {
               <ChevronLeft size={22} color="#FFFFFF" />
             </TouchableOpacity>
 
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              {job.jobNumber}
-            </Text>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                {job.jobNumber}
+              </Text>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, fontWeight: '600' }}>
+                Cool Car AC Repair
+              </Text>
+            </View>
 
             <TouchableOpacity
-              onPress={() => Alert.alert('Share Invoice', 'Work order link copied.')}
+              onPress={() => Alert.alert('Share Job Sheet', `Job Sheet #${job.jobNumber} details copied to clipboard.`)}
               style={{
                 width: 44,
                 height: 44,
@@ -142,7 +183,7 @@ export default function JobSheetDetailsScreen() {
           <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>
             {job.vehicleModel}
           </Text>
-          <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+          <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 14, fontWeight: '700', marginTop: 2 }}>
             {job.vehicleNumber} • {job.customerName}
           </Text>
 
@@ -153,37 +194,53 @@ export default function JobSheetDetailsScreen() {
             </Text>
           </View>
 
-          {/* Status Badge Pill */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              backgroundColor: job.pendingAmount === 0 ? 'rgba(0, 200, 150, 0.2)' : 'rgba(245, 158, 11, 0.25)',
-              paddingHorizontal: 12,
-              paddingVertical: 5,
-              borderRadius: 16,
-              marginBottom: 20,
-            }}
-          >
-            {job.pendingAmount === 0 ? (
-              <CheckCircle2 size={13} color="#00C896" />
-            ) : (
-              <Clock size={13} color="#FBBF24" />
-            )}
-            <Text
+          {/* Status & Payment Pills */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+            {/* Status Pill */}
+            <View
               style={{
-                color: job.pendingAmount === 0 ? '#00C896' : '#FBBF24',
-                fontSize: 12,
-                fontWeight: '800',
+                backgroundColor: statusStyle.bg,
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 16,
               }}
             >
-              {job.pendingAmount === 0 ? 'Fully Paid' : `Due: ${formatCurrency(job.pendingAmount, currencySymbol)}`}
-            </Text>
+              <Text style={{ color: statusStyle.text, fontSize: 12, fontWeight: '800' }}>
+                {statusStyle.label}
+              </Text>
+            </View>
+
+            {/* Payment Balance Pill */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                backgroundColor: job.pendingAmount === 0 ? 'rgba(52, 211, 153, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 16,
+              }}
+            >
+              {job.pendingAmount === 0 ? (
+                <CheckCircle2 size={13} color="#34D399" />
+              ) : (
+                <Clock size={13} color="#EF4444" />
+              )}
+              <Text
+                style={{
+                  color: job.pendingAmount === 0 ? '#34D399' : '#EF4444',
+                  fontSize: 12,
+                  fontWeight: '800',
+                }}
+              >
+                {job.pendingAmount === 0 ? 'Fully Paid' : `Balance Due: ${formatCurrency(job.pendingAmount, currencySymbol)}`}
+              </Text>
+            </View>
           </View>
 
-          {/* 4 Circular Action Buttons (↓ ↗ ⇄ 📞) */}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 24, width: '100%' }}>
+          {/* 4 Circular Action Buttons (Payment, Status, Call, WhatsApp) */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 20, width: '100%' }}>
             {/* Payment */}
             <TouchableOpacity
               onPress={() => router.push('/payments')}
@@ -203,36 +260,13 @@ export default function JobSheetDetailsScreen() {
                 <ArrowDown size={20} color="#FFFFFF" strokeWidth={2.2} />
               </View>
               <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                Payment
+                Collect
               </Text>
             </TouchableOpacity>
 
-            {/* Add Item */}
+            {/* Toggle Status */}
             <TouchableOpacity
-              onPress={() => Alert.alert('Add Item', 'Add service or part modal')}
-              activeOpacity={0.8}
-              style={{ alignItems: 'center', gap: 6 }}
-            >
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Plus size={22} color="#FFFFFF" strokeWidth={2.4} />
-              </View>
-              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                Add Item
-              </Text>
-            </TouchableOpacity>
-
-            {/* Status */}
-            <TouchableOpacity
-              onPress={() => Alert.alert('Update Status', 'Mark job complete or in-progress')}
+              onPress={handleToggleStatus}
               activeOpacity={0.8}
               style={{ alignItems: 'center', gap: 6 }}
             >
@@ -249,7 +283,7 @@ export default function JobSheetDetailsScreen() {
                 <Repeat size={20} color="#FFFFFF" strokeWidth={2.2} />
               </View>
               <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                Status
+                Next Status
               </Text>
             </TouchableOpacity>
 
@@ -275,10 +309,33 @@ export default function JobSheetDetailsScreen() {
                 Call
               </Text>
             </TouchableOpacity>
+
+            {/* Share / Invoice */}
+            <TouchableOpacity
+              onPress={() => Alert.alert('Bill Generated', `Invoice for Job #${job.jobNumber} ready to print or WhatsApp.`)}
+              activeOpacity={0.8}
+              style={{ alignItems: 'center', gap: 6 }}
+            >
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Share2 size={19} color="#FFFFFF" strokeWidth={2.2} />
+              </View>
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                Share Bill
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Crisp White Lower Sheet */}
+        {/* Crisp Lower Sheet */}
         <View
           style={{
             backgroundColor: sheetBg,
@@ -317,13 +374,62 @@ export default function JobSheetDetailsScreen() {
                   color: activeTab === 'items' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
                 }}
               >
-                Parts & Labor ({job.items.length})
+                Services & Parts ({job.items.length})
               </Text>
             </TouchableOpacity>
           </View>
 
           {activeTab === 'overview' ? (
             <View style={{ gap: 14 }}>
+              {/* Assigned Staff / Mechanic Card */}
+              <GlassCard
+                variant={isDark ? 'navy' : 'sand'}
+                padding={16}
+                style={{
+                  borderRadius: 22,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      backgroundColor: '#6B9FE8',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <UserCheck size={20} color="#FFFFFF" />
+                  </View>
+                  <View>
+                    <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                      Assigned Mechanic
+                    </Text>
+                    <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800', marginTop: 2 }}>
+                      {job.assignedMechanicName || 'Irfan Khan (Head AC Mechanic)'}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => router.push('/staff' as any)}
+                  style={{
+                    backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 14,
+                  }}
+                >
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 12, fontWeight: '800' }}>
+                    Staff Details
+                  </Text>
+                </TouchableOpacity>
+              </GlassCard>
+
               {/* 4-Box Spec Metric Grid */}
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
@@ -335,7 +441,7 @@ export default function JobSheetDetailsScreen() {
 
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
                   <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Discount</Text>
-                  <Text style={{ color: '#00C896', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
+                  <Text style={{ color: '#34D399', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
                     -{formatCurrency(job.discount, currencySymbol)}
                   </Text>
                 </GlassCard>
@@ -344,14 +450,14 @@ export default function JobSheetDetailsScreen() {
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
                   <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Paid So Far</Text>
-                  <Text style={{ color: '#00C896', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
+                  <Text style={{ color: '#34D399', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
                     {formatCurrency(job.totalPaid, currencySymbol)}
                   </Text>
                 </GlassCard>
 
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
                   <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Balance Due</Text>
-                  <Text style={{ color: job.pendingAmount > 0 ? '#EF4444' : '#00C896', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
+                  <Text style={{ color: job.pendingAmount > 0 ? '#EF4444' : '#34D399', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
                     {formatCurrency(job.pendingAmount, currencySymbol)}
                   </Text>
                 </GlassCard>
@@ -371,7 +477,7 @@ export default function JobSheetDetailsScreen() {
               >
                 <View>
                   <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-                    Vehicle Owner
+                    Customer Details
                   </Text>
                   <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '800', marginTop: 2 }}>
                     {job.customerName}
@@ -391,7 +497,7 @@ export default function JobSheetDetailsScreen() {
                   }}
                 >
                   <Text style={{ color: primaryBtnText, fontSize: 13, fontWeight: '800' }}>
-                    Call Owner
+                    Call Customer
                   </Text>
                 </TouchableOpacity>
               </GlassCard>
@@ -431,7 +537,7 @@ export default function JobSheetDetailsScreen() {
                         {item.name}
                       </Text>
                       <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-                        Qty: {item.quantity} × {formatCurrency(item.unitPrice, currencySymbol)}
+                        {item.type === 'SERVICE' ? 'Service / Labor' : 'Spare Part'} • Qty: {item.quantity} × {formatCurrency(item.unitPrice, currencySymbol)}
                       </Text>
                     </View>
                   </View>
@@ -462,7 +568,7 @@ export default function JobSheetDetailsScreen() {
             }}
           >
             <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
-              {job.pendingAmount > 0 ? `Collect Balance (${formatCurrency(job.pendingAmount, currencySymbol)})` : 'Print Final Invoice'}
+              {job.pendingAmount > 0 ? `Collect Balance (${formatCurrency(job.pendingAmount, currencySymbol)})` : 'Print Invoice'}
             </Text>
           </TouchableOpacity>
         </View>

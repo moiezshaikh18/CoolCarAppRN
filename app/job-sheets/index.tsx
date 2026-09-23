@@ -22,6 +22,7 @@ import {
   Car,
   User,
   Phone,
+  Wrench,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -199,7 +200,7 @@ export default function JobSheetsScreen() {
             paddingVertical: 10,
             borderTopWidth: 1,
             borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-            marginBottom: 10,
+            marginBottom: 6,
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
@@ -228,6 +229,16 @@ export default function JobSheetsScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+
+        {/* Assigned Mechanic */}
+        {item.assignedMechanicName ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <Wrench size={13} color="#6B9FE8" />
+            <Text style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
+              Staff: <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontWeight: '700' }}>{item.assignedMechanicName}</Text>
+            </Text>
+          </View>
+        ) : null}
 
         {/* Financial Breakdown: Final Amount, Paid, Pending */}
         <View
@@ -310,7 +321,7 @@ export default function JobSheetsScreen() {
                 Job Sheets
               </Text>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
-                {filteredJobs.length} active orders
+                Cool Car AC Repair • {filteredJobs.length} active orders
               </Text>
             </View>
           </View>

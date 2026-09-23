@@ -1,9 +1,7 @@
 // ============================================================
-// Create Job Sheet Screen — Section 10 & 11 Core Business Entity
-// Features TWO explicit search modes:
-// 1. Search by Vehicle Number
-// 2. Search by Customer Name / Mobile Number
-// Sky Blue & Midnight Navy Luxury Aesthetic (media_1790189780212.png)
+// Create Job Sheet Screen — Cool Car AC Repair Workshop
+// Simple English labels, Quick AC Presets, Staff / Mechanic Assignment
+// Sky Blue (#6B9FE8) & Midnight Navy (#0C1829) Luxury Aesthetic
 // ============================================================
 
 import React, { useState, useMemo } from 'react';
@@ -14,6 +12,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -22,10 +21,13 @@ import {
   Car,
   Plus,
   Trash2,
-  CheckCircle2,
   ArrowRight,
   Wrench,
   Package,
+  UserCheck,
+  Check,
+  X,
+  Sparkles,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -35,6 +37,7 @@ import { router } from 'expo-router';
 import { useCustomerStore } from '../../src/store/customerStore';
 import { useVehicleStore } from '../../src/store/vehicleStore';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
+import { useEmployeeStore } from '../../src/store/employeeStore';
 
 interface MockVehicle {
   id: string;
@@ -57,20 +60,19 @@ interface MockCustomer {
 }
 
 const DATABASE_VEHICLES: MockVehicle[] = [
-  { id: 'v1', reg: 'DL04AB1234', make: 'Maruti', model: 'Swift', customerId: 'c1', customerName: 'Rahul Sharma', customerPhone: '9876543210', lastVisit: '10 May 2025', pendingAmount: 1000 },
-  { id: 'v2', reg: 'UP32XY9876', make: 'Honda', model: 'City', customerId: 'c2', customerName: 'Priya Kapoor', customerPhone: '9811223344', lastVisit: '22 Apr 2025', pendingAmount: 0 },
-  { id: 'v3', reg: 'HR26BC4321', make: 'Hyundai', model: 'i20', customerId: 'c3', customerName: 'Suresh Gupta', customerPhone: '9899001122', lastVisit: '05 Jan 2025', pendingAmount: 2500 },
+  { id: 'v1', reg: 'MH02AB1234', make: 'Honda', model: 'City ZX', customerId: 'c1', customerName: 'Rajesh Sharma', customerPhone: '9820112345', lastVisit: '10 May 2025', pendingAmount: 0 },
+  { id: 'v2', reg: 'DL04AB1234', make: 'Maruti', model: 'Swift Dzire', customerId: 'c2', customerName: 'Priya Kapoor', customerPhone: '9811223344', lastVisit: '22 Apr 2025', pendingAmount: 0 },
+  { id: 'v3', reg: 'HR26BC4321', make: 'Hyundai', model: 'Creta SX', customerId: 'c3', customerName: 'Suresh Gupta', customerPhone: '9899001122', lastVisit: '05 Jan 2025', pendingAmount: 2500 },
 ];
 
 const DATABASE_CUSTOMERS: MockCustomer[] = [
   {
     id: 'c1',
-    name: 'Rahul Sharma',
-    phone: '9876543210',
-    pendingAmount: 1000,
+    name: 'Rajesh Sharma',
+    phone: '9820112345',
+    pendingAmount: 0,
     vehicles: [
-      { id: 'v1', reg: 'DL04AB1234', model: 'Maruti Swift' },
-      { id: 'v4', reg: 'DL08XY5678', model: 'Honda Amaze' },
+      { id: 'v1', reg: 'MH02AB1234', model: 'Honda City ZX' },
     ],
   },
   {
@@ -79,7 +81,7 @@ const DATABASE_CUSTOMERS: MockCustomer[] = [
     phone: '9811223344',
     pendingAmount: 0,
     vehicles: [
-      { id: 'v2', reg: 'UP32XY9876', model: 'Honda City' },
+      { id: 'v2', reg: 'DL04AB1234', model: 'Maruti Swift Dzire' },
     ],
   },
 ];
@@ -90,6 +92,20 @@ interface JobItem {
   type: 'SERVICE' | 'PART';
   price: number;
 }
+
+// Popular Car AC Repair services and parts for Cool Car
+const POPULAR_AC_ITEMS: { name: string; type: 'SERVICE' | 'PART'; price: number }[] = [
+  { name: 'AC Gas Refill (R134a)', type: 'SERVICE', price: 1800 },
+  { name: 'Cooling Coil Service & Clean', type: 'SERVICE', price: 2500 },
+  { name: 'AC Compressor Overhaul / Repair', type: 'SERVICE', price: 3500 },
+  { name: 'AC Condenser Wash & Cleaning', type: 'SERVICE', price: 800 },
+  { name: 'Nitrogen AC Leak Test', type: 'SERVICE', price: 600 },
+  { name: 'Cabin AC Filter Change', type: 'SERVICE', price: 450 },
+  { name: 'R134a Refrigerant Can 450g', type: 'PART', price: 650 },
+  { name: 'AC Compressor Oil (PAG 46)', type: 'PART', price: 350 },
+  { name: 'Expansion Valve OEM', type: 'PART', price: 1200 },
+  { name: 'AC Relay & Fuse Kit', type: 'PART', price: 250 },
+];
 
 function generateNewJobId(): string {
   return `JS-${Date.now()}`;
@@ -106,10 +122,28 @@ export default function CreateJobSheetScreen() {
   const { customers } = useCustomerStore();
   const { vehicles } = useVehicleStore();
   const { addJobSheet } = useJobSheetStore();
+  const { employees } = useEmployeeStore();
 
   const [searchMode, setSearchMode] = useState<'vehicle' | 'customer'>('vehicle');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<MockVehicle | null>(null);
+
+  // Manual vehicle / customer fallback
+  const [manualReg, setManualReg] = useState('');
+  const [manualModel, setManualModel] = useState('');
+  const [manualCustomer, setManualCustomer] = useState('');
+  const [manualPhone, setManualPhone] = useState('');
+
+  // Assigned mechanic
+  const [assignedEmployeeId, setAssignedEmployeeId] = useState<string>(
+    employees[0]?.id || ''
+  );
+
+  // Custom Item Modal state
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
+  const [newItemType, setNewItemType] = useState<'SERVICE' | 'PART'>('SERVICE');
 
   const allVehicles: MockVehicle[] = useMemo(() => {
     const fromStore: MockVehicle[] = vehicles.map((v) => {
@@ -143,10 +177,10 @@ export default function CreateJobSheetScreen() {
     );
   }, [searchQuery, searchMode]);
 
+  // Default items loaded for Car AC repair
   const [items, setItems] = useState<JobItem[]>([
-    { id: '1', name: 'Oil Change', type: 'SERVICE', price: 1200 },
-    { id: '2', name: 'Brake Service', type: 'SERVICE', price: 1500 },
-    { id: '3', name: 'Oil Filter OEM', type: 'PART', price: 500 },
+    { id: '1', name: 'AC Gas Refill (R134a)', type: 'SERVICE', price: 1800 },
+    { id: '2', name: 'Cabin AC Filter Change', type: 'SERVICE', price: 450 },
   ]);
 
   const [discount, setDiscount] = useState<string>('0');
@@ -154,6 +188,10 @@ export default function CreateJobSheetScreen() {
   const subtotal = useMemo(() => items.reduce((sum, it) => sum + it.price, 0), [items]);
   const discountVal = parseFloat(discount) || 0;
   const finalAmount = Math.max(0, subtotal - discountVal);
+
+  const selectedMechanic = useMemo(() => {
+    return employees.find((e) => e.id === assignedEmployeeId);
+  }, [employees, assignedEmployeeId]);
 
   const handleSelectVehicle = (v: MockVehicle) => {
     setSelectedVehicle(v);
@@ -175,9 +213,69 @@ export default function CreateJobSheetScreen() {
     setSearchQuery('');
   };
 
+  const handleAddPresetItem = (preset: { name: string; type: 'SERVICE' | 'PART'; price: number }) => {
+    // Avoid exact duplicate
+    const exists = items.some((i) => i.name === preset.name);
+    if (exists) {
+      Alert.alert('Already Added', `"${preset.name}" is already in this job sheet.`);
+      return;
+    }
+    setItems((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        name: preset.name,
+        type: preset.type,
+        price: preset.price,
+      },
+    ]);
+  };
+
+  const handleSaveCustomItem = () => {
+    if (!newItemName.trim()) {
+      Alert.alert('Name Required', 'Please enter service or part name.');
+      return;
+    }
+    const priceNum = parseFloat(newItemPrice);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      Alert.alert('Price Required', 'Please enter a valid price.');
+      return;
+    }
+
+    setItems((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        name: newItemName.trim(),
+        type: newItemType,
+        price: priceNum,
+      },
+    ]);
+    setNewItemName('');
+    setNewItemPrice('');
+    setIsAddItemModalOpen(false);
+  };
+
   const handleCreateJobSheet = async () => {
-    if (!selectedVehicle) {
-      Alert.alert('Vehicle Required', 'Please search and select a vehicle first.');
+    // Check vehicle selection or manual entry
+    let vehicleReg = selectedVehicle?.reg || manualReg.trim().toUpperCase();
+    let vehicleModelName = selectedVehicle?.model || manualModel.trim();
+    let custName = selectedVehicle?.customerName || manualCustomer.trim();
+    let custPhone = selectedVehicle?.customerPhone || manualPhone.trim();
+
+    if (!vehicleReg) {
+      Alert.alert('Car Number Required', 'Please search a vehicle or enter the Car Number.');
+      return;
+    }
+    if (!custName) {
+      custName = 'Walk-in Customer';
+    }
+    if (!vehicleModelName) {
+      vehicleModelName = 'Vehicle';
+    }
+
+    if (items.length === 0) {
+      Alert.alert('Add Items', 'Please add at least one service or part to this job sheet.');
       return;
     }
 
@@ -189,15 +287,17 @@ export default function CreateJobSheetScreen() {
       id: newJobId,
       enterpriseId: entId,
       jobNumber: jobNum,
-      customerId: selectedVehicle.customerId,
-      customerName: selectedVehicle.customerName,
-      customerPhone: selectedVehicle.customerPhone,
-      vehicleId: selectedVehicle.id,
-      vehicleNumber: selectedVehicle.reg,
-      vehicleMake: selectedVehicle.make,
-      vehicleModel: selectedVehicle.model,
+      customerId: selectedVehicle?.customerId || `cust-${Date.now()}`,
+      customerName: custName,
+      customerPhone: custPhone,
+      vehicleId: selectedVehicle?.id || `veh-${Date.now()}`,
+      vehicleNumber: vehicleReg,
+      vehicleMake: selectedVehicle?.make || vehicleModelName.split(' ')[0],
+      vehicleModel: vehicleModelName,
       date: new Date().toISOString(),
       status: 'OPEN' as const,
+      assignedMechanicId: selectedMechanic?.id || '',
+      assignedMechanicName: selectedMechanic ? `${selectedMechanic.name} (${selectedMechanic.role})` : 'Unassigned',
       items: items.map((it) => ({
         id: it.id,
         name: it.name,
@@ -212,7 +312,9 @@ export default function CreateJobSheetScreen() {
       totalPaid: 0,
       pendingAmount: finalAmount,
       paymentStatus: 'PENDING' as const,
-      notes: 'Initial work order intake',
+      notes: 'Car AC repair & maintenance service',
+      voided: false,
+      createdBy: 'Cool Car Manager',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -228,9 +330,9 @@ export default function CreateJobSheetScreen() {
     addJobSheet(newJob as any);
 
     Alert.alert(
-      'Job Sheet Created',
-      `Job Sheet #${jobNum} created for ${selectedVehicle.model} (${selectedVehicle.reg}) for ${currencySymbol}${finalAmount}!`,
-      [{ text: 'View All Jobs', onPress: () => router.replace('/job-sheets' as any) }]
+      'Job Sheet Created!',
+      `Job Sheet #${jobNum} created for ${vehicleModelName} (${vehicleReg})\nTotal: ${currencySymbol}${finalAmount}\nAssigned: ${selectedMechanic?.name || 'General Workshop'}`,
+      [{ text: 'View All Job Sheets', onPress: () => router.replace('/job-sheets' as any) }]
     );
   };
 
@@ -259,9 +361,14 @@ export default function CreateJobSheetScreen() {
             <ChevronLeft size={22} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
-            New Work Order
-          </Text>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+              New Job Sheet
+            </Text>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 12, fontWeight: '600' }}>
+              Cool Car AC Repair
+            </Text>
+          </View>
 
           <View style={{ width: 44 }} />
         </View>
@@ -273,7 +380,7 @@ export default function CreateJobSheetScreen() {
             backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
             borderRadius: 24,
             padding: 4,
-            marginBottom: 14,
+            marginBottom: 12,
           }}
         >
           <TouchableOpacity
@@ -296,7 +403,7 @@ export default function CreateJobSheetScreen() {
                 fontWeight: '800',
               }}
             >
-              Vehicle Number
+              Car Number
             </Text>
           </TouchableOpacity>
 
@@ -320,7 +427,7 @@ export default function CreateJobSheetScreen() {
                 fontWeight: '800',
               }}
             >
-              Customer Name/No.
+              Customer Name / Mobile
             </Text>
           </TouchableOpacity>
         </View>
@@ -333,7 +440,7 @@ export default function CreateJobSheetScreen() {
             backgroundColor: isDark ? '#141926' : '#FFFFFF',
             borderRadius: 26,
             paddingHorizontal: 16,
-            height: 52,
+            height: 50,
             gap: 12,
             borderWidth: 1,
             borderColor: cardBorder,
@@ -345,8 +452,8 @@ export default function CreateJobSheetScreen() {
             onChangeText={setSearchQuery}
             placeholder={
               searchMode === 'vehicle'
-                ? 'Search vehicle e.g. DL04AB1234'
-                : 'Search customer e.g. Rahul or 9876543210'
+                ? 'Search car number e.g. MH02AB1234'
+                : 'Search customer name or mobile e.g. Rajesh'
             }
             placeholderTextColor="#94A3B8"
             autoCapitalize={searchMode === 'vehicle' ? 'characters' : 'none'}
@@ -360,14 +467,14 @@ export default function CreateJobSheetScreen() {
         </View>
       </View>
 
-      {/* Crisp White Lower Sheet */}
+      {/* Crisp White / Dark Lower Sheet */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
           borderTopLeftRadius: 36,
           borderTopRightRadius: 36,
-          paddingTop: 24,
+          paddingTop: 22,
           paddingHorizontal: 20,
           shadowColor: '#0C1829',
           shadowOffset: { width: 0, height: -4 },
@@ -376,16 +483,16 @@ export default function CreateJobSheetScreen() {
           elevation: 8,
         }}
       >
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
           {/* Selected Vehicle or Search Results */}
           {selectedVehicle ? (
             <GlassCard
               variant={isDark ? 'navy' : 'sand'}
-              padding={18}
-              style={{ borderRadius: 24, marginBottom: 18 }}
+              padding={16}
+              style={{ borderRadius: 22, marginBottom: 18 }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                   <View
                     style={{
                       width: 44,
@@ -398,7 +505,7 @@ export default function CreateJobSheetScreen() {
                   >
                     <Car size={20} color="#FFFFFF" />
                   </View>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
                       {selectedVehicle.model}
                     </Text>
@@ -422,9 +529,9 @@ export default function CreateJobSheetScreen() {
               </View>
             </GlassCard>
           ) : vehicleResults.length > 0 ? (
-            <View style={{ marginBottom: 18, gap: 10 }}>
+            <View style={{ marginBottom: 18, gap: 8 }}>
               <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' }}>
-                Search Results ({vehicleResults.length})
+                Matching Cars ({vehicleResults.length})
               </Text>
               {vehicleResults.map((v) => (
                 <TouchableOpacity
@@ -434,8 +541,8 @@ export default function CreateJobSheetScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: 14,
-                    borderRadius: 20,
+                    padding: 12,
+                    borderRadius: 18,
                     backgroundColor: isDark ? '#141926' : '#F8FAFD',
                     borderWidth: 1,
                     borderColor: cardBorder,
@@ -454,16 +561,16 @@ export default function CreateJobSheetScreen() {
               ))}
             </View>
           ) : customerResults.length > 0 ? (
-            <View style={{ marginBottom: 18, gap: 10 }}>
+            <View style={{ marginBottom: 18, gap: 8 }}>
               <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' }}>
-                Customer Results ({customerResults.length})
+                Matching Customers ({customerResults.length})
               </Text>
               {customerResults.map((c) => (
                 <View
                   key={c.id}
                   style={{
-                    padding: 14,
-                    borderRadius: 20,
+                    padding: 12,
+                    borderRadius: 18,
                     backgroundColor: isDark ? '#141926' : '#F8FAFD',
                     borderWidth: 1,
                     borderColor: cardBorder,
@@ -497,21 +604,221 @@ export default function CreateJobSheetScreen() {
                 </View>
               ))}
             </View>
-          ) : null}
+          ) : (
+            /* Quick Direct Vehicle Entry if not searching */
+            <View style={{ marginBottom: 18, backgroundColor: isDark ? '#141926' : '#F8FAFD', padding: 14, borderRadius: 20, borderWidth: 1, borderColor: cardBorder }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 10 }}>
+                Car & Customer Details
+              </Text>
+              <View style={{ gap: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TextInput
+                    value={manualReg}
+                    onChangeText={setManualReg}
+                    placeholder="Car Number (e.g. MH02AB1234)"
+                    placeholderTextColor="#94A3B8"
+                    autoCapitalize="characters"
+                    style={{
+                      flex: 1,
+                      backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                      borderRadius: 14,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: isDark ? '#FFFFFF' : '#0C1829',
+                    }}
+                  />
+                  <TextInput
+                    value={manualModel}
+                    onChangeText={setManualModel}
+                    placeholder="Car Model (e.g. Honda City)"
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      flex: 1,
+                      backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                      borderRadius: 14,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: isDark ? '#FFFFFF' : '#0C1829',
+                    }}
+                  />
+                </View>
 
-          {/* Job Items (Services & Spare Parts) */}
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TextInput
+                    value={manualCustomer}
+                    onChangeText={setManualCustomer}
+                    placeholder="Customer Name"
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      flex: 1,
+                      backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                      borderRadius: 14,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: isDark ? '#FFFFFF' : '#0C1829',
+                    }}
+                  />
+                  <TextInput
+                    value={manualPhone}
+                    onChangeText={setManualPhone}
+                    placeholder="Mobile Number"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="phone-pad"
+                    style={{
+                      flex: 1,
+                      backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                      borderRadius: 14,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: isDark ? '#FFFFFF' : '#0C1829',
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Section: Assign Mechanic / Staff */}
+          <View style={{ marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <UserCheck size={16} color="#6B9FE8" />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  Assign Mechanic / Staff
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/staff' as any)}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B9FE8' }}>
+                  Manage Staff
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 10 }}>
+              {employees.map((emp) => {
+                const isSelected = emp.id === assignedEmployeeId;
+                return (
+                  <TouchableOpacity
+                    key={emp.id}
+                    onPress={() => setAssignedEmployeeId(emp.id)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingVertical: 10,
+                      paddingHorizontal: 14,
+                      borderRadius: 18,
+                      backgroundColor: isSelected
+                        ? (isDark ? '#FFFFFF' : '#0C1829')
+                        : (isDark ? '#141926' : '#F4F7FC'),
+                      borderWidth: 1,
+                      borderColor: isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : cardBorder,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        backgroundColor: isSelected
+                          ? (isDark ? '#0C1829' : '#FFFFFF')
+                          : '#6B9FE8',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {isSelected ? (
+                        <Check size={14} color={isDark ? '#FFFFFF' : '#0C1829'} strokeWidth={3} />
+                      ) : (
+                        <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                          {emp.name.charAt(0)}
+                        </Text>
+                      )}
+                    </View>
+                    <View>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '800',
+                          color: isSelected
+                            ? (isDark ? '#0C1829' : '#FFFFFF')
+                            : (isDark ? '#FFFFFF' : '#0C1829'),
+                        }}
+                      >
+                        {emp.name}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          fontWeight: '600',
+                          color: isSelected
+                            ? (isDark ? 'rgba(12,24,41,0.7)' : 'rgba(255,255,255,0.7)')
+                            : '#64748B',
+                        }}
+                      >
+                        {emp.role}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Section: Quick Add Popular Car AC Jobs */}
+          <View style={{ marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+              <Sparkles size={16} color="#6B9FE8" />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Quick Add AC Services & Parts
+              </Text>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 10 }}>
+              {POPULAR_AC_ITEMS.map((item, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => handleAddPresetItem(item)}
+                  style={{
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Plus size={13} color="#6B9FE8" strokeWidth={2.5} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                    {item.name}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8' }}>
+                    ₹{item.price}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Section: Job Items List */}
           <View style={{ marginBottom: 20 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                Services & Spare Parts
+                Job Items ({items.length})
               </Text>
               <TouchableOpacity
-                onPress={() => {
-                  setItems([
-                    ...items,
-                    { id: Date.now().toString(), name: 'General Labor Inspection', type: 'SERVICE', price: 800 },
-                  ]);
-                }}
+                onPress={() => setIsAddItemModalOpen(true)}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -524,7 +831,7 @@ export default function CreateJobSheetScreen() {
               >
                 <Plus size={14} color={isDark ? '#FFFFFF' : '#0C1829'} />
                 <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                  Add Line
+                  Custom Item
                 </Text>
               </TouchableOpacity>
             </View>
@@ -562,7 +869,7 @@ export default function CreateJobSheetScreen() {
                         {item.name}
                       </Text>
                       <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 1 }}>
-                        {item.type}
+                        {item.type === 'SERVICE' ? 'Labor / Service' : 'Spare Part'}
                       </Text>
                     </View>
                   </View>
@@ -616,9 +923,14 @@ export default function CreateJobSheetScreen() {
             <View style={{ height: 1, backgroundColor: cardBorder }} />
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900' }}>
-                Total Job Value
-              </Text>
+              <View>
+                <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900' }}>
+                  Total Bill
+                </Text>
+                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>
+                  Assigned: {selectedMechanic?.name || 'Workshop'}
+                </Text>
+              </View>
               <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 24, fontWeight: '900' }}>
                 {formatCurrency(finalAmount, currencySymbol)}
               </Text>
@@ -648,6 +960,135 @@ export default function CreateJobSheetScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* Add Custom Item Modal */}
+      <Modal
+        visible={isAddItemModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsAddItemModalOpen(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: isDark ? '#111622' : '#FFFFFF',
+              borderRadius: 28,
+              padding: 24,
+              gap: 16,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Add Custom Item
+              </Text>
+              <TouchableOpacity onPress={() => setIsAddItemModalOpen(false)}>
+                <X size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Type selector: Service vs Part */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setNewItemType('SERVICE')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  backgroundColor: newItemType === 'SERVICE' ? (isDark ? '#FFFFFF' : '#0C1829') : (isDark ? '#1C2538' : '#F1F5F9'),
+                }}
+              >
+                <Text
+                  style={{
+                    color: newItemType === 'SERVICE' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#FFFFFF' : '#0C1829'),
+                    fontWeight: '800',
+                    fontSize: 13,
+                  }}
+                >
+                  Labor / Service
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setNewItemType('PART')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  backgroundColor: newItemType === 'PART' ? (isDark ? '#FFFFFF' : '#0C1829') : (isDark ? '#1C2538' : '#F1F5F9'),
+                }}
+              >
+                <Text
+                  style={{
+                    color: newItemType === 'PART' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#FFFFFF' : '#0C1829'),
+                    fontWeight: '800',
+                    fontSize: 13,
+                  }}
+                >
+                  Spare Part
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Item Name */}
+            <TextInput
+              value={newItemName}
+              onChangeText={setNewItemName}
+              placeholder="Item name (e.g. AC Gas Refill)"
+              placeholderTextColor="#94A3B8"
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#F8FAFD',
+                borderRadius: 16,
+                padding: 14,
+                fontSize: 14,
+                fontWeight: '700',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+              }}
+            />
+
+            {/* Item Price */}
+            <TextInput
+              value={newItemPrice}
+              onChangeText={setNewItemPrice}
+              placeholder="Price (₹)"
+              placeholderTextColor="#94A3B8"
+              keyboardType="numeric"
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#F8FAFD',
+                borderRadius: 16,
+                padding: 14,
+                fontSize: 14,
+                fontWeight: '700',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+              }}
+            />
+
+            <TouchableOpacity
+              onPress={handleSaveCustomItem}
+              style={{
+                backgroundColor: primaryBtnBg,
+                paddingVertical: 14,
+                borderRadius: 20,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: primaryBtnText, fontSize: 15, fontWeight: '800' }}>
+                Add to Job Sheet
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -39,6 +39,7 @@ const MENU_SECTIONS = [
     title: 'Operations Hub',
     items: [
       { label: 'Job Sheets (Work Orders)', icon: FileSpreadsheet, route: '/job-sheets' },
+      { label: 'Staff & Salary Tracker', icon: Users, route: '/staff' },
       { label: 'Customers Directory', icon: Users, route: '/customers' },
       { label: 'Vehicles Fleet', icon: Car, route: '/vehicles' },
       { label: 'Spare Parts & Inventory', icon: Package, route: '/inventory' },

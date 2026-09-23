@@ -40,6 +40,8 @@ export interface JobSheet {
   totalPaid: number;
   pendingAmount: number;
   paymentStatus: PaymentStatus;
+  assignedMechanicId?: string;
+  assignedMechanicName?: string;
   notes?: string;
   voided: boolean;
   voidReason?: string;

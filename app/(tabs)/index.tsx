@@ -31,10 +31,12 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  Users,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useAuthStore } from '../../src/store/authStore';
+import { useEmployeeStore } from '../../src/store/employeeStore';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { router } from 'expo-router';
@@ -46,6 +48,13 @@ export default function DashboardScreen() {
   const { enterprise, currencySymbol } = useEnterprise();
   const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
+
+  const { employees } = useEmployeeStore();
+  const totalStaffCount = employees.length;
+  const totalAdvanceDue = useMemo(
+    () => employees.reduce((sum, e) => sum + (e.currentAdvance || 0), 0),
+    [employees]
+  );
 
   const [activeTab, setActiveTab] = useState<'jobs' | 'vehicles' | 'expenses'>('jobs');
   const [refreshing, setRefreshing] = useState(false);
@@ -346,6 +355,59 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
           </GlassCard>
+
+          {/* Cool Car Staff & Salary Tracker Shortcut Banner */}
+          <TouchableOpacity
+            onPress={() => router.push('/staff' as any)}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
+              borderRadius: 24,
+              padding: 16,
+              marginBottom: 10,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.3)',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#FFFFFF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Users size={18} color="#0C1829" />
+              </View>
+              <View>
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>
+                  Staff & Salary Tracker
+                </Text>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12, marginTop: 1 }}>
+                  {totalStaffCount} staff active • {totalAdvanceDue > 0 ? `Advance: ${formatCurrency(totalAdvanceDue, currencySymbol)}` : 'All advances clear ✓'}
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                Manage
+              </Text>
+            </View>
+          </TouchableOpacity>
 
           {/* Workshop Fleet Status Banner (Matching Screen 1's "Savings account" card) */}
           <TouchableOpacity
