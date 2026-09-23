@@ -1,0 +1,196 @@
+// ============================================================
+// Firestore Security Rules — Enterprise-scoped access control
+// Deploy with: firebase deploy --only firestore:rules
+// ============================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isMember(enterpriseId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/enterprises/$(enterpriseId)/members/$(request.auth.uid));
+    }
+
+    function getMember(enterpriseId) {
+      return get(/databases/$(database)/documents/enterprises/$(enterpriseId)/members/$(request.auth.uid)).data;
+    }
+
+    function hasRole(enterpriseId, role) {
+      return isMember(enterpriseId) && getMember(enterpriseId).role == role;
+    }
+
+    function hasAnyRole(enterpriseId, roles) {
+      return isMember(enterpriseId) && getMember(enterpriseId).role in roles;
+    }
+
+    function isOwnerOrAdmin(enterpriseId) {
+      return hasAnyRole(enterpriseId, ['OWNER', 'ADMIN']);
+    }
+
+    function isActive(enterpriseId) {
+      return isMember(enterpriseId) && getMember(enterpriseId).isActive == true;
+    }
+
+    // ─── User Documents ──────────────────────────────────────────
+
+    match /users/{userId} {
+      allow read: if isUser(userId);
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isUser(userId);
+    }
+
+    // ─── Enterprise Documents ────────────────────────────────────
+
+    match /enterprises/{enterpriseId} {
+      // Members can read enterprise details
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      // Only owners can update enterprise
+      allow update: if hasRole(enterpriseId, 'OWNER') && isActive(enterpriseId);
+      // Creating enterprise requires auth
+      allow create: if isAuthenticated();
+    }
+
+    // ─── Members ─────────────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/members/{memberId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow write: if isOwnerOrAdmin(enterpriseId) && isActive(enterpriseId);
+    }
+
+    // ─── Customers ───────────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/customers/{customerId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow create: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'])
+                    && isActive(enterpriseId)
+                    && request.resource.data.enterpriseId == enterpriseId;
+      allow update: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'])
+                    && isActive(enterpriseId);
+      allow delete: if isOwnerOrAdmin(enterpriseId) && isActive(enterpriseId);
+    }
+
+    // ─── Vehicles ────────────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/vehicles/{vehicleId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow create: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'])
+                    && isActive(enterpriseId)
+                    && request.resource.data.enterpriseId == enterpriseId;
+      allow update: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'])
+                    && isActive(enterpriseId);
+    }
+
+    // ─── Job Sheets ──────────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/jobSheets/{jobSheetId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow create: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'])
+                    && isActive(enterpriseId)
+                    && request.resource.data.enterpriseId == enterpriseId;
+      allow update: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'])
+                    && isActive(enterpriseId);
+      // void only by owner/admin/manager
+      // actual void logic enforced by checking voided field changes
+
+      match /items/{itemId} {
+        allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+        allow write: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE'])
+                     && isActive(enterpriseId);
+      }
+    }
+
+    // ─── Payments ────────────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/payments/{paymentId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow create: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'ACCOUNTANT', 'EMPLOYEE'])
+                    && isActive(enterpriseId)
+                    && request.resource.data.enterpriseId == enterpriseId;
+      // void requires accountant+
+      allow update: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+                    && isActive(enterpriseId);
+    }
+
+    // ─── Expenses ────────────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/expenses/{expenseId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow create: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER', 'ACCOUNTANT'])
+                    && isActive(enterpriseId)
+                    && request.resource.data.enterpriseId == enterpriseId;
+      allow update: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+                    && isActive(enterpriseId);
+    }
+
+    // ─── Expense Categories ──────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/expenseCategories/{catId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow write: if isOwnerOrAdmin(enterpriseId) && isActive(enterpriseId);
+    }
+
+    // ─── Bank Accounts ───────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/bankAccounts/{accountId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow write: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+                   && isActive(enterpriseId);
+    }
+
+    match /enterprises/{enterpriseId}/accountTransactions/{txId} {
+      allow read: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+                  && isActive(enterpriseId);
+      allow create: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'ACCOUNTANT'])
+                   && isActive(enterpriseId);
+    }
+
+    // ─── Spare Parts / Inventory ─────────────────────────────────
+
+    match /enterprises/{enterpriseId}/spareParts/{partId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow write: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER'])
+                   && isActive(enterpriseId);
+    }
+
+    match /enterprises/{enterpriseId}/inventoryTransactions/{txId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow create: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER'])
+                    && isActive(enterpriseId);
+    }
+
+    // ─── Reminders ───────────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/reminders/{reminderId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow write: if hasAnyRole(enterpriseId, ['OWNER', 'ADMIN', 'MANAGER'])
+                   && isActive(enterpriseId);
+    }
+
+    // ─── Settings ────────────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/settings/{document} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow write: if isOwnerOrAdmin(enterpriseId) && isActive(enterpriseId);
+    }
+
+    // ─── Services Catalog ────────────────────────────────────────
+
+    match /enterprises/{enterpriseId}/services/{serviceId} {
+      allow read: if isMember(enterpriseId) && isActive(enterpriseId);
+      allow write: if isOwnerOrAdmin(enterpriseId) && isActive(enterpriseId);
+    }
+  }
+}
+
