@@ -48,3 +48,4 @@ export interface EmployeeFormData {
   joiningDate?: string;
   notes?: string;
 }
+
