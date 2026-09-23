@@ -1,6 +1,6 @@
 // ============================================================
-// Business Info Screen — Luxury Nestora Warm-Minimalist Redesign
-// Strictly follows media_1790116823022.png aesthetic
+// Business Info Screen — Garage Business Profile
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState } from 'react';
@@ -12,13 +12,13 @@ import {
   TextInput,
   Alert,
   Modal,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Building2, User, Phone, MapPin, Edit3, Check } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
-import { GlassCard } from '../../src/components/common/GlassCard';
 
 export default function BusinessInfoScreen() {
   const { theme, isDark } = useTheme();
@@ -53,207 +53,52 @@ export default function BusinessInfoScreen() {
     Alert.alert('Saved', 'Business profile details updated successfully.');
   };
 
-  const canvasBg = isDark ? '#14171F' : '#F8F6F2';
-  const cardBg = isDark ? '#1C212B' : '#EFECE6';
-  const circleBtnBg = isDark ? '#1C212B' : '#EFECE6';
-  const primaryBtnBg = isDark ? '#FFFFFF' : '#121214';
-  const primaryBtnText = isDark ? '#121214' : '#FFFFFF';
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const inputBg = isDark ? '#141926' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      {/* Symmetrical Top Header */}
+    <View style={{ flex: 1, backgroundColor: skyBg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 8,
+          paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 14,
+          paddingBottom: 20,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: circleBtnBg,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ArrowLeft size={20} color={theme.text} />
-        </TouchableOpacity>
-
-        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 }}>
-          Business Profile
-        </Text>
-
-        <TouchableOpacity
-          onPress={() => {
-            setTempName(businessName);
-            setTempOwner(ownerName);
-            setTempPhone(phone);
-            setTempAddress(address);
-            setEditModal(true);
-          }}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: circleBtnBg,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Edit3 size={18} color={theme.text} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}
-      >
-        {/* Enterprise Brand Identity Hero Card */}
-        <GlassCard
-          variant="sand"
-          padding={24}
-          style={{
-            borderRadius: 28,
-            marginBottom: 20,
-            alignItems: 'center',
-          }}
-        >
-          <View
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
             style={{
-              width: 72,
-              height: 72,
-              borderRadius: 36,
-              backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255,255,255,0.22)',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: 14,
             }}
           >
-            <Building2 size={34} color={theme.text} />
-          </View>
-
-          <Text style={{ color: theme.text, fontSize: 22, fontWeight: '800', textAlign: 'center', letterSpacing: -0.4 }}>
-            {businessName}
-          </Text>
-          <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: '600', marginTop: 4 }}>
-            Automobile Workshop & Body Shop
-          </Text>
-
-          <View
-            style={{
-              marginTop: 14,
-              paddingHorizontal: 14,
-              paddingVertical: 6,
-              borderRadius: 20,
-              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#DFDCD4',
-            }}
-          >
-            <Text style={{ color: theme.text, fontSize: 12, fontWeight: '700' }}>
-              Multi-Tenant ID: {activeEnterprise?.id || 'ent_default'}
+            <ArrowLeft size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View>
+            <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
+              Business Profile
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
+              Workshop registration details
             </Text>
           </View>
-        </GlassCard>
+        </View>
 
-        {/* Business Specifications Card */}
-        <GlassCard
-          variant="sand"
-          padding={22}
-          style={{
-            borderRadius: 28,
-            gap: 16,
-          }}
-        >
-          <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.2 }}>
-            Workshop Details
-          </Text>
-
-          {/* Owner */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 21,
-                backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <User size={18} color={theme.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600' }}>Owner / Proprietor</Text>
-              <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700', marginTop: 2 }}>{ownerName}</Text>
-            </View>
-          </View>
-
-          <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#DFDCD4' }} />
-
-          {/* Phone */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 21,
-                backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Phone size={18} color={theme.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600' }}>Phone / WhatsApp</Text>
-              <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700', marginTop: 2 }}>+91 {phone}</Text>
-            </View>
-          </View>
-
-          <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#DFDCD4' }} />
-
-          {/* Address */}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
-            <View
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 21,
-                backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 2,
-              }}
-            >
-              <MapPin size={18} color={theme.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600' }}>Workshop Location</Text>
-              <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600', marginTop: 2, lineHeight: 20 }}>
-                {address}
-              </Text>
-            </View>
-          </View>
-        </GlassCard>
-      </ScrollView>
-
-      {/* Floating Solid Obsidian CTA Button */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 24,
-          left: 20,
-          right: 20,
-        }}
-      >
         <TouchableOpacity
-          activeOpacity={0.88}
           onPress={() => {
             setTempName(businessName);
             setTempOwner(ownerName);
@@ -262,150 +107,246 @@ export default function BusinessInfoScreen() {
             setEditModal(true);
           }}
           style={{
-            backgroundColor: primaryBtnBg,
-            paddingVertical: 18,
-            borderRadius: 34,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: '#0C1829',
             alignItems: 'center',
             justifyContent: 'center',
             shadowColor: '#000',
+            shadowOpacity: 0.25,
+            shadowRadius: 8,
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.18,
-            shadowRadius: 10,
             elevation: 4,
           }}
         >
-          <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
-            Edit Business Info
-          </Text>
+          <Edit3 size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      {/* Edit Modal with Luxury Pill Inputs */}
-      <Modal visible={editModal} transparent animationType="slide">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            justifyContent: 'flex-end',
-          }}
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 60 }}
         >
+          {/* Main Info Card */}
           <View
             style={{
-              backgroundColor: isDark ? '#1C212B' : '#F8F6F2',
-              borderTopLeftRadius: 32,
-              borderTopRightRadius: 32,
-              padding: 24,
-              paddingBottom: 40,
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: borderColor,
               gap: 16,
+              marginBottom: 16,
             }}
           >
-            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800' }}>
-              Edit Business Info
-            </Text>
-
-            <View>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
-                Garage Name
-              </Text>
-              <TextInput
-                value={tempName}
-                onChangeText={setTempName}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View
                 style={{
-                  backgroundColor: isDark ? '#262D3B' : '#EFECE6',
-                  borderRadius: 22,
-                  paddingHorizontal: 18,
-                  paddingVertical: 14,
-                  color: theme.text,
-                  fontSize: 15,
-                  fontWeight: '600',
-                }}
-              />
-            </View>
-
-            <View>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
-                Owner Name
-              </Text>
-              <TextInput
-                value={tempOwner}
-                onChangeText={setTempOwner}
-                style={{
-                  backgroundColor: isDark ? '#262D3B' : '#EFECE6',
-                  borderRadius: 22,
-                  paddingHorizontal: 18,
-                  paddingVertical: 14,
-                  color: theme.text,
-                  fontSize: 15,
-                  fontWeight: '600',
-                }}
-              />
-            </View>
-
-            <View>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
-                Phone Number
-              </Text>
-              <TextInput
-                value={tempPhone}
-                onChangeText={setTempPhone}
-                keyboardType="phone-pad"
-                style={{
-                  backgroundColor: isDark ? '#262D3B' : '#EFECE6',
-                  borderRadius: 22,
-                  paddingHorizontal: 18,
-                  paddingVertical: 14,
-                  color: theme.text,
-                  fontSize: 15,
-                  fontWeight: '600',
-                }}
-              />
-            </View>
-
-            <View>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
-                Workshop Address
-              </Text>
-              <TextInput
-                value={tempAddress}
-                onChangeText={setTempAddress}
-                multiline
-                numberOfLines={2}
-                style={{
-                  backgroundColor: isDark ? '#262D3B' : '#EFECE6',
-                  borderRadius: 22,
-                  paddingHorizontal: 18,
-                  paddingVertical: 14,
-                  color: theme.text,
-                  fontSize: 15,
-                  fontWeight: '600',
-                }}
-              />
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-              <TouchableOpacity
-                onPress={() => setEditModal(false)}
-                style={{
-                  flex: 1,
-                  backgroundColor: isDark ? '#262D3B' : '#EFECE6',
-                  paddingVertical: 16,
-                  borderRadius: 28,
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  backgroundColor: isDark ? '#141926' : '#EFF6FF',
                   alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>Cancel</Text>
+                <Building2 size={26} color={isDark ? '#FFFFFF' : '#3B82F6'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>
+                  {businessName}
+                </Text>
+                <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 2 }}>
+                  Automobile Service Center
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ height: 1, backgroundColor: borderColor }} />
+
+            {/* Field rows */}
+            <View style={{ gap: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <User size={18} color={theme.textMuted} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Workshop Owner</Text>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700', marginTop: 2 }}>{ownerName}</Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Phone size={18} color={theme.textMuted} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Official Phone</Text>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700', marginTop: 2 }}>{phone}</Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                <MapPin size={18} color={theme.textMuted} style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Workshop Address</Text>
+                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600', marginTop: 2 }}>{address}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Quick Edit CTA */}
+          <TouchableOpacity
+            onPress={() => {
+              setTempName(businessName);
+              setTempOwner(ownerName);
+              setTempPhone(phone);
+              setTempAddress(address);
+              setEditModal(true);
+            }}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: '#0C1829',
+              paddingVertical: 18,
+              borderRadius: 34,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              shadowColor: '#000',
+              shadowOpacity: 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
+            }}
+          >
+            <Edit3 size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              Edit Business Details
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
+      {/* Edit Modal */}
+      <Modal visible={editModal} transparent animationType="slide" onRequestClose={() => setEditModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: isDark ? '#101927' : '#FFFFFF',
+              borderTopLeftRadius: 36,
+              borderTopRightRadius: 36,
+              paddingTop: 24,
+              paddingHorizontal: 20,
+              paddingBottom: insets.bottom + 20,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800' }}>Edit Business Profile</Text>
+              <TouchableOpacity onPress={() => setEditModal(false)}>
+                <Text style={{ color: isDark ? '#60A5FA' : '#2563EB', fontSize: 15, fontWeight: '700' }}>Cancel</Text>
               </TouchableOpacity>
+            </View>
+
+            <View style={{ gap: 14 }}>
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>GARAGE NAME</Text>
+                <TextInput
+                  value={tempName}
+                  onChangeText={setTempName}
+                  style={{
+                    backgroundColor: inputBg,
+                    borderRadius: 16,
+                    paddingHorizontal: 16,
+                    height: 50,
+                    color: theme.text,
+                    fontSize: 15,
+                    fontWeight: '600',
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                />
+              </View>
+
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>OWNER NAME</Text>
+                <TextInput
+                  value={tempOwner}
+                  onChangeText={setTempOwner}
+                  style={{
+                    backgroundColor: inputBg,
+                    borderRadius: 16,
+                    paddingHorizontal: 16,
+                    height: 50,
+                    color: theme.text,
+                    fontSize: 15,
+                    fontWeight: '600',
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                />
+              </View>
+
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>PHONE NUMBER</Text>
+                <TextInput
+                  value={tempPhone}
+                  onChangeText={setTempPhone}
+                  keyboardType="phone-pad"
+                  style={{
+                    backgroundColor: inputBg,
+                    borderRadius: 16,
+                    paddingHorizontal: 16,
+                    height: 50,
+                    color: theme.text,
+                    fontSize: 15,
+                    fontWeight: '600',
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                />
+              </View>
+
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>WORKSHOP ADDRESS</Text>
+                <TextInput
+                  value={tempAddress}
+                  onChangeText={setTempAddress}
+                  multiline
+                  style={{
+                    backgroundColor: inputBg,
+                    borderRadius: 16,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    minHeight: 70,
+                    color: theme.text,
+                    fontSize: 14,
+                    fontWeight: '500',
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                />
+              </View>
+
               <TouchableOpacity
                 onPress={handleSave}
                 style={{
-                  flex: 1,
-                  backgroundColor: primaryBtnBg,
+                  backgroundColor: '#0C1829',
                   paddingVertical: 16,
-                  borderRadius: 28,
+                  borderRadius: 32,
                   alignItems: 'center',
+                  marginTop: 10,
                 }}
               >
-                <Text style={{ color: primaryBtnText, fontSize: 15, fontWeight: '800' }}>Save</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>Save Changes</Text>
               </TouchableOpacity>
             </View>
           </View>

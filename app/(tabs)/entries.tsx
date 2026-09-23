@@ -1,6 +1,6 @@
 // ============================================================
-// Entries Tab — Daily Job Sheet & Daily Expenses
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// Entries Tab — Sky Blue & Midnight Navy Luxury Aesthetic
+// Directly matching media_1790189780212.png & media_1790189816628.png
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
@@ -9,8 +9,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -19,11 +17,10 @@ import {
   ChevronRight,
   FileText,
   Plus,
-  Home as HomeIcon,
-  Zap,
-  Coffee,
-  MoreHorizontal,
-  ArrowUpRight,
+  Receipt,
+  Car,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -45,18 +42,18 @@ interface ExpenseEntry {
   category: string;
   amount: number;
   iconName: string;
-  iconColor: string;
 }
 
 const DEFAULT_JOBS: JobSheetEntry[] = [
-  { id: '1', jobNumber: 'CCG-0001', vehicleModel: 'Honda City', customerName: 'Rajesh Sharma', amount: 8500, status: 'Paid' },
-  { id: '2', jobNumber: 'CCG-0002', vehicleModel: 'Hyundai Creta', customerName: 'Amit Patel', amount: 4200, status: 'Partially Paid' },
+  { id: '1', jobNumber: 'CCG-0001', vehicleModel: 'Honda City ZX', customerName: 'Rajesh Sharma', amount: 8500, status: 'Paid' },
+  { id: '2', jobNumber: 'CCG-0002', vehicleModel: 'Hyundai Creta SX', customerName: 'Amit Patel', amount: 4200, status: 'Partially Paid' },
+  { id: '3', jobNumber: 'CCG-0003', vehicleModel: 'Maruti Brezza ZDi', customerName: 'Priya Kapoor', amount: 14200, status: 'Paid' },
 ];
 
 const DEFAULT_EXPENSES: ExpenseEntry[] = [
-  { id: '1', category: 'Mobil 1 Engine Oil', amount: 4500, iconName: 'Home', iconColor: '#121214' },
-  { id: '2', category: 'Electricity Bill', amount: 3200, iconName: 'Zap', iconColor: '#121214' },
-  { id: '3', category: 'Staff Snacks & Tea', amount: 450, iconName: 'Coffee', iconColor: '#121214' },
+  { id: '1', category: 'Mobil 1 Fully Synthetic 4L', amount: 4500, iconName: 'Fuel' },
+  { id: '2', category: 'Workshop Electricity Bill', amount: 3200, iconName: 'Zap' },
+  { id: '3', category: 'Technician Lunch & Tea', amount: 450, iconName: 'Coffee' },
 ];
 
 export default function EntriesScreen() {
@@ -68,7 +65,7 @@ export default function EntriesScreen() {
   const [jobs, setJobs] = useState<JobSheetEntry[]>(DEFAULT_JOBS);
   const [expenses, setExpenses] = useState<ExpenseEntry[]>(DEFAULT_EXPENSES);
 
-  // Live Firestore Sync for Job Sheets and Expenses
+  // Live Firestore Sync
   useEffect(() => {
     let unsubscribeJobs: (() => void) | undefined;
     let unsubscribeExpenses: (() => void) | undefined;
@@ -79,7 +76,7 @@ export default function EntriesScreen() {
         const { collection, onSnapshot } = await import('firebase/firestore');
         const { db } = await import('../../src/services/firebase/firebase.config');
 
-        // Listen to jobs
+        // Jobs
         const jobsRef = collection(db, 'enterprises', entId, 'jobSheets');
         unsubscribeJobs = onSnapshot(jobsRef, (snap) => {
           if (!snap.empty) {
@@ -100,131 +97,149 @@ export default function EntriesScreen() {
           }
         });
 
-        // Listen to expenses
+        // Expenses
         const expRef = collection(db, 'enterprises', entId, 'expenses');
         unsubscribeExpenses = onSnapshot(expRef, (snap) => {
           if (!snap.empty) {
             const list: ExpenseEntry[] = snap.docs.map((d) => {
               const data = d.data();
-              const cat = data.category || 'Expense';
-              const isUtil = cat.toLowerCase().includes('electricity') || cat.toLowerCase().includes('utility');
-              const isFood = cat.toLowerCase().includes('tea') || cat.toLowerCase().includes('refreshment');
               return {
                 id: d.id,
-                category: data.title || cat,
+                category: data.category || 'General Expense',
                 amount: Number(data.amount) || 0,
-                iconName: isUtil ? 'Zap' : isFood ? 'Coffee' : 'Home',
-                iconColor: '#121214',
+                iconName: 'Receipt',
               };
             });
             setExpenses(list);
           }
         });
       } catch (err) {
-        console.log('[Entries] Firestore sync:', err);
+        console.log('[Entries] Firestore sync error:', err);
       }
     };
 
     syncEntries();
     return () => {
-      unsubscribeJobs?.();
-      unsubscribeExpenses?.();
+      if (unsubscribeJobs) unsubscribeJobs();
+      if (unsubscribeExpenses) unsubscribeExpenses();
     };
   }, [enterprise?.id]);
 
-  const totalExpenseToday = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalJobsAmount = jobs.reduce((sum, j) => sum + j.amount, 0);
+  const totalExpensesAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const getCategoryIcon = (iconName: string) => {
-    const size = 18;
-    const color = isDark ? '#FFFFFF' : '#121214';
-    switch (iconName) {
-      case 'Home': return <HomeIcon size={size} color={color} />;
-      case 'Zap': return <Zap size={size} color={color} />;
-      case 'Coffee': return <Coffee size={size} color={color} />;
-      default: return <MoreHorizontal size={size} color={color} />;
-    }
-  };
+  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#111622' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
+    <View style={{ flex: 1, backgroundColor: canvasBg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* Symmetrical Top Header */}
-        <View
-          style={{
-            paddingTop: insets.top + 14,
-            paddingHorizontal: 22,
-            paddingBottom: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <View>
-            <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-              Garage Ledger
-            </Text>
-            <Text style={{ color: theme.text, fontSize: 26, fontWeight: '800', marginTop: 2, letterSpacing: -0.5 }}>
-              {activeTab === 'jobSheets' ? 'Daily Job Sheets' : 'Daily Expenses'}
-            </Text>
+        {/* Sky Blue Header */}
+        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <View>
+              <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
+                Daily Ledger
+              </Text>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+                Operational & Financial Tracking
+              </Text>
+            </View>
+
+            {/* Circular Add Button */}
+            <TouchableOpacity
+              onPress={() => {
+                if (activeTab === 'jobSheets') router.push('/job-sheets/create');
+                else router.push('/expenses/add');
+              }}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
           </View>
 
-          {/* Symmetrical Circular Action Button */}
-          <TouchableOpacity
-            onPress={() => {
-              if (activeTab === 'jobSheets') {
-                router.push('/job-sheets/create' as any);
-              } else {
-                router.push('/expenses/add' as any);
-              }
-            }}
-            activeOpacity={0.8}
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: isDark ? '#FFFFFF' : '#121214',
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOpacity: 0.15,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 4,
-            }}
-          >
-            <Plus size={22} color={isDark ? '#121214' : '#FFFFFF'} strokeWidth={2.5} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Symmetrical Capsule Tab Switcher */}
-        <View style={{ paddingHorizontal: 22, marginBottom: 18 }}>
+          {/* Date Selector Pill */}
           <View
             style={{
               flexDirection: 'row',
-              backgroundColor: isDark ? '#1C212B' : '#EFECE6',
-              borderRadius: 30,
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
+              borderRadius: 24,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.3)',
+            }}
+          >
+            <TouchableOpacity style={{ padding: 4 }}>
+              <ChevronLeft size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Calendar size={14} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+                {currentDate} • 24 May 2026
+              </Text>
+            </View>
+            <TouchableOpacity style={{ padding: 4 }}>
+              <ChevronRight size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Crisp White Lower Sheet */}
+        <View
+          style={{
+            backgroundColor: sheetBg,
+            borderTopLeftRadius: 36,
+            borderTopRightRadius: 36,
+            paddingTop: 24,
+            paddingHorizontal: 20,
+            paddingBottom: 24,
+            minHeight: 500,
+            shadowColor: '#0C1829',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: isDark ? 0.4 : 0.06,
+            shadowRadius: 16,
+            elevation: 8,
+          }}
+        >
+          {/* Segmented Switcher Capsule */}
+          <View
+            style={{
+              flexDirection: 'row',
+              backgroundColor: isDark ? '#182030' : '#F4F7FC',
+              borderRadius: 24,
               padding: 4,
+              marginBottom: 20,
             }}
           >
             <TouchableOpacity
               onPress={() => setActiveTab('jobSheets')}
-              activeOpacity={0.8}
               style={{
                 flex: 1,
                 paddingVertical: 12,
+                borderRadius: 20,
+                backgroundColor: activeTab === 'jobSheets' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
                 alignItems: 'center',
-                borderRadius: 26,
-                backgroundColor: activeTab === 'jobSheets' ? (isDark ? '#FFFFFF' : '#121214') : 'transparent',
               }}
             >
               <Text
                 style={{
-                  color: activeTab === 'jobSheets' ? (isDark ? '#121214' : '#FFFFFF') : theme.textMuted,
-                  fontSize: 14,
-                  fontWeight: '700',
+                  fontSize: 13,
+                  fontWeight: '800',
+                  color: activeTab === 'jobSheets' ? (isDark ? '#0C1829' : '#FFFFFF') : '#64748B',
                 }}
               >
                 Job Sheets ({jobs.length})
@@ -233,229 +248,167 @@ export default function EntriesScreen() {
 
             <TouchableOpacity
               onPress={() => setActiveTab('expenses')}
-              activeOpacity={0.8}
               style={{
                 flex: 1,
                 paddingVertical: 12,
+                borderRadius: 20,
+                backgroundColor: activeTab === 'expenses' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
                 alignItems: 'center',
-                borderRadius: 26,
-                backgroundColor: activeTab === 'expenses' ? (isDark ? '#FFFFFF' : '#121214') : 'transparent',
               }}
             >
               <Text
                 style={{
-                  color: activeTab === 'expenses' ? (isDark ? '#121214' : '#FFFFFF') : theme.textMuted,
-                  fontSize: 14,
-                  fontWeight: '700',
+                  fontSize: 13,
+                  fontWeight: '800',
+                  color: activeTab === 'expenses' ? (isDark ? '#0C1829' : '#FFFFFF') : '#64748B',
                 }}
               >
                 Expenses ({expenses.length})
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Symmetrical Date Selector Bar */}
-        <View style={{ paddingHorizontal: 22, marginBottom: 18 }}>
-          <View
+          {/* Day Total Metric Card */}
+          <GlassCard
+            variant={isDark ? 'navy' : 'sand'}
+            padding={18}
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: isDark ? '#1C212B' : '#FFFFFF',
               borderRadius: 24,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              borderWidth: 1,
-              borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+              marginBottom: 18,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}
           >
-            <TouchableOpacity
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: isDark ? '#252B38' : '#F8F6F2',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ChevronLeft size={18} color={theme.text} />
-            </TouchableOpacity>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Calendar size={15} color={theme.textMuted} />
-              <Text style={{ color: theme.text, fontSize: 14, fontWeight: '700' }}>
-                {currentDate}
+            <View>
+              <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', textTransform: 'uppercase' }}>
+                {activeTab === 'jobSheets' ? 'Daily Billed Revenue' : 'Daily Outflow'}
+              </Text>
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 24, fontWeight: '900', marginTop: 4 }}>
+                {formatCurrency(activeTab === 'jobSheets' ? totalJobsAmount : totalExpensesAmount, currencySymbol)}
               </Text>
             </View>
-
-            <TouchableOpacity
+            <View
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: isDark ? '#252B38' : '#F8F6F2',
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: activeTab === 'jobSheets' ? 'rgba(0, 200, 150, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <ChevronRight size={18} color={theme.text} />
-            </TouchableOpacity>
-          </View>
-        </View>
+              {activeTab === 'jobSheets' ? (
+                <TrendingUp size={22} color="#00C896" />
+              ) : (
+                <TrendingDown size={22} color="#EF4444" />
+              )}
+            </View>
+          </GlassCard>
 
-        {activeTab === 'jobSheets' ? (
-          /* ==================== DAILY JOB SHEETS ==================== */
-          <View style={{ paddingHorizontal: 22, gap: 14 }}>
-            {jobs.map((job) => {
-              const isPaid = job.status === 'Paid';
-              return (
-                <GlassCard
-                  key={job.id}
-                  variant="sand"
-                  padding={18}
-                  style={{ borderRadius: 28 }}
-                  onPress={() => router.push(`/job-sheets/${job.id}` as any)}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                    <View
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
-                        backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderWidth: 1,
-                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                      }}
-                    >
-                      <FileText size={22} color={theme.text} />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                          {job.jobNumber}
-                        </Text>
-                        <Text style={{ color: theme.text, fontSize: 17, fontWeight: '800' }}>
-                          {formatCurrency(job.amount, currencySymbol)}
-                        </Text>
-                      </View>
-
-                      <Text style={{ color: theme.textSecondary, fontSize: 13, marginTop: 2, fontWeight: '600' }}>
-                        {job.vehicleModel}
-                      </Text>
-
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                        <Text style={{ color: theme.textMuted, fontSize: 12 }}>
-                          {job.customerName}
-                        </Text>
-                        <View
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 4,
-                            borderRadius: 12,
-                            backgroundColor: isPaid ? (isDark ? '#064E3B' : '#DCFCE7') : (isDark ? '#78350F' : '#FEF3C7'),
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color: isPaid ? (isDark ? '#34D399' : '#15803D') : (isDark ? '#FBBF24' : '#B45309'),
-                              fontSize: 11,
-                              fontWeight: '700',
-                            }}
-                          >
-                            {job.status}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                </GlassCard>
-              );
-            })}
-          </View>
-        ) : (
-          /* ==================== DAILY EXPENSES ==================== */
-          <View style={{ paddingHorizontal: 22 }}>
-            {/* Total Expenses Warm Sand Card */}
-            <GlassCard
-              variant="sand"
-              padding={22}
-              style={{
-                marginBottom: 16,
-                borderRadius: 28,
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
-                  <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>
-                    Total Expenses
-                  </Text>
-                  <Text style={{ color: theme.text, fontSize: 30, fontWeight: '800', marginTop: 4, letterSpacing: -0.5 }}>
-                    {formatCurrency(totalExpenseToday, currencySymbol)}
-                  </Text>
-                </View>
-
-                {/* Minimalist Bar Indicator */}
-                <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 44, gap: 5 }}>
-                  <View style={{ width: 7, height: 18, backgroundColor: theme.text, borderRadius: 4, opacity: 0.25 }} />
-                  <View style={{ width: 7, height: 30, backgroundColor: theme.text, borderRadius: 4, opacity: 0.5 }} />
-                  <View style={{ width: 7, height: 20, backgroundColor: theme.text, borderRadius: 4, opacity: 0.35 }} />
-                  <View style={{ width: 7, height: 42, backgroundColor: theme.text, borderRadius: 4, opacity: 0.9 }} />
-                  <View style={{ width: 7, height: 26, backgroundColor: theme.text, borderRadius: 4, opacity: 0.6 }} />
-                </View>
-              </View>
-            </GlassCard>
-
-            {/* Expense Item List */}
+          {/* List Entries */}
+          {activeTab === 'jobSheets' ? (
             <View style={{ gap: 12 }}>
-              {expenses.map((expense) => (
-                <GlassCard
-                  key={expense.id}
-                  variant="sand"
-                  padding={16}
+              {jobs.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => router.push(`/job-sheets/${item.id}`)}
+                  activeOpacity={0.85}
                   style={{
-                    borderRadius: 24,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
                     <View
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 22,
-                        backgroundColor: isDark ? '#252B38' : '#FFFFFF',
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        borderWidth: 1,
-                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
                       }}
                     >
-                      {getCategoryIcon(expense.iconName)}
+                      <Car size={18} color="#FFFFFF" />
                     </View>
-                    <View>
-                      <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
-                        {expense.category}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                        {item.vehicleModel}
                       </Text>
-                      <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
-                        Daily Operations
+                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                        {item.jobNumber} • {item.customerName}
                       </Text>
                     </View>
                   </View>
-                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                    {formatCurrency(expense.amount, currencySymbol)}
-                  </Text>
-                </GlassCard>
+
+                  <View style={{ alignItems: 'flex-end', marginLeft: 10 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                      {formatCurrency(item.amount, currencySymbol)}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: item.status === 'Paid' ? '#00C896' : item.status === 'Partially Paid' ? '#F59E0B' : '#EF4444',
+                        marginTop: 4,
+                      }}
+                    >
+                      {item.status}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
-          </View>
-        )}
+          ) : (
+            <View style={{ gap: 12 }}>
+              {expenses.map((item) => (
+                <View
+                  key={item.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Receipt size={18} color="#FFFFFF" />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', flex: 1 }}>
+                      {item.category}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#EF4444' }}>
+                    -{formatCurrency(item.amount, currencySymbol)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );

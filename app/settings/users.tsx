@@ -1,7 +1,7 @@
 // ============================================================
 // Users & Roles Screen — Master Prompt Section 7
 // Multi-Tenant RBAC: OWNER, ADMIN, MANAGER, ACCOUNTANT, EMPLOYEE
-// Strictly follows media_1790116823022.png aesthetic
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState } from 'react';
@@ -13,6 +13,7 @@ import {
   TextInput,
   Alert,
   Modal,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,7 +29,6 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
-import { GlassCard } from '../../src/components/common/GlassCard';
 import { UserRole } from '../../src/types/enterprise.types';
 import { formatRoleLabel } from '../../src/utils/formatters';
 
@@ -101,77 +101,82 @@ export default function UsersRolesScreen() {
     }
 
     const newMember: TeamMember = {
-      id: `m_${Date.now()}`,
+      id: `m-${Date.now()}`,
       name: newName.trim(),
-      phone: `+91 ${newPhone.trim()}`,
+      phone: `+91 ${newPhone.replace(/\D/g, '').slice(-10)}`,
       role: newRole,
       isActive: true,
     };
 
-    setMembers((prev) => [...prev, newMember]);
+    setMembers([...members, newMember]);
     setNewName('');
     setNewPhone('');
     setNewRole('EMPLOYEE');
     setModalVisible(false);
-    Alert.alert('Staff Added', `${newMember.name} added as ${formatRoleLabel(newMember.role)}.`);
+    Alert.alert('Added', `${newMember.name} added as ${formatRoleLabel(newMember.role)}.`);
   };
 
-  const handleRemoveMember = (member: TeamMember) => {
-    if (member.role === 'OWNER') {
-      Alert.alert('Not Permitted', 'The primary garage Owner cannot be deleted.');
+  const handleRemoveMember = (id: string, name: string) => {
+    if (members.find((m) => m.id === id)?.role === 'OWNER') {
+      Alert.alert('Action Restricted', 'Owner account cannot be removed.');
       return;
     }
-    Alert.alert(
-      'Remove Staff',
-      `Revoke access for ${member.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            setMembers((prev) => prev.filter((m) => m.id !== member.id));
-          },
+    Alert.alert('Remove Team Member', `Are you sure you want to revoke access for ${name}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Revoke',
+        style: 'destructive',
+        onPress: () => {
+          setMembers(members.filter((m) => m.id !== id));
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const canvasBg = isDark ? '#14171F' : '#F8F6F2';
-  const circleBtnBg = isDark ? '#1C212B' : '#EFECE6';
-  const primaryBtnBg = isDark ? '#FFFFFF' : '#121214';
-  const primaryBtnText = isDark ? '#121214' : '#FFFFFF';
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const inputBg = isDark ? '#141926' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      {/* Symmetrical Top Header */}
+    <View style={{ flex: 1, backgroundColor: skyBg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 8,
+          paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 14,
+          paddingBottom: 20,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: circleBtnBg,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ArrowLeft size={20} color={theme.text} />
-        </TouchableOpacity>
-
-        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 }}>
-          Users & Permissions
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255,255,255,0.22)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ArrowLeft size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View>
+            <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
+              Staff & Roles
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
+              Workshop permission levels
+            </Text>
+          </View>
+        </View>
 
         <TouchableOpacity
           onPress={() => setModalVisible(true)}
@@ -179,346 +184,265 @@ export default function UsersRolesScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: circleBtnBg,
+            backgroundColor: '#0C1829',
             alignItems: 'center',
             justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOpacity: 0.25,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 4,
           }}
         >
-          <Plus size={20} color={theme.text} />
+          <UserPlus size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+        }}
       >
-        {/* Info Banner */}
-        <GlassCard
-          variant="sand"
-          padding={20}
-          style={{
-            borderRadius: 28,
-            marginBottom: 20,
-            gap: 8,
-          }}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 110 }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Shield size={18} color={theme.text} />
-            </View>
-            <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-              Multi-Role Access Control
-            </Text>
-          </View>
-          <Text style={{ color: theme.textMuted, fontSize: 13, lineHeight: 19 }}>
-            Granular permissions strictly enforced via Firebase Security Rules. Protect sensitive financial books, ledger entries, and garage operational sheets.
+          <Text
+            style={{
+              color: theme.textMuted,
+              fontSize: 11,
+              fontWeight: '800',
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              marginBottom: 12,
+              paddingLeft: 4,
+            }}
+          >
+            Active Workshop Staff ({members.length})
           </Text>
-        </GlassCard>
 
-        {/* Team Members List */}
-        <Text
-          style={{
-            color: theme.textMuted,
-            fontSize: 11,
-            fontWeight: '800',
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
-            marginBottom: 12,
-            marginLeft: 4,
-          }}
-        >
-          Active Staff ({members.length})
-        </Text>
-
-        <View style={{ gap: 12 }}>
-          {members.map((member) => (
-            <GlassCard
-              key={member.id}
-              variant="sand"
-              padding={18}
-              style={{
-                borderRadius: 28,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
-                  {/* Circular Avatar */}
-                  <View
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 24,
-                      backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <User size={22} color={theme.text} />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
-                      {member.name}
-                    </Text>
-                    <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                      {member.phone}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Role Pill & Remove */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 16,
-                      backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                    }}
-                  >
-                    <Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>
-                      {formatRoleLabel(member.role)}
-                    </Text>
-                  </View>
-
-                  {member.role !== 'OWNER' && (
-                    <TouchableOpacity
-                      onPress={() => handleRemoveMember(member)}
+          {/* Members List */}
+          <View style={{ gap: 12 }}>
+            {members.map((member) => {
+              const isOwner = member.role === 'OWNER';
+              return (
+                <View
+                  key={member.id}
+                  style={{
+                    backgroundColor: cardBg,
+                    borderRadius: 24,
+                    padding: 18,
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    shadowColor: '#000',
+                    shadowOpacity: isDark ? 0.3 : 0.04,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 4 },
+                    elevation: 2,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                    <View
                       style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)',
+                        width: 48,
+                        height: 48,
+                        borderRadius: 24,
+                        backgroundColor: isDark ? '#141926' : '#EFF6FF',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      <Trash2 size={15} color="#EF4444" />
+                      <User size={22} color={isDark ? '#FFFFFF' : '#3B82F6'} />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
+                        {member.name}
+                      </Text>
+                      <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 2 }}>
+                        {member.phone}
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                        <View
+                          style={{
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 8,
+                            backgroundColor: isOwner ? (isDark ? '#3B2F04' : '#FEF3C7') : (isDark ? '#1E293B' : '#F1F5F9'),
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: isOwner ? (isDark ? '#FBBF24' : '#B45309') : (isDark ? '#60A5FA' : '#1D4ED8'),
+                              fontSize: 11,
+                              fontWeight: '700',
+                            }}
+                          >
+                            {formatRoleLabel(member.role)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {!isOwner && (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveMember(member.id, member.name)}
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 19,
+                        backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Trash2 size={16} color="#DC2626" />
                     </TouchableOpacity>
                   )}
                 </View>
-              </View>
-            </GlassCard>
-          ))}
-        </View>
+              );
+            })}
+          </View>
+        </ScrollView>
 
-        {/* Roles Reference Accordion Card */}
-        <Text
-          style={{
-            color: theme.textMuted,
-            fontSize: 11,
-            fontWeight: '800',
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
-            marginTop: 24,
-            marginBottom: 12,
-            marginLeft: 4,
-          }}
-        >
-          Role Permissions Reference
-        </Text>
-
-        <GlassCard
-          variant="sand"
-          padding={20}
-          style={{
-            borderRadius: 28,
-            gap: 14,
-          }}
-        >
-          {ROLES.map((r, idx) => (
-            <View key={r.role}>
-              {idx > 0 && (
-                <View
-                  style={{
-                    height: 1,
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#DFDCD4',
-                    marginBottom: 14,
-                  }}
-                />
-              )}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: 12,
-                    backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                  }}
-                >
-                  <Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>{r.label}</Text>
-                </View>
-              </View>
-              <Text style={{ color: theme.textMuted, fontSize: 13, lineHeight: 18 }}>{r.desc}</Text>
-            </View>
-          ))}
-        </GlassCard>
-      </ScrollView>
-
-      {/* Floating Solid Obsidian CTA Button */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 24,
-          left: 20,
-          right: 20,
-        }}
-      >
-        <TouchableOpacity
-          activeOpacity={0.88}
-          onPress={() => setModalVisible(true)}
-          style={{
-            backgroundColor: primaryBtnBg,
-            paddingVertical: 18,
-            borderRadius: 34,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.18,
-            shadowRadius: 10,
-            elevation: 4,
-          }}
-        >
-          <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
-            + Add Staff Member
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Add Staff Modal */}
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <View
+        {/* Floating Midnight Navy CTA */}
+        <View style={{ position: 'absolute', bottom: 24, left: 20, right: 20 }}>
+          <TouchableOpacity
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.88}
             style={{
-              backgroundColor: isDark ? '#1C212B' : '#F8F6F2',
-              borderTopLeftRadius: 32,
-              borderTopRightRadius: 32,
-              padding: 24,
-              paddingBottom: 40,
-              gap: 16,
+              backgroundColor: '#0C1829',
+              paddingVertical: 16,
+              borderRadius: 32,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              shadowColor: '#000',
+              shadowOpacity: 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 5 },
+              elevation: 6,
             }}
           >
-            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800' }}>
+            <UserPlus size={20} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
               Add Team Member
             </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-            <View>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
-                Full Name
-              </Text>
-              <TextInput
-                value={newName}
-                onChangeText={setNewName}
-                placeholder="e.g. Ramesh Verma"
-                placeholderTextColor={theme.textMuted}
-                style={{
-                  backgroundColor: isDark ? '#262D3B' : '#EFECE6',
-                  borderRadius: 22,
-                  paddingHorizontal: 18,
-                  paddingVertical: 14,
-                  color: theme.text,
-                  fontSize: 15,
-                  fontWeight: '600',
-                }}
-              />
+      {/* Add Member Modal */}
+      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: isDark ? '#101927' : '#FFFFFF',
+              borderTopLeftRadius: 36,
+              borderTopRightRadius: 36,
+              paddingTop: 24,
+              paddingHorizontal: 20,
+              paddingBottom: insets.bottom + 20,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800' }}>Add Workshop Staff</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={{ color: isDark ? '#60A5FA' : '#2563EB', fontSize: 15, fontWeight: '700' }}>Cancel</Text>
+              </TouchableOpacity>
             </View>
 
-            <View>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
-                Mobile Number (for OTP Login)
-              </Text>
-              <TextInput
-                value={newPhone}
-                onChangeText={setNewPhone}
-                placeholder="9876543210"
-                placeholderTextColor={theme.textMuted}
-                keyboardType="phone-pad"
-                maxLength={10}
-                style={{
-                  backgroundColor: isDark ? '#262D3B' : '#EFECE6',
-                  borderRadius: 22,
-                  paddingHorizontal: 18,
-                  paddingVertical: 14,
-                  color: theme.text,
-                  fontSize: 15,
-                  fontWeight: '600',
-                }}
-              />
-            </View>
+            <View style={{ gap: 14 }}>
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>NAME</Text>
+                <TextInput
+                  value={newName}
+                  onChangeText={setNewName}
+                  placeholder="e.g. Rahul Sharma"
+                  placeholderTextColor={theme.textMuted}
+                  style={{
+                    backgroundColor: inputBg,
+                    borderRadius: 16,
+                    paddingHorizontal: 16,
+                    height: 50,
+                    color: theme.text,
+                    fontSize: 15,
+                    fontWeight: '600',
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                />
+              </View>
 
-            <View>
-              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 8 }}>
-                Select Role
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {ROLES.filter((r) => r.role !== 'OWNER').map((r) => {
-                  const isSelected = newRole === r.role;
-                  return (
-                    <TouchableOpacity
-                      key={r.role}
-                      onPress={() => setNewRole(r.role)}
-                      style={{
-                        paddingHorizontal: 16,
-                        paddingVertical: 10,
-                        borderRadius: 20,
-                        backgroundColor: isSelected ? primaryBtnBg : (isDark ? '#262D3B' : '#EFECE6'),
-                      }}
-                    >
-                      <Text
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>PHONE NUMBER</Text>
+                <TextInput
+                  value={newPhone}
+                  onChangeText={setNewPhone}
+                  placeholder="9876543210"
+                  placeholderTextColor={theme.textMuted}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  style={{
+                    backgroundColor: inputBg,
+                    borderRadius: 16,
+                    paddingHorizontal: 16,
+                    height: 50,
+                    color: theme.text,
+                    fontSize: 15,
+                    fontWeight: '600',
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                />
+              </View>
+
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 8 }}>ASSIGN ROLE</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {ROLES.filter((r) => r.role !== 'OWNER').map((r) => {
+                    const isSelected = newRole === r.role;
+                    return (
+                      <TouchableOpacity
+                        key={r.role}
+                        onPress={() => setNewRole(r.role)}
                         style={{
-                          color: isSelected ? primaryBtnText : theme.text,
-                          fontSize: 13,
-                          fontWeight: '700',
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 16,
+                          backgroundColor: isSelected ? '#0C1829' : inputBg,
                         }}
                       >
-                        {r.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text style={{ color: isSelected ? '#FFFFFF' : theme.text, fontSize: 13, fontWeight: '700' }}>
+                          {r.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
-            </View>
 
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                style={{
-                  flex: 1,
-                  backgroundColor: isDark ? '#262D3B' : '#EFECE6',
-                  paddingVertical: 16,
-                  borderRadius: 28,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>Cancel</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAddMember}
                 style={{
-                  flex: 1,
-                  backgroundColor: primaryBtnBg,
+                  backgroundColor: '#0C1829',
                   paddingVertical: 16,
-                  borderRadius: 28,
+                  borderRadius: 32,
                   alignItems: 'center',
+                  marginTop: 10,
                 }}
               >
-                <Text style={{ color: primaryBtnText, fontSize: 15, fontWeight: '800' }}>Add Member</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>Confirm & Add</Text>
               </TouchableOpacity>
             </View>
           </View>

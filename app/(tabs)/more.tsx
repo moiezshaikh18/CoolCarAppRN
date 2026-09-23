@@ -1,15 +1,31 @@
 // ============================================================
-// More Tab — Settings, Garage Modules & Preferences
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// More Tab — Sky Blue & Midnight Navy Luxury Settings Layout
+// Directly matching media_1790189780212.png & media_1790189816628.png
 // ============================================================
 
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  User, Building2, Bell, Database, Download,
-  Shield, Info, LogOut, ChevronRight, Palette, Sun, Moon,
-  Users, Car, FileSpreadsheet, Package, Wallet, Receipt, Calendar,
+  User,
+  Building2,
+  Bell,
+  Database,
+  Download,
+  Shield,
+  Info,
+  LogOut,
+  ChevronRight,
+  Palette,
+  Sun,
+  Moon,
+  Users,
+  Car,
+  FileSpreadsheet,
+  Package,
+  Wallet,
+  Receipt,
+  Calendar,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
@@ -58,132 +74,151 @@ export default function MoreScreen() {
   const { activeMember, reset: resetEnterprise } = useEnterpriseStore();
 
   const handleLogout = () => {
-    resetAuth();
-    resetEnterprise();
-    setAuthState('unauthenticated');
-    router.replace('/(auth)/login');
+    Alert.alert('Sign Out', 'Are you sure you want to log out of your garage account?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => {
+          resetAuth();
+          resetEnterprise();
+          setAuthState('unauthenticated');
+          router.replace('/(auth)/login');
+        },
+      },
+    ]);
   };
 
+  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#111622' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
+    <View style={{ flex: 1, backgroundColor: canvasBg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* Header */}
-        <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 22, paddingBottom: 16 }}>
-          <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            System Settings
-          </Text>
-          <Text style={{ color: theme.text, fontSize: 26, fontWeight: '800', marginTop: 2, letterSpacing: -0.5 }}>
-            Garage Control
-          </Text>
+        {/* Sky Blue Header */}
+        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <View>
+              <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
+                Garage Control
+              </Text>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+                Settings & Enterprise Modules
+              </Text>
+            </View>
 
-          {/* Luxury Profile Card */}
-          <GlassCard
-            variant="sand"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 16, borderRadius: 28 }}
-            padding={18}
-            onPress={() => router.push('/settings/profile' as any)}
-          >
-            <View
+            {/* Dark/Light Mode Toggle */}
+            <TouchableOpacity
+              onPress={toggleMode}
               style={{
-                width: 52,
-                height: 52,
-                borderRadius: 26,
-                backgroundColor: isDark ? '#FFFFFF' : '#121214',
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ color: isDark ? '#121214' : '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+              {isDark ? <Sun size={20} color="#FBBF24" /> : <Moon size={20} color="#FFFFFF" />}
+            </TouchableOpacity>
+          </View>
+
+          {/* User Profile Card (Featured Midnight Navy Style) */}
+          <TouchableOpacity
+            onPress={() => router.push('/settings/profile' as any)}
+            activeOpacity={0.88}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: isDark ? '#101927' : '#0C1829',
+              borderRadius: 28,
+              padding: 16,
+              gap: 14,
+              shadowColor: '#0C1829',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.2,
+              shadowRadius: 14,
+              elevation: 4,
+            }}
+          >
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: 25,
+                backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
                 {getInitials(user?.displayName ?? 'Garage Owner')}
               </Text>
             </View>
+
             <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.text, fontSize: 17, fontWeight: '800' }}>
-                {user?.displayName ?? 'Garage Owner'}
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                {user?.displayName ?? 'Manish Kumar'}
               </Text>
-              <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 2 }}>
-                {user?.phone ?? user?.email ?? '+91 98201 12345'}
+              <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 12, marginTop: 2 }}>
+                {user?.phone ?? '+91 98765 43210'} • {formatRoleLabel(activeMember?.role ?? 'OWNER')}
               </Text>
-              <View
-                style={{
-                  alignSelf: 'flex-start',
-                  marginTop: 6,
-                  paddingHorizontal: 10,
-                  paddingVertical: 3,
-                  borderRadius: 12,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                }}
-              >
-                <Text style={{ color: theme.text, fontSize: 11, fontWeight: '700' }}>
-                  {formatRoleLabel(activeMember?.role ?? 'OWNER')}
-                </Text>
-              </View>
             </View>
-            <ChevronRight size={20} color={theme.textMuted} />
-          </GlassCard>
+
+            <ChevronRight size={18} color="rgba(255, 255, 255, 0.6)" />
+          </TouchableOpacity>
         </View>
 
-        {/* Theme Appearance Mode Switcher Card */}
-        <View style={{ paddingHorizontal: 22, marginBottom: 20 }}>
-          <GlassCard
-            variant="sand"
-            padding={18}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 24 }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {isDark ? <Moon size={20} color="#FBBF24" /> : <Sun size={20} color="#121214" />}
-              </View>
-              <View>
-                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
-                  {isDark ? 'Dark Mode' : 'Light Mode'}
-                </Text>
-                <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
-                  {isDark ? 'Obsidian luxury dark scheme' : 'Warm sand minimalist theme'}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={isDark}
-              onValueChange={toggleMode}
-              trackColor={{ false: '#D1D5DB', true: '#121214' }}
-              thumbColor={isDark ? '#FFFFFF' : '#FFFFFF'}
-            />
-          </GlassCard>
-        </View>
-
-        {/* Menu sections */}
-        <View style={{ paddingHorizontal: 22, gap: 24 }}>
-          {MENU_SECTIONS.map((section) => (
-            <View key={section.title}>
+        {/* Crisp White Lower Sheet */}
+        <View
+          style={{
+            backgroundColor: sheetBg,
+            borderTopLeftRadius: 36,
+            borderTopRightRadius: 36,
+            paddingTop: 24,
+            paddingHorizontal: 20,
+            paddingBottom: 24,
+            minHeight: 600,
+            shadowColor: '#0C1829',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: isDark ? 0.4 : 0.06,
+            shadowRadius: 16,
+            elevation: 8,
+          }}
+        >
+          {MENU_SECTIONS.map((section, sIdx) => (
+            <View key={section.title} style={{ marginBottom: 24 }}>
               <Text
                 style={{
-                  color: theme.textMuted,
+                  color: '#64748B',
                   fontSize: 12,
-                  fontWeight: '700',
+                  fontWeight: '800',
                   letterSpacing: 1.2,
                   textTransform: 'uppercase',
-                  marginBottom: 10,
-                  paddingLeft: 4,
+                  marginBottom: 12,
+                  marginLeft: 4,
                 }}
               >
                 {section.title}
               </Text>
-              <GlassCard variant="sand" padding={0} style={{ borderRadius: 28, overflow: 'hidden' }}>
+
+              <View
+                style={{
+                  backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                  borderRadius: 24,
+                  borderWidth: 1,
+                  borderColor: cardBorder,
+                  overflow: 'hidden',
+                }}
+              >
                 {section.items.map((item, idx) => {
                   const Icon = item.icon;
+                  const isLast = idx === section.items.length - 1;
+
                   return (
                     <TouchableOpacity
                       key={item.label}
@@ -192,58 +227,58 @@ export default function MoreScreen() {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        gap: 14,
-                        padding: 16,
-                        borderBottomWidth: idx < section.items.length - 1 ? 1 : 0,
-                        borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                        justifyContent: 'space-between',
+                        paddingVertical: 14,
+                        paddingHorizontal: 16,
+                        borderBottomWidth: isLast ? 0 : 1,
+                        borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(12, 24, 41, 0.04)',
                       }}
                     >
-                      <View
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 20,
-                          backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Icon size={18} color={theme.text} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                        <View
+                          style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 19,
+                            backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Icon size={17} color="#FFFFFF" />
+                        </View>
+                        <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 14, fontWeight: '700', flex: 1 }}>
+                          {item.label}
+                        </Text>
                       </View>
-                      <Text style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}>
-                        {item.label}
-                      </Text>
-                      <ChevronRight size={18} color={theme.textMuted} />
+                      <ChevronRight size={16} color="#94A3B8" />
                     </TouchableOpacity>
                   );
                 })}
-              </GlassCard>
+              </View>
             </View>
           ))}
 
-          {/* Logout */}
-          <GlassCard
+          {/* Sign Out Button */}
+          <TouchableOpacity
             onPress={handleLogout}
-            variant="sand"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 24, marginTop: 4 }}
-            padding={16}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+              paddingVertical: 16,
+              borderRadius: 28,
+              gap: 8,
+              marginTop: 8,
+            }}
           >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <LogOut size={18} color="#EF4444" />
-            </View>
-            <Text style={{ flex: 1, color: '#EF4444', fontSize: 15, fontWeight: '700' }}>
-              Sign Out from Garage
+            <LogOut size={18} color="#EF4444" />
+            <Text style={{ color: '#EF4444', fontSize: 15, fontWeight: '800' }}>
+              Sign Out of Garage
             </Text>
-          </GlassCard>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>

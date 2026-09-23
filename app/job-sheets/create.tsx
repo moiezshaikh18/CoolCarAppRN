@@ -3,7 +3,7 @@
 // Features TWO explicit search modes:
 // 1. Search by Vehicle Number
 // 2. Search by Customer Name / Mobile Number
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// Sky Blue & Midnight Navy Luxury Aesthetic (media_1790189780212.png)
 // ============================================================
 
 import React, { useState, useMemo } from 'react';
@@ -17,11 +17,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft,
+  ChevronLeft,
   Search,
   Car,
   Plus,
   Trash2,
+  CheckCircle2,
+  ArrowRight,
+  Wrench,
+  Package,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -66,7 +70,7 @@ const DATABASE_CUSTOMERS: MockCustomer[] = [
     pendingAmount: 1000,
     vehicles: [
       { id: 'v1', reg: 'DL04AB1234', model: 'Maruti Swift' },
-      { id: 'v1b', reg: 'DL04CD5678', model: 'Honda City' },
+      { id: 'v4', reg: 'DL08XY5678', model: 'Honda Amaze' },
     ],
   },
   {
@@ -103,83 +107,56 @@ export default function CreateJobSheetScreen() {
   const { vehicles } = useVehicleStore();
   const { addJobSheet } = useJobSheetStore();
 
-  // Step 1: Find Customer / Vehicle (Search Mode)
   const [searchMode, setSearchMode] = useState<'vehicle' | 'customer'>('vehicle');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Selected Target
   const [selectedVehicle, setSelectedVehicle] = useState<MockVehicle | null>(null);
 
-  // Combine static and live vehicles
-  const allVehicles = useMemo(() => {
-    const list: MockVehicle[] = [...DATABASE_VEHICLES];
-    vehicles.forEach((v) => {
-      if (!list.some((existing) => existing.reg === v.registrationNumber)) {
-        list.push({
-          id: v.id,
-          reg: v.registrationNumber,
-          make: v.make,
-          model: `${v.make} ${v.model}`,
-          customerId: v.customerId,
-          customerName: v.customerName || 'Customer',
-          customerPhone: v.customerPhone || '',
-          lastVisit: 'Recent',
-          pendingAmount: 0,
-        });
-      }
+  const allVehicles: MockVehicle[] = useMemo(() => {
+    const fromStore: MockVehicle[] = vehicles.map((v) => {
+      const cust = customers.find((c) => c.id === v.customerId);
+      return {
+        id: v.id,
+        reg: v.registrationNumber,
+        make: v.make,
+        model: v.model,
+        customerId: v.customerId,
+        customerName: cust?.name || 'Customer',
+        customerPhone: cust?.phone || '',
+        lastVisit: 'Recent',
+        pendingAmount: cust?.pendingAmount || 0,
+      };
     });
-    return list;
-  }, [vehicles]);
+    return [...DATABASE_VEHICLES, ...fromStore];
+  }, [vehicles, customers]);
 
-  // Combine static and live customers
-  const allCustomers = useMemo(() => {
-    const list: MockCustomer[] = [...DATABASE_CUSTOMERS];
-    customers.forEach((c) => {
-      if (!list.some((existing) => existing.id === c.id)) {
-        const custVehicles = allVehicles
-          .filter((v) => v.customerId === c.id)
-          .map((v) => ({ id: v.id, reg: v.reg, model: v.model }));
-        list.push({
-          id: c.id,
-          name: c.name,
-          phone: c.phone,
-          pendingAmount: c.pendingAmount || 0,
-          vehicles: custVehicles,
-        });
-      }
-    });
-    return list;
-  }, [customers, allVehicles]);
-
-  // Job Items (Services & Parts)
-  const [items, setItems] = useState<JobItem[]>([
-    { id: '1', name: 'Oil Change', type: 'SERVICE', price: 1200 },
-    { id: '2', name: 'Brake Service', type: 'SERVICE', price: 1500 },
-    { id: '3', name: 'Oil Filter', type: 'PART', price: 500 },
-  ]);
-  const [discount, setDiscount] = useState('200');
-
-  // Search results
   const vehicleResults = useMemo(() => {
     if (!searchQuery.trim() || searchMode !== 'vehicle') return [];
-    const q = searchQuery.toUpperCase().replace(/\s/g, '');
-    return allVehicles.filter((v) => v.reg.replace(/\s/g, '').includes(q));
+    const q = searchQuery.toLowerCase().replace(/\s+/g, '');
+    return allVehicles.filter((v) => v.reg.toLowerCase().replace(/\s+/g, '').includes(q));
   }, [searchQuery, searchMode, allVehicles]);
 
   const customerResults = useMemo(() => {
     if (!searchQuery.trim() || searchMode !== 'customer') return [];
-    const q = searchQuery.toLowerCase().trim();
-    return allCustomers.filter(
+    const q = searchQuery.toLowerCase();
+    return DATABASE_CUSTOMERS.filter(
       (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q)
     );
-  }, [searchQuery, searchMode, allCustomers]);
+  }, [searchQuery, searchMode]);
 
-  const subtotal = items.reduce((sum, item) => sum + item.price, 0);
-  const discountNum = parseFloat(discount) || 0;
-  const finalAmount = Math.max(0, subtotal - discountNum);
+  const [items, setItems] = useState<JobItem[]>([
+    { id: '1', name: 'Oil Change', type: 'SERVICE', price: 1200 },
+    { id: '2', name: 'Brake Service', type: 'SERVICE', price: 1500 },
+    { id: '3', name: 'Oil Filter OEM', type: 'PART', price: 500 },
+  ]);
 
-  const handleSelectVehicle = (vehicle: MockVehicle) => {
-    setSelectedVehicle(vehicle);
+  const [discount, setDiscount] = useState<string>('0');
+
+  const subtotal = useMemo(() => items.reduce((sum, it) => sum + it.price, 0), [items]);
+  const discountVal = parseFloat(discount) || 0;
+  const finalAmount = Math.max(0, subtotal - discountVal);
+
+  const handleSelectVehicle = (v: MockVehicle) => {
+    setSelectedVehicle(v);
     setSearchQuery('');
   };
 
@@ -230,13 +207,12 @@ export default function CreateJobSheetScreen() {
         amount: it.price,
       })),
       subtotal,
-      discount: discountNum,
+      discount: discountVal,
       finalAmount,
       totalPaid: 0,
       pendingAmount: finalAmount,
       paymentStatus: 'PENDING' as const,
-      voided: false,
-      createdBy: 'user-owner-001',
+      notes: 'Initial work order intake',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -258,518 +234,420 @@ export default function CreateJobSheetScreen() {
     );
   };
 
+  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#111622' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
+  const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* Symmetrical Top Header */}
-      <View
-        style={{
-          paddingTop: insets.top + 14,
-          paddingHorizontal: 22,
-          paddingBottom: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => router.back()}
+    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+      {/* Sky Blue Header */}
+      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ChevronLeft size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+            New Work Order
+          </Text>
+
+          <View style={{ width: 44 }} />
+        </View>
+
+        {/* Search Mode Capsule */}
+        <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: isDark ? '#1C212B' : '#EFECE6',
-            alignItems: 'center',
-            justifyContent: 'center',
+            flexDirection: 'row',
+            backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
+            borderRadius: 24,
+            padding: 4,
+            marginBottom: 14,
           }}
         >
-          <ArrowLeft size={20} color={theme.text} />
-        </TouchableOpacity>
-        <View>
-          <Text style={{ color: theme.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
-            New Job Sheet
-          </Text>
-          <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 1 }}>
-            Work order & service billing
-          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setSearchMode('vehicle');
+              setSearchQuery('');
+            }}
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              borderRadius: 20,
+              alignItems: 'center',
+              backgroundColor: searchMode === 'vehicle' ? '#FFFFFF' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: searchMode === 'vehicle' ? '#0C1829' : '#FFFFFF',
+                fontSize: 13,
+                fontWeight: '800',
+              }}
+            >
+              Vehicle Number
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setSearchMode('customer');
+              setSearchQuery('');
+            }}
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              borderRadius: 20,
+              alignItems: 'center',
+              backgroundColor: searchMode === 'customer' ? '#FFFFFF' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: searchMode === 'customer' ? '#0C1829' : '#FFFFFF',
+                fontSize: 13,
+                fontWeight: '800',
+              }}
+            >
+              Customer Name/No.
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Pill Search Input */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: isDark ? '#141926' : '#FFFFFF',
+            borderRadius: 26,
+            paddingHorizontal: 16,
+            height: 52,
+            gap: 12,
+            borderWidth: 1,
+            borderColor: cardBorder,
+          }}
+        >
+          <Search size={18} color="#64748B" />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={
+              searchMode === 'vehicle'
+                ? 'Search vehicle e.g. DL04AB1234'
+                : 'Search customer e.g. Rahul or 9876543210'
+            }
+            placeholderTextColor="#94A3B8"
+            autoCapitalize={searchMode === 'vehicle' ? 'characters' : 'none'}
+            style={{
+              flex: 1,
+              color: isDark ? '#FFFFFF' : '#0C1829',
+              fontSize: 14,
+              fontWeight: '700',
+            }}
+          />
         </View>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 110 }}
+      {/* Crisp White Lower Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          paddingTop: 24,
+          paddingHorizontal: 20,
+          shadowColor: '#0C1829',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: isDark ? 0.4 : 0.06,
+          shadowRadius: 16,
+          elevation: 8,
+        }}
       >
-        {/* Step 1: Find Customer / Vehicle Box in Warm Sand */}
-        {!selectedVehicle ? (
-          <GlassCard
-            variant="sand"
-            padding={22}
-            style={{
-              borderRadius: 28,
-              marginBottom: 18,
-            }}
-          >
-            <Text style={{ color: theme.text, fontSize: 17, fontWeight: '800', marginBottom: 4 }}>
-              Find Customer / Vehicle (Section 10)
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 13, marginBottom: 16 }}>
-              Select search method to identify the vehicle and owner
-            </Text>
-
-            {/* TWO EXPLICIT SEARCH OPTIONS CAPSULE */}
-            <View
-              style={{
-                flexDirection: 'row',
-                backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                borderRadius: 24,
-                padding: 4,
-                marginBottom: 16,
-              }}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+          {/* Selected Vehicle or Search Results */}
+          {selectedVehicle ? (
+            <GlassCard
+              variant={isDark ? 'navy' : 'sand'}
+              padding={18}
+              style={{ borderRadius: 24, marginBottom: 18 }}
             >
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchMode('vehicle');
-                  setSearchQuery('');
-                }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 11,
-                  borderRadius: 20,
-                  alignItems: 'center',
-                  backgroundColor: searchMode === 'vehicle' ? (isDark ? '#FFFFFF' : '#121214') : 'transparent',
-                }}
-              >
-                <Text
-                  style={{
-                    color: searchMode === 'vehicle' ? (isDark ? '#121214' : '#FFFFFF') : theme.textMuted,
-                    fontSize: 13,
-                    fontWeight: '700',
-                  }}
-                >
-                  Vehicle Number
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchMode('customer');
-                  setSearchQuery('');
-                }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 11,
-                  borderRadius: 20,
-                  alignItems: 'center',
-                  backgroundColor: searchMode === 'customer' ? (isDark ? '#FFFFFF' : '#121214') : 'transparent',
-                }}
-              >
-                <Text
-                  style={{
-                    color: searchMode === 'customer' ? (isDark ? '#121214' : '#FFFFFF') : theme.textMuted,
-                    fontSize: 13,
-                    fontWeight: '700',
-                  }}
-                >
-                  Customer Name/No.
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Luxury Search Pill */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                borderRadius: 24,
-                paddingHorizontal: 16,
-                height: 52,
-                gap: 12,
-              }}
-            >
-              <Search size={18} color={theme.textMuted} />
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder={
-                  searchMode === 'vehicle'
-                    ? 'e.g. DL04AB1234'
-                    : 'e.g. Rahul or 9876543210'
-                }
-                placeholderTextColor={theme.textMuted}
-                autoCapitalize={searchMode === 'vehicle' ? 'characters' : 'none'}
-                style={{
-                  flex: 1,
-                  color: theme.text,
-                  fontSize: 15,
-                  fontWeight: '600',
-                }}
-              />
-            </View>
-
-            {/* Quick Demo Pre-fill helpers */}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchMode('vehicle');
-                  setSearchQuery('DL04');
-                }}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 12,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                }}
-              >
-                <Text style={{ color: theme.text, fontSize: 11, fontWeight: '700' }}>
-                  Demo: DL04AB1234
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchMode('customer');
-                  setSearchQuery('Rahul');
-                }}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 12,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                }}
-              >
-                <Text style={{ color: theme.text, fontSize: 11, fontWeight: '700' }}>
-                  Demo: Rahul
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Vehicle Search Results */}
-            {vehicleResults.length > 0 && (
-              <View style={{ marginTop: 16, gap: 10 }}>
-                {vehicleResults.map((v) => (
-                  <TouchableOpacity
-                    key={v.id}
-                    onPress={() => handleSelectVehicle(v)}
-                    style={{
-                      padding: 16,
-                      borderRadius: 22,
-                      backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                        {v.model} ({v.reg})
-                      </Text>
-                      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '800' }}>
-                        Select →
-                      </Text>
-                    </View>
-                    <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 4 }}>
-                      Owner: {v.customerName} • {v.customerPhone}
-                    </Text>
-                    <Text style={{ color: v.pendingAmount > 0 ? (isDark ? '#F87171' : '#DC2626') : (isDark ? '#34D399' : '#16A34A'), fontSize: 12, marginTop: 4, fontWeight: '700' }}>
-                      Pending: {currencySymbol}{v.pendingAmount} • Last Visit: {v.lastVisit}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Customer Search Results */}
-            {customerResults.length > 0 && (
-              <View style={{ marginTop: 16, gap: 10 }}>
-                {customerResults.map((cust) => (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View
-                    key={cust.id}
                     style={{
-                      padding: 16,
+                      width: 44,
+                      height: 44,
                       borderRadius: 22,
-                      backgroundColor: isDark ? '#252B38' : '#FFFFFF',
+                      backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                      {cust.name} ({cust.phone})
+                    <Car size={20} color="#FFFFFF" />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                      {selectedVehicle.model}
                     </Text>
-                    <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2, marginBottom: 10 }}>
-                      {cust.vehicles.length} Vehicle(s) owned — Select one:
+                    <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '700', marginTop: 2 }}>
+                      {selectedVehicle.reg} • {selectedVehicle.customerName}
                     </Text>
-                    {cust.vehicles.map((v) => (
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => setSelectedVehicle(null)}
+                  style={{
+                    backgroundColor: '#FEE2E2',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 14,
+                  }}
+                >
+                  <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '800' }}>Change</Text>
+                </TouchableOpacity>
+              </View>
+            </GlassCard>
+          ) : vehicleResults.length > 0 ? (
+            <View style={{ marginBottom: 18, gap: 10 }}>
+              <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' }}>
+                Search Results ({vehicleResults.length})
+              </Text>
+              {vehicleResults.map((v) => (
+                <TouchableOpacity
+                  key={v.id}
+                  onPress={() => handleSelectVehicle(v)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 14,
+                    borderRadius: 20,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <View>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                      {v.reg} — {v.model}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                      {v.customerName} • {v.customerPhone}
+                    </Text>
+                  </View>
+                  <ArrowRight size={16} color="#64748B" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : customerResults.length > 0 ? (
+            <View style={{ marginBottom: 18, gap: 10 }}>
+              <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' }}>
+                Customer Results ({customerResults.length})
+              </Text>
+              {customerResults.map((c) => (
+                <View
+                  key={c.id}
+                  style={{
+                    padding: 14,
+                    borderRadius: 20,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                    gap: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                    {c.name} ({c.phone})
+                  </Text>
+                  <View style={{ gap: 6 }}>
+                    {c.vehicles.map((v) => (
                       <TouchableOpacity
                         key={v.id}
-                        onPress={() => handleSelectCustomerVehicle(cust, v)}
+                        onPress={() => handleSelectCustomerVehicle(c, v)}
                         style={{
                           flexDirection: 'row',
-                          justifyContent: 'space-between',
                           alignItems: 'center',
-                          paddingVertical: 10,
-                          paddingHorizontal: 14,
-                          backgroundColor: isDark ? '#1C212B' : '#EFECE6',
+                          justifyContent: 'space-between',
+                          padding: 10,
                           borderRadius: 14,
-                          marginBottom: 6,
+                          backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
                         }}
                       >
-                        <Text style={{ color: theme.text, fontSize: 14, fontWeight: '700' }}>
-                          🚗 {v.model} ({v.reg})
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                          {v.model} ({v.reg})
                         </Text>
-                        <Text style={{ color: theme.text, fontSize: 13, fontWeight: '800' }}>
-                          Select
-                        </Text>
+                        <ArrowRight size={14} color="#64748B" />
                       </TouchableOpacity>
                     ))}
                   </View>
-                ))}
-              </View>
-            )}
-
-            {/* If vehicle/customer not found fallback */}
-            {searchQuery.trim().length > 0 &&
-              ((searchMode === 'vehicle' && vehicleResults.length === 0) ||
-                (searchMode === 'customer' && customerResults.length === 0)) && (
-                <View
-                  style={{
-                    marginTop: 16,
-                    padding: 16,
-                    borderRadius: 20,
-                    backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                    alignItems: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
-                    No matching records found
-                  </Text>
-                  <Text style={{ color: theme.textMuted, fontSize: 12, textAlign: 'center' }}>
-                    If vehicle or customer is not registered in this garage yet:
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 4 }}>
-                    <TouchableOpacity
-                      onPress={() => router.push('/customers/add')}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 12,
-                        borderRadius: 18,
-                        backgroundColor: isDark ? '#FFFFFF' : '#121214',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text style={{ color: isDark ? '#121214' : '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                        + Customer
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => router.push('/vehicles/add')}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 12,
-                        borderRadius: 18,
-                        backgroundColor: isDark ? '#1C212B' : '#EFECE6',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text style={{ color: theme.text, fontSize: 13, fontWeight: '800' }}>
-                        + Vehicle
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
-              )}
-          </GlassCard>
-        ) : (
-          /* Selected Vehicle Header Banner */
-          <GlassCard
-            variant="sand"
-            padding={20}
-            style={{
-              borderRadius: 28,
-              marginBottom: 18,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-                <View
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Car size={24} color={theme.text} />
-                </View>
-                <View>
-                  <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>
-                    {selectedVehicle.model}
-                  </Text>
-                  <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '800', marginTop: 2 }}>
-                    {selectedVehicle.reg}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => setSelectedVehicle(null)}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 14,
-                  backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2',
-                }}
-              >
-                <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '700' }}>Change</Text>
-              </TouchableOpacity>
+              ))}
             </View>
+          ) : null}
 
-            <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }}>
-              <Text style={{ color: theme.textMuted, fontSize: 13 }}>
-                Customer: <Text style={{ color: theme.text, fontWeight: '700' }}>{selectedVehicle.customerName}</Text> ({selectedVehicle.customerPhone})
+          {/* Job Items (Services & Spare Parts) */}
+          <View style={{ marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Services & Spare Parts
               </Text>
-            </View>
-          </GlassCard>
-        )}
-
-        {/* Step 2: Job Items (Services & Spare Parts) */}
-        <GlassCard
-          variant="sand"
-          padding={22}
-          style={{
-            borderRadius: 28,
-            marginBottom: 18,
-          }}
-        >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={{ color: theme.text, fontSize: 17, fontWeight: '800' }}>
-              Services & Spare Parts
-            </Text>
-            <TouchableOpacity
-              onPress={() => {
-                setItems([
-                  ...items,
-                  { id: Date.now().toString(), name: 'General Labor', type: 'SERVICE', price: 800 },
-                ]);
-              }}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 14,
-              }}
-            >
-              <Plus size={14} color={theme.text} />
-              <Text style={{ color: theme.text, fontSize: 12, fontWeight: '700' }}>Add Item</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={{ gap: 10 }}>
-            {items.map((item, idx) => (
-              <View
-                key={item.id}
+              <TouchableOpacity
+                onPress={() => {
+                  setItems([
+                    ...items,
+                    { id: Date.now().toString(), name: 'General Labor Inspection', type: 'SERVICE', price: 800 },
+                  ]);
+                }}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingVertical: 12,
-                  borderBottomWidth: idx < items.length - 1 ? 1 : 0,
-                  borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  gap: 4,
+                  backgroundColor: isDark ? '#141926' : '#F4F7FC',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 16,
                 }}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
-                    {item.name}
-                  </Text>
-                  <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
-                    {item.type}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
-                    {formatCurrency(item.price, currencySymbol)}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setItems(items.filter((i) => i.id !== item.id))}
-                  >
-                    <Trash2 size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        </GlassCard>
+                <Plus size={14} color={isDark ? '#FFFFFF' : '#0C1829'} />
+                <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  Add Line
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* Step 3: Summary & Calculations */}
-        <GlassCard
-          variant="sand"
-          padding={22}
-          style={{
-            borderRadius: 28,
-            marginBottom: 24,
-          }}
-        >
-          <View style={{ gap: 12 }}>
+            <View style={{ gap: 8 }}>
+              {items.map((item) => (
+                <View
+                  key={item.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 14,
+                    borderRadius: 20,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                    <View
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 17,
+                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {item.type === 'PART' ? <Package size={15} color="#FFFFFF" /> : <Wrench size={15} color="#FFFFFF" />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                        {item.name}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 1 }}>
+                        {item.type}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                      {formatCurrency(item.price, currencySymbol)}
+                    </Text>
+                    <TouchableOpacity onPress={() => setItems(items.filter((i) => i.id !== item.id))}>
+                      <Trash2 size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Pricing Summary Card */}
+          <GlassCard
+            variant={isDark ? 'navy' : 'sand'}
+            padding={18}
+            style={{ borderRadius: 24, marginBottom: 24, gap: 10 }}
+          >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ color: theme.textMuted, fontSize: 14 }}>Subtotal</Text>
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700' }}>
+              <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>Subtotal</Text>
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800' }}>
                 {formatCurrency(subtotal, currencySymbol)}
               </Text>
             </View>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ color: theme.textMuted, fontSize: 14 }}>Discount ({currencySymbol})</Text>
+              <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>Discount ({currencySymbol})</Text>
               <TextInput
                 value={discount}
                 onChangeText={setDiscount}
                 keyboardType="numeric"
                 style={{
-                  width: 90,
+                  width: 80,
                   textAlign: 'right',
-                  color: isDark ? '#F87171' : '#DC2626',
-                  fontSize: 16,
+                  color: '#EF4444',
+                  fontSize: 15,
                   fontWeight: '800',
-                  paddingVertical: 4,
+                  paddingVertical: 2,
                   paddingHorizontal: 8,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 10,
+                  backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                  borderRadius: 8,
                 }}
               />
             </View>
 
-            <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }} />
+            <View style={{ height: 1, backgroundColor: cardBorder }} />
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>
-                Final Amount
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900' }}>
+                Total Job Value
               </Text>
-              <Text style={{ color: theme.text, fontSize: 24, fontWeight: '900' }}>
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 24, fontWeight: '900' }}>
                 {formatCurrency(finalAmount, currencySymbol)}
               </Text>
             </View>
-          </View>
-        </GlassCard>
+          </GlassCard>
 
-        {/* Solid Obsidian Black Pill CTA Button */}
-        <TouchableOpacity
-          onPress={handleCreateJobSheet}
-          activeOpacity={0.88}
-          style={{
-            backgroundColor: isDark ? '#FFFFFF' : '#121214',
-            paddingVertical: 18,
-            borderRadius: 34,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOpacity: 0.2,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 6,
-          }}
-        >
-          <Text style={{ color: isDark ? '#121214' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-            Create Job Sheet
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {/* Solid Midnight Navy CTA Button */}
+          <TouchableOpacity
+            onPress={handleCreateJobSheet}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: primaryBtnBg,
+              paddingVertical: 18,
+              borderRadius: 30,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#0C1829',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 10,
+              elevation: 4,
+            }}
+          >
+            <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
+              Create Job Sheet
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     </View>
   );
 }

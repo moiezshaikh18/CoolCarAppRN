@@ -1,15 +1,14 @@
 // ============================================================
 // Select Enterprise Screen — Multi-garage switcher
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StatusBar } from 'react-native';
 import { router } from 'expo-router';
 import { Building2, ChevronRight, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/hooks/useTheme';
-import { GlassCard } from '../../src/components/common/GlassCard';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE, MOCK_ENTERPRISE_ABC } from '../../src/features/enterprise/mockEnterprise';
@@ -38,21 +37,46 @@ export default function SelectEnterpriseScreen() {
     router.replace('/(tabs)');
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <View style={{ flex: 1, paddingHorizontal: 22, paddingTop: insets.top + 20 }}>
-        <View style={{ marginBottom: 28 }}>
-          <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            Multi-Tenant Switcher
-          </Text>
-          <Text style={{ color: theme.text, fontSize: 32, fontWeight: '900', marginTop: 2, letterSpacing: -0.5 }}>
-            Select Garage
-          </Text>
-          <Text style={{ color: theme.textSecondary, fontSize: 15, marginTop: 4 }}>
-            Choose active workshop workspace to continue
-          </Text>
-        </View>
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
+  return (
+    <View style={{ flex: 1, backgroundColor: skyBg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
+      <View
+        style={{
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 24,
+        }}
+      >
+        <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          Multi-Tenant Switcher
+        </Text>
+        <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', marginTop: 4, letterSpacing: -0.5 }}>
+          Select Garage
+        </Text>
+        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4, fontWeight: '500' }}>
+          Choose active workshop workspace to continue
+        </Text>
+      </View>
+
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+          paddingHorizontal: 20,
+          paddingTop: 24,
+        }}
+      >
         <FlatList
           data={MOCK_ENTERPRISES}
           keyExtractor={(item) => item.id}
@@ -61,18 +85,24 @@ export default function SelectEnterpriseScreen() {
           renderItem={({ item }) => {
             const isActive = activeEnterprise?.id === item.id;
             return (
-              <GlassCard
+              <TouchableOpacity
                 onPress={() => handleSelect(item)}
-                variant="sand"
+                activeOpacity={0.88}
                 style={{
-                  borderRadius: 28,
+                  backgroundColor: cardBg,
+                  borderRadius: 24,
+                  padding: 18,
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 16,
                   borderWidth: isActive ? 2 : 1,
-                  borderColor: isActive ? (isDark ? '#FFFFFF' : '#121214') : 'transparent',
+                  borderColor: isActive ? '#0C1829' : borderColor,
+                  shadowColor: '#000',
+                  shadowOpacity: isDark ? 0.3 : 0.04,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 2,
                 }}
-                padding={18}
               >
                 {/* Logo / Icon */}
                 <View
@@ -80,14 +110,12 @@ export default function SelectEnterpriseScreen() {
                     width: 48,
                     height: 48,
                     borderRadius: 24,
-                    backgroundColor: isDark ? '#252B38' : '#FFFFFF',
+                    backgroundColor: isDark ? '#141926' : '#EFF6FF',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderWidth: 1,
-                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
                   }}
                 >
-                  <Building2 size={24} color={theme.text} />
+                  <Building2 size={24} color={isDark ? '#FFFFFF' : '#3B82F6'} />
                 </View>
 
                 {/* Info */}
@@ -98,39 +126,26 @@ export default function SelectEnterpriseScreen() {
                   <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 2 }}>
                     {item.address ?? item.phone}
                   </Text>
-                  <View
-                    style={{
-                      alignSelf: 'flex-start',
-                      marginTop: 6,
-                      paddingHorizontal: 8,
-                      paddingVertical: 2,
-                      borderRadius: 8,
-                      backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                    }}
-                  >
-                    <Text style={{ color: theme.text, fontSize: 11, fontWeight: '700' }}>
-                      OWNER
-                    </Text>
-                  </View>
                 </View>
 
+                {/* Status indicator */}
                 {isActive ? (
                   <View
                     style={{
                       width: 32,
                       height: 32,
                       borderRadius: 16,
-                      backgroundColor: isDark ? '#FFFFFF' : '#121214',
+                      backgroundColor: '#0C1829',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <Check size={18} color={isDark ? '#121214' : '#FFFFFF'} strokeWidth={2.5} />
+                    <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
                   </View>
                 ) : (
                   <ChevronRight size={20} color={theme.textMuted} />
                 )}
-              </GlassCard>
+              </TouchableOpacity>
             );
           }}
         />

@@ -1,6 +1,6 @@
 // ============================================================
-// Add Bank Account Screen — Link Bank or Register Cash Counter
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// Add Bank Account Screen — Sky Blue & Midnight Navy Luxury Layout
+// Directly matching media_1790189780212.png & media_1790189816628.png
 // ============================================================
 
 import React, { useState } from 'react';
@@ -16,7 +16,7 @@ import {
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft,
+  ChevronLeft,
   Building,
   CreditCard,
   Wallet,
@@ -34,7 +34,7 @@ const ACCOUNT_TYPES: { label: string; value: AccountType; icon: any }[] = [
   { label: 'Cash in Hand', value: 'CASH_IN_HAND', icon: Wallet },
 ];
 
-const POPULAR_BANKS = ['HDFC Bank', 'ICICI Bank', 'State Bank of India', 'Axis Bank', 'Kotak Mahindra', 'Punjab National Bank'];
+const POPULAR_BANKS = ['HDFC Bank', 'ICICI Bank', 'State Bank of India', 'Axis Bank', 'Kotak Mahindra'];
 
 export default function AddBankAccountScreen() {
   const { theme, isDark } = useTheme();
@@ -61,25 +61,21 @@ export default function AddBankAccountScreen() {
     }
 
     setLoading(true);
-    const newAccId = `acc-${Date.now()}`;
     const entId = enterpriseId || 'enterprise-dev-001';
-    const balanceNum = parseFloat(openingBalance) || 0;
+    const accId = `acc_${Date.now()}`;
+    const balanceNum = parseFloat(openingBalance.replace(/[^0-9.]/g, '')) || 0;
 
-    let masked = undefined;
-    if (accountNumber.trim()) {
-      const cleanNum = accountNumber.replace(/\s/g, '');
-      masked = `****${cleanNum.slice(-4)}`;
-    }
-
-    const accountObj: BankAccount = {
-      id: newAccId,
+    const newAcc: BankAccount = {
+      id: accId,
       enterpriseId: entId,
       accountName: accountName.trim(),
-      bankName: accountType === 'CASH_IN_HAND' ? undefined : bankName.trim(),
-      accountNumberMasked: masked,
       accountType,
+      bankName: accountType === 'CASH_IN_HAND' ? 'Cash Counter' : bankName.trim(),
+      accountNumber: accountType === 'CASH_IN_HAND' ? 'CASH' : accountNumber.trim(),
+      ifscCode: '',
       openingBalance: balanceNum,
       currentBalance: balanceNum,
+      isDefault: false,
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -88,291 +84,272 @@ export default function AddBankAccountScreen() {
     try {
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
-      const accRef = doc(db, 'enterprises', entId, 'bankAccounts', newAccId);
-      await setDoc(accRef, accountObj);
+      await setDoc(doc(db, 'enterprises', entId, 'bankAccounts', accId), newAcc);
     } catch (err) {
-      console.log('[AddBankAccount] Firestore sync error/offline:', err);
+      console.log('[AddBankAccount] Firestore error:', err);
     }
 
-    addAccount(accountObj);
+    addAccount(newAcc);
     setLoading(false);
-
-    Alert.alert('Success', 'Account added successfully!', [
-      { text: 'OK', onPress: () => router.back() },
+    Alert.alert('Account Linked', `"${newAcc.accountName}" has been successfully added to your garage ledger.`, [
+      { text: 'Done', onPress: () => router.back() },
     ]);
   };
 
+  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#111622' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
+  const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 60 }}
-      >
-        {/* Symmetrical Top Header */}
-        <View
-          style={{
-            paddingTop: insets.top + 14,
-            paddingHorizontal: 22,
-            paddingBottom: 20,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-          }}
-        >
+    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+      {/* Sky Blue Header */}
+      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
           <TouchableOpacity
             onPress={() => router.back()}
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#1C212B' : '#EFECE6',
-              alignItems: 'center',
-              justifyContent: 'center',
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 20,
+              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
             }}
           >
-            <ArrowLeft size={20} color={theme.text} />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Cancel</Text>
           </TouchableOpacity>
-          <View>
-            <Text style={{ color: theme.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
-              Add Account
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 1 }}>
-              Link bank or register cash drawer
-            </Text>
-          </View>
+
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+            Link Bank Account
+          </Text>
+
+          <View style={{ width: 60 }} />
         </View>
 
-        <View style={{ paddingHorizontal: 22, gap: 18 }}>
-          {/* Account Type Selector in Warm Sand */}
-          <GlassCard variant="sand" padding={20} style={{ borderRadius: 28, gap: 12 }}>
-            <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 }}>
-              ACCOUNT TYPE *
+        {/* Central Bank Badge */}
+        <View
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            backgroundColor: isDark ? '#1C2538' : '#0C1829',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 10,
+          }}
+        >
+          <Building size={30} color="#FFFFFF" />
+        </View>
+
+        <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>
+          Workshop Liquidity
+        </Text>
+        <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, marginTop: 2 }}>
+          Configure settlement gateway & cash drawer
+        </Text>
+      </View>
+
+      {/* Crisp White Lower Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          paddingTop: 24,
+          paddingHorizontal: 20,
+          shadowColor: '#0C1829',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: isDark ? 0.4 : 0.06,
+          shadowRadius: 16,
+          elevation: 8,
+        }}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+          {/* Account Type Chips */}
+          <View style={{ marginBottom: 18 }}>
+            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
+              Account Type
             </Text>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {ACCOUNT_TYPES.map((type) => {
-                const isSelected = accountType === type.value;
-                const Icon = type.icon;
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {ACCOUNT_TYPES.map((t) => {
+                const isSelected = accountType === t.value;
+                const Icon = t.icon;
                 return (
                   <TouchableOpacity
-                    key={type.value}
-                    onPress={() => {
-                      setAccountType(type.value);
-                      if (type.value === 'CASH_IN_HAND' && !accountName) {
-                        setAccountName('Counter Cash Drawer');
-                      }
-                    }}
+                    key={t.value}
+                    onPress={() => setAccountType(t.value)}
                     style={{
                       flex: 1,
-                      paddingVertical: 14,
-                      paddingHorizontal: 8,
+                      paddingVertical: 12,
                       borderRadius: 20,
+                      backgroundColor: isSelected ? primaryBtnBg : (isDark ? '#141926' : '#F8FAFD'),
                       alignItems: 'center',
-                      backgroundColor: isSelected
-                        ? (isDark ? '#FFFFFF' : '#121214')
-                        : (isDark ? '#252B38' : '#FFFFFF'),
+                      justifyContent: 'center',
+                      gap: 4,
                       borderWidth: 1,
-                      borderColor: isSelected ? (isDark ? '#FFFFFF' : '#121214') : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
-                      gap: 6,
+                      borderColor: isSelected ? primaryBtnBg : cardBorder,
                     }}
                   >
-                    <Icon size={20} color={isSelected ? (isDark ? '#121214' : '#FFFFFF') : theme.text} />
-                    <Text
-                      style={{
-                        color: isSelected ? (isDark ? '#121214' : '#FFFFFF') : theme.text,
-                        fontSize: 12,
-                        fontWeight: '700',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {type.label}
+                    <Icon size={16} color={isSelected ? primaryBtnText : (isDark ? '#FFFFFF' : '#0C1829')} />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? primaryBtnText : (isDark ? '#FFFFFF' : '#0C1829') }}>
+                      {t.label}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-          </GlassCard>
+          </View>
 
-          {/* Form Fields in Warm Sand */}
-          <GlassCard variant="sand" padding={22} style={{ borderRadius: 28, gap: 16 }}>
-            {/* Account Name */}
-            <View>
-              <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                ACCOUNT NAME *
-              </Text>
-              <TextInput
-                value={accountName}
-                onChangeText={setAccountName}
-                placeholder={
-                  accountType === 'CASH_IN_HAND'
-                    ? 'e.g. Counter Cash Drawer'
-                    : 'e.g. HDFC Main Workshop A/c'
-                }
-                placeholderTextColor={theme.textMuted}
-                style={{
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  paddingHorizontal: 16,
-                  height: 54,
-                  color: theme.text,
-                  fontSize: 15,
-                  fontWeight: '600',
-                }}
-              />
-            </View>
+          {/* Account Nickname */}
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
+              Account Nickname
+            </Text>
+            <TextInput
+              value={accountName}
+              onChangeText={setAccountName}
+              placeholder="e.g. Primary HDFC Current"
+              placeholderTextColor="#94A3B8"
+              style={{
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                borderRadius: 22,
+                backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                borderWidth: 1,
+                borderColor: cardBorder,
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                fontSize: 15,
+                fontWeight: '600',
+              }}
+            />
+          </View>
 
-            {/* Bank Name (only if not Cash) */}
-            {accountType !== 'CASH_IN_HAND' && (
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  BANK NAME *
+          {accountType !== 'CASH_IN_HAND' && (
+            <>
+              {/* Bank Name Selector */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
+                  Bank Name
                 </Text>
                 <TextInput
                   value={bankName}
                   onChangeText={setBankName}
-                  placeholder="e.g. HDFC Bank, ICICI Bank"
-                  placeholderTextColor={theme.textMuted}
+                  placeholder="Select or enter bank name"
+                  placeholderTextColor="#94A3B8"
                   style={{
-                    backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    paddingVertical: 14,
                     paddingHorizontal: 16,
-                    height: 54,
-                    color: theme.text,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                    color: isDark ? '#FFFFFF' : '#0C1829',
                     fontSize: 15,
                     fontWeight: '600',
+                    marginBottom: 8,
                   }}
                 />
-
-                {/* Popular Banks chips */}
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: 8, marginTop: 10 }}
-                >
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                   {POPULAR_BANKS.map((b) => (
                     <TouchableOpacity
                       key={b}
                       onPress={() => setBankName(b)}
                       style={{
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: 16,
-                        backgroundColor:
-                          bankName === b
-                            ? (isDark ? '#FFFFFF' : '#121214')
-                            : (isDark ? '#252B38' : '#FFFFFF'),
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 14,
+                        backgroundColor: bankName === b ? primaryBtnBg : (isDark ? '#182030' : '#F1F5F9'),
                       }}
                     >
-                      <Text
-                        style={{
-                          color: bankName === b ? (isDark ? '#121214' : '#FFFFFF') : theme.textSecondary,
-                          fontSize: 12,
-                          fontWeight: '700',
-                        }}
-                      >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: bankName === b ? primaryBtnText : '#64748B' }}>
                         {b}
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </View>
               </View>
-            )}
 
-            {/* Account Number (only if not Cash) */}
-            {accountType !== 'CASH_IN_HAND' && (
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  ACCOUNT NUMBER (OPTIONAL / MASKED)
+              {/* Account Number */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
+                  Account Number
                 </Text>
                 <TextInput
                   value={accountNumber}
                   onChangeText={setAccountNumber}
                   placeholder="e.g. 50200012345678"
-                  placeholderTextColor={theme.textMuted}
+                  placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
                   style={{
-                    backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    paddingVertical: 14,
                     paddingHorizontal: 16,
-                    height: 54,
-                    color: theme.text,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                    color: isDark ? '#FFFFFF' : '#0C1829',
                     fontSize: 15,
                     fontWeight: '600',
                   }}
                 />
               </View>
-            )}
+            </>
+          )}
 
-            {/* Opening Balance */}
-            <View>
-              <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                OPENING BALANCE ({currencySymbol})
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  paddingHorizontal: 16,
-                  height: 54,
-                }}
-              >
-                <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800', marginRight: 8 }}>
-                  {currencySymbol}
-                </Text>
-                <TextInput
-                  value={openingBalance}
-                  onChangeText={setOpeningBalance}
-                  placeholder="0.00"
-                  placeholderTextColor={theme.textMuted}
-                  keyboardType="numeric"
-                  style={{ flex: 1, color: theme.text, fontSize: 17, fontWeight: '800' }}
-                />
-              </View>
-            </View>
-          </GlassCard>
+          {/* Initial Opening Balance */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
+              Opening Balance ({currencySymbol})
+            </Text>
+            <TextInput
+              value={openingBalance}
+              onChangeText={setOpeningBalance}
+              placeholder="0.00"
+              placeholderTextColor="#94A3B8"
+              keyboardType="decimal-pad"
+              style={{
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                borderRadius: 22,
+                backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                borderWidth: 1,
+                borderColor: cardBorder,
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                fontSize: 15,
+                fontWeight: '700',
+              }}
+            />
+          </View>
 
-          {/* Solid Obsidian Black Pill Submit Button */}
+          {/* Solid Midnight Navy CTA Button */}
           <TouchableOpacity
             onPress={handleSave}
             disabled={loading}
             activeOpacity={0.88}
             style={{
-              backgroundColor: isDark ? '#FFFFFF' : '#121214',
+              backgroundColor: primaryBtnBg,
               paddingVertical: 18,
-              borderRadius: 34,
-              flexDirection: 'row',
+              borderRadius: 30,
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 10,
-              shadowColor: '#000',
+              shadowColor: '#0C1829',
+              shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.2,
               shadowRadius: 10,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 6,
+              elevation: 4,
             }}
           >
             {loading ? (
-              <ActivityIndicator color={isDark ? '#121214' : '#FFFFFF'} />
+              <ActivityIndicator color={primaryBtnText} />
             ) : (
-              <>
-                <Check size={20} color={isDark ? '#121214' : '#FFFFFF'} strokeWidth={2.5} />
-                <Text style={{ color: isDark ? '#121214' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                  Save Account
-                </Text>
-              </>
+              <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
+                Save Account
+              </Text>
             )}
           </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 }

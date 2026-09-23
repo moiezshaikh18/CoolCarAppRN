@@ -9,10 +9,13 @@ export interface BankAccount {
   enterpriseId: string;
   accountName: string;
   bankName?: string; // null for CASH_IN_HAND
+  accountNumber?: string;
   accountNumberMasked?: string;
+  ifscCode?: string;
   accountType: AccountType;
   openingBalance: number;
   currentBalance: number;
+  isDefault?: boolean;
   isActive: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;

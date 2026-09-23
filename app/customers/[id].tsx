@@ -1,6 +1,6 @@
 // ============================================================
-// Customer Details Screen — Screen 3 Style in media_1790116823022.png
-// Modern Luxury Architectural Layout: 4-Box Metric Grid & Vehicles Fleet
+// Customer Details Screen — Sky Blue & Midnight Navy Luxury Layout
+// Directly matching media_1790189780212.png center screen
 // ============================================================
 
 import React, { useMemo, useState } from 'react';
@@ -9,30 +9,29 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
   Linking,
+  Alert,
 } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
+  Share2,
   Phone,
-  MessageSquare,
+  User,
   Car,
   FileText,
-  Clock,
-  MapPin,
-  Layers,
-  TrendingUp,
-  CreditCard,
   Plus,
+  MessageSquare,
+  ChevronRight,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useCustomerStore } from '../../src/store/customerStore';
 import { useVehicleStore } from '../../src/store/vehicleStore';
+import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { getInitials } from '../../src/utils/formatters';
-import { router, useLocalSearchParams } from 'expo-router';
 
 export default function CustomerDetailsScreen() {
   const { theme, isDark } = useTheme();
@@ -41,6 +40,7 @@ export default function CustomerDetailsScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const { customers } = useCustomerStore();
   const { vehicles } = useVehicleStore();
+  const [activeTab, setActiveTab] = useState<'overview' | 'fleet'>('overview');
 
   const customer = useMemo(() => {
     const found = customers.find((c) => c.id === params.id);
@@ -57,382 +57,368 @@ export default function CustomerDetailsScreen() {
       pendingAmount: 2300,
       lastVisit: '10 May 2025',
       isActive: true,
+      vehicles: [
+        { id: 'v1', reg: 'MH02AB1234', model: 'Honda City ZX', year: '2022' },
+        { id: 'v2', reg: 'MH01CD5678', model: 'Hyundai Creta SX', year: '2021' },
+      ],
     };
-  }, [customers, params.id]);
+  }, [params.id, customers]);
 
-  // Customer vehicles
-  const customerVehicles = useMemo(() => {
-    const matched = vehicles.filter((v) => v.customerId === customer.id);
-    if (matched.length > 0) return matched;
-    return [
-      { id: 'v1', make: 'Maruti', model: 'Swift Dzire VXi', registrationNumber: 'MH02AB1234', fuelType: 'PETROL', modelYear: 2021 },
-      { id: 'v2', make: 'Honda', model: 'City ZX', registrationNumber: 'MH01CD5678', fuelType: 'PETROL', modelYear: 2023 },
-    ];
-  }, [vehicles, customer.id]);
-
-  const hasPending = (customer.pendingAmount ?? 0) > 0;
+  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#111622' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
+  const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* Top Floating Circular Header Bar (Screen 3 pattern) */}
-      <View
-        style={{
-          paddingTop: insets.top + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: isDark ? '#1E2430' : '#FFFFFF',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: theme.border,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: isDark ? 0 : 0.04,
-            shadowRadius: 6,
-            elevation: 2,
-          }}
-        >
-          <ChevronLeft size={22} color={theme.text} strokeWidth={2.2} />
-        </TouchableOpacity>
-
-        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>
-          Customer Profile
-        </Text>
-
-        <TouchableOpacity
-          onPress={() => Linking.openURL(`tel:${customer.phone}`)}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: isDark ? '#1E2430' : '#FFFFFF',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: theme.border,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: isDark ? 0 : 0.04,
-            shadowRadius: 6,
-            elevation: 2,
-          }}
-        >
-          <Phone size={18} color={theme.text} />
-        </TouchableOpacity>
-      </View>
-
+    <View style={{ flex: 1, backgroundColor: canvasBg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60 }}
+        contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* HERO SHOWCASE CARD (Screen 3 pattern in warm sand) */}
-        <View
-          style={{
-            backgroundColor: isDark ? '#1E2430' : '#EFECE6',
-            borderRadius: 28,
-            padding: 24,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: isDark ? 0.3 : 0.05,
-            shadowRadius: 12,
-            elevation: 3,
-          }}
-        >
+        {/* Sky Blue Header */}
+        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
+          {/* Top Bar with Back & Share */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ChevronLeft size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              Customer Profile
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => Alert.alert('Share', 'Customer account link copied.')}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Share2 size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Central Customer Avatar */}
           <View
             style={{
-              width: 90,
-              height: 90,
-              borderRadius: 45,
-              backgroundColor: isDark ? '#141822' : '#FFFFFF',
+              width: 68,
+              height: 68,
+              borderRadius: 34,
+              backgroundColor: isDark ? '#1C2538' : '#0C1829',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: 14,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.08,
-              shadowRadius: 10,
+              marginBottom: 12,
+              shadowColor: '#0C1829',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
               elevation: 4,
             }}
           >
-            <Text style={{ color: theme.text, fontSize: 32, fontWeight: '900' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900' }}>
               {getInitials(customer.name)}
             </Text>
           </View>
 
-          <Text style={{ color: theme.text, fontSize: 24, fontWeight: '900' }}>
+          {/* Name & Phone */}
+          <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '900', letterSpacing: -0.3 }}>
             {customer.name}
           </Text>
-          <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 4 }}>
-            {customer.phone} {customer.address ? `• ${customer.address}` : ''}
+          <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 14, fontWeight: '600', marginTop: 2 }}>
+            {customer.phone}
           </Text>
 
-          {/* Quick Communication Buttons */}
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+          {/* Lifetime Spent */}
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 12, marginBottom: 8 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -1 }}>
+              {formatCurrency(customer.totalSpent, currencySymbol)}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              backgroundColor: customer.pendingAmount > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 200, 150, 0.2)',
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: 16,
+              marginBottom: 20,
+            }}
+          >
+            <Text style={{ color: customer.pendingAmount > 0 ? '#EF4444' : '#00C896', fontSize: 12, fontWeight: '800' }}>
+              {customer.pendingAmount > 0 ? `Pending Due: ${formatCurrency(customer.pendingAmount, currencySymbol)}` : 'All Accounts Settled'}
+            </Text>
+          </View>
+
+          {/* 4 Circular Action Buttons (Call, WhatsApp, New Job, Add Vehicle) */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 24, width: '100%' }}>
             <TouchableOpacity
               onPress={() => Linking.openURL(`tel:${customer.phone}`)}
-              style={{
-                backgroundColor: isDark ? '#FFFFFF' : '#121214',
-                paddingHorizontal: 20,
-                paddingVertical: 10,
-                borderRadius: 20,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-              }}
+              activeOpacity={0.8}
+              style={{ alignItems: 'center', gap: 6 }}
             >
-              <Phone size={14} color={isDark ? '#12141A' : '#FFFFFF'} />
-              <Text style={{ color: isDark ? '#12141A' : '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Phone size={19} color="#FFFFFF" strokeWidth={2.2} />
+              </View>
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
                 Call
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => Linking.openURL(`sms:${customer.phone}`)}
-              style={{
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-                paddingHorizontal: 18,
-                paddingVertical: 10,
-                borderRadius: 20,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                borderWidth: 1,
-                borderColor: theme.border,
-              }}
+              onPress={() => Linking.openURL(`https://wa.me/${customer.phone.replace(/[^0-9]/g, '')}`)}
+              activeOpacity={0.8}
+              style={{ alignItems: 'center', gap: 6 }}
             >
-              <MessageSquare size={14} color={theme.text} />
-              <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>
-                SMS
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* 4-BOX METRICS GRID (Screen 3 style) */}
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-          {/* Box 1: Total Jobs */}
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-              borderRadius: 20,
-              paddingVertical: 14,
-              paddingHorizontal: 6,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: theme.border,
-            }}
-          >
-            <FileText size={18} color={theme.textMuted} />
-            <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800', marginTop: 4 }}>
-              {customer.totalJobs || 12}
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-              Work Orders
-            </Text>
-          </View>
-
-          {/* Box 2: Total Spent */}
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-              borderRadius: 20,
-              paddingVertical: 14,
-              paddingHorizontal: 6,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: theme.border,
-            }}
-          >
-            <TrendingUp size={18} color={theme.textMuted} />
-            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800', marginTop: 4 }}>
-              {formatCurrency(customer.totalSpent || 45600, currencySymbol)}
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-              Spent
-            </Text>
-          </View>
-
-          {/* Box 3: Total Paid */}
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-              borderRadius: 20,
-              paddingVertical: 14,
-              paddingHorizontal: 6,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: theme.border,
-            }}
-          >
-            <CreditCard size={18} color="#10B981" />
-            <Text style={{ color: '#10B981', fontSize: 14, fontWeight: '800', marginTop: 4 }}>
-              {formatCurrency(customer.totalPaid ?? (customer.totalSpent - customer.pendingAmount), currencySymbol)}
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-              Paid
-            </Text>
-          </View>
-
-          {/* Box 4: Pending Due */}
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-              borderRadius: 20,
-              paddingVertical: 14,
-              paddingHorizontal: 6,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: theme.border,
-            }}
-          >
-            <Clock size={18} color={hasPending ? '#EF4444' : '#10B981'} />
-            <Text
-              style={{
-                color: hasPending ? '#EF4444' : '#10B981',
-                fontSize: 14,
-                fontWeight: '800',
-                marginTop: 4,
-              }}
-            >
-              {formatCurrency(customer.pendingAmount || 0, currencySymbol)}
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-              Pending
-            </Text>
-          </View>
-        </View>
-
-        {/* VEHICLES OWNED (Screen 2/3 cards) */}
-        <View style={{ marginBottom: 24 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>
-              Vehicles Owned ({customerVehicles.length})
-            </Text>
-            <TouchableOpacity onPress={() => router.push(`/vehicles/add?customerId=${customer.id}`)}>
-              <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: '700' }}>
-                + Add Vehicle
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {customerVehicles.map((v) => (
-            <TouchableOpacity
-              key={v.id}
-              activeOpacity={0.88}
-              onPress={() => router.push(`/vehicles/${v.id}` as any)}
-              style={{
-                backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-                borderRadius: 24,
-                padding: 18,
-                marginBottom: 10,
-                borderWidth: 1,
-                borderColor: theme.border,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: isDark ? 0 : 0.04,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                      backgroundColor: isDark ? '#27272A' : '#EFECE6',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Car size={20} color={theme.text} />
-                  </View>
-
-                  <View>
-                    <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                      {v.make ? `${v.make} ${v.model}` : v.model}
-                    </Text>
-                    <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
-                      {v.fuelType} • Year {v.modelYear || 2022}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Indian Plate Chip */}
-                <View
-                  style={{
-                    backgroundColor: isDark ? '#141822' : '#F4F2EE',
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: theme.border,
-                  }}
-                >
-                  <Text style={{ color: theme.text, fontSize: 12, fontWeight: '900', letterSpacing: 0.5 }}>
-                    {v.registrationNumber}
-                  </Text>
-                </View>
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MessageSquare size={19} color="#FFFFFF" strokeWidth={2.2} />
               </View>
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                WhatsApp
+              </Text>
             </TouchableOpacity>
-          ))}
+
+            <TouchableOpacity
+              onPress={() => router.push('/job-sheets/create')}
+              activeOpacity={0.8}
+              style={{ alignItems: 'center', gap: 6 }}
+            >
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <FileText size={20} color="#FFFFFF" />
+              </View>
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                New Job
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/vehicles/add')}
+              activeOpacity={0.8}
+              style={{ alignItems: 'center', gap: 6 }}
+            >
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Car size={20} color="#FFFFFF" />
+              </View>
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                Add Car
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* BOTTOM ACTION: CREATE JOB SHEET FOR THIS CUSTOMER */}
-        <TouchableOpacity
-          onPress={() => router.push('/job-sheets/create')}
-          activeOpacity={0.9}
+        {/* Crisp White Lower Sheet */}
+        <View
           style={{
-            backgroundColor: isDark ? '#FFFFFF' : '#121214',
-            height: 58,
-            borderRadius: 29,
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'row',
-            gap: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 10,
-            elevation: 4,
+            backgroundColor: sheetBg,
+            borderTopLeftRadius: 36,
+            borderTopRightRadius: 36,
+            paddingTop: 24,
+            paddingHorizontal: 20,
+            paddingBottom: 24,
+            minHeight: 500,
+            shadowColor: '#0C1829',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: isDark ? 0.4 : 0.06,
+            shadowRadius: 16,
+            elevation: 8,
           }}
         >
-          <Plus size={18} color={isDark ? '#12141A' : '#FFFFFF'} strokeWidth={2.5} />
-          <Text
+          {/* Segmented Switcher */}
+          <View style={{ flexDirection: 'row', gap: 24, alignItems: 'center', marginBottom: 20 }}>
+            <TouchableOpacity onPress={() => setActiveTab('overview')} activeOpacity={0.7}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: activeTab === 'overview' ? '900' : '600',
+                  color: activeTab === 'overview' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
+                }}
+              >
+                Financials
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setActiveTab('fleet')} activeOpacity={0.7}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: activeTab === 'fleet' ? '900' : '600',
+                  color: activeTab === 'fleet' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
+                }}
+              >
+                Vehicles Fleet ({((customer as any).vehicles?.length) || 2})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {activeTab === 'overview' ? (
+            <View style={{ gap: 14 }}>
+              {/* 4-Box Spec Metric Grid */}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
+                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Total Billed</Text>
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
+                    {formatCurrency(customer.totalSpent, currencySymbol)}
+                  </Text>
+                </GlassCard>
+
+                <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
+                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Total Paid</Text>
+                  <Text style={{ color: '#00C896', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
+                    {formatCurrency(customer.totalPaid, currencySymbol)}
+                  </Text>
+                </GlassCard>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
+                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Total Jobs</Text>
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
+                    {customer.totalJobs} Work Orders
+                  </Text>
+                </GlassCard>
+
+                <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
+                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Last Visit</Text>
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800', marginTop: 2 }}>
+                    {customer.lastVisit ? String(customer.lastVisit) : 'Never'}
+                  </Text>
+                </GlassCard>
+              </View>
+
+              {/* Address Details Card */}
+              <GlassCard
+                variant={isDark ? 'navy' : 'sand'}
+                padding={18}
+                style={{ borderRadius: 24, marginTop: 6 }}
+              >
+                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                  Billing Address
+                </Text>
+                <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 14, fontWeight: '700', marginTop: 4 }}>
+                  {customer.address}
+                </Text>
+              </GlassCard>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {(((customer as any).vehicles) || []).map((v: any) => (
+                <TouchableOpacity
+                  key={v.id}
+                  onPress={() => router.push(`/vehicles/${v.id}`)}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Car size={18} color="#FFFFFF" />
+                    </View>
+                    <View>
+                      <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800' }}>
+                        {v.model}
+                      </Text>
+                      <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+                        {v.reg} • {v.year}
+                      </Text>
+                    </View>
+                  </View>
+                  <ChevronRight size={18} color="#64748B" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* New Job CTA */}
+          <TouchableOpacity
+            onPress={() => router.push('/job-sheets/create')}
+            activeOpacity={0.88}
             style={{
-              color: isDark ? '#12141A' : '#FFFFFF',
-              fontSize: 16,
-              fontWeight: '800',
+              backgroundColor: primaryBtnBg,
+              paddingVertical: 18,
+              borderRadius: 30,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: 24,
+              shadowColor: '#0C1829',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 10,
+              elevation: 4,
             }}
           >
-            Create Job Sheet for Customer
-          </Text>
-        </TouchableOpacity>
+            <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
+              Create Work Order for {customer.name}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );

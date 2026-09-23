@@ -1,6 +1,6 @@
 // ============================================================
 // Create Profile Screen — New user onboarding
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState } from 'react';
@@ -13,12 +13,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { User, Mail, ArrowLeft, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/hooks/useTheme';
-import { GlassCard } from '../../src/components/common/GlassCard';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE } from '../../src/features/enterprise/mockEnterprise';
@@ -73,16 +73,25 @@ export default function CreateProfileScreen() {
     }
   };
 
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const inputBg = isDark ? '#141926' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* Symmetrical Top Header */}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1, backgroundColor: skyBg }}
+    >
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 14,
-          paddingHorizontal: 22,
-          paddingBottom: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 24,
         }}
       >
         <TouchableOpacity
@@ -91,34 +100,49 @@ export default function CreateProfileScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: isDark ? '#1C212B' : '#EFECE6',
+            backgroundColor: 'rgba(255,255,255,0.22)',
             alignItems: 'center',
             justifyContent: 'center',
+            marginBottom: 16,
           }}
         >
-          <ArrowLeft size={20} color={theme.text} />
+          <ArrowLeft size={20} color="#FFFFFF" />
         </TouchableOpacity>
+
+        <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>
+          Create Profile
+        </Text>
+        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4, fontWeight: '500' }}>
+          Personalize your workshop administrator identity
+        </Text>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+        }}
+      >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 22, paddingBottom: 60 }}
-          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 }}
         >
-          <View style={{ marginBottom: 28 }}>
-            <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-              Owner Onboarding
-            </Text>
-            <Text style={{ color: theme.text, fontSize: 32, fontWeight: '900', marginTop: 2, letterSpacing: -0.5 }}>
-              Create Profile
-            </Text>
-            <Text style={{ color: theme.textSecondary, fontSize: 15, marginTop: 4 }}>
-              Setup your name and garage owner credentials
-            </Text>
-          </View>
-
-          <GlassCard variant="sand" padding={22} style={{ borderRadius: 28, gap: 18 }}>
-            {/* Full Name */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: borderColor,
+              gap: 16,
+              marginBottom: 20,
+            }}
+          >
+            {/* Display Name */}
             <View>
               <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
                 YOUR FULL NAME *
@@ -127,22 +151,21 @@ export default function CreateProfileScreen() {
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
+                  backgroundColor: inputBg,
+                  borderRadius: 18,
                   paddingHorizontal: 16,
-                  height: 54,
+                  height: 52,
                   gap: 12,
                   borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  borderColor: borderColor,
                 }}
               >
                 <User size={18} color={theme.textMuted} />
                 <TextInput
-                  placeholder="e.g. Rahul Sharma"
-                  placeholderTextColor={theme.textMuted}
                   value={displayName}
                   onChangeText={setDisplayName}
-                  autoCapitalize="words"
+                  placeholder="e.g. Ramesh Sharma"
+                  placeholderTextColor={theme.textMuted}
                   style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
                 />
               </View>
@@ -151,27 +174,27 @@ export default function CreateProfileScreen() {
             {/* Email */}
             <View>
               <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                EMAIL (OPTIONAL)
+                EMAIL ADDRESS (OPTIONAL)
               </Text>
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
+                  backgroundColor: inputBg,
+                  borderRadius: 18,
                   paddingHorizontal: 16,
-                  height: 54,
+                  height: 52,
                   gap: 12,
                   borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  borderColor: borderColor,
                 }}
               >
                 <Mail size={18} color={theme.textMuted} />
                 <TextInput
-                  placeholder="e.g. rahul@example.com"
-                  placeholderTextColor={theme.textMuted}
                   value={email}
                   onChangeText={setEmail}
+                  placeholder="ramesh@garage.com"
+                  placeholderTextColor={theme.textMuted}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
@@ -180,46 +203,46 @@ export default function CreateProfileScreen() {
             </View>
 
             {error && (
-              <Text style={{ color: isDark ? '#F87171' : '#DC2626', fontSize: 13, textAlign: 'center', fontWeight: '600' }}>
+              <Text style={{ color: isDark ? '#F87171' : '#DC2626', fontSize: 13, fontWeight: '600', marginTop: 4 }}>
                 {error}
               </Text>
             )}
 
-            {/* Solid Obsidian Black Pill CTA Button */}
+            {/* Midnight Navy CTA */}
             <TouchableOpacity
               onPress={handleCreateProfile}
               disabled={isLoading}
               activeOpacity={0.88}
               style={{
-                marginTop: 6,
-                backgroundColor: isDark ? '#FFFFFF' : '#121214',
+                backgroundColor: '#0C1829',
                 paddingVertical: 18,
                 borderRadius: 34,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
+                marginTop: 6,
                 shadowColor: '#000',
-                shadowOpacity: 0.2,
+                shadowOpacity: 0.35,
                 shadowRadius: 10,
                 shadowOffset: { width: 0, height: 4 },
                 elevation: 6,
               }}
             >
               {isLoading ? (
-                <ActivityIndicator color={isDark ? '#121214' : '#FFFFFF'} />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <>
-                  <Check size={20} color={isDark ? '#121214' : '#FFFFFF'} strokeWidth={2.5} />
-                  <Text style={{ color: isDark ? '#121214' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                    Complete Setup
+                  <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                    Save & Continue
                   </Text>
                 </>
               )}
             </TouchableOpacity>
-          </GlassCard>
+          </View>
         </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }

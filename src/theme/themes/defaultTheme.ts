@@ -1,52 +1,54 @@
 // ============================================================
-// Default Theme — Purple/Blue Glassmorphic
-// Refined with Soft Modern Dark Mode & Crisp Clean Light Mode
+// Default Theme — Sky Blue & Midnight Navy Luxury Aesthetic
+// Directly matching media_1790189780212.png & media_1790189816628.png
+// True dark black background with high-contrast white text for dark mode
 // ============================================================
 
 import { EnterpriseTheme } from '../theme.types';
 
+// Dark Mode: Pure deep dark black background with high-contrast white text
 export const defaultTheme: EnterpriseTheme = {
   // Brand
   primary: '#FFFFFF',
-  secondary: '#38BDF8',
-  accent: '#10B981',
+  secondary: '#6B9FE8',
+  accent: '#00C896',
 
-  // Backgrounds — Sophisticated deep luxury night
-  background: '#12141A',
-  surface: '#1A1E27',
-  surfaceAlt: '#222834',
+  // Backgrounds — True dark black with deep navy surfaces
+  background: '#070A0F',
+  surface: '#111622',
+  surfaceAlt: '#182030',
 
-  // Text
-  text: '#F8FAFC',
+  // Text — Crisp white contrast
+  text: '#FFFFFF',
   textSecondary: '#94A3B8',
   textMuted: '#64748B',
-  textInverse: '#0F172A',
+  textInverse: '#070A0F',
 
   // Semantic
-  error: '#F43F5E',
-  success: '#10B981',
+  error: '#EF4444',
+  success: '#00C896',
   warning: '#F59E0B',
-  info: '#38BDF8',
+  info: '#6B9FE8',
 
   // Borders
   border: 'rgba(255, 255, 255, 0.1)',
   borderLight: 'rgba(255, 255, 255, 0.05)',
 
   // Glass
-  glassOpacity: 0.12,
+  glassOpacity: 0.15,
   glassBlur: 20,
   glassBorder: 'rgba(255, 255, 255, 0.12)',
   glassSurface: 'rgba(255, 255, 255, 0.06)',
 
   // Gradients
-  gradientStart: '#1E2640',
-  gradientEnd: '#121829',
+  gradientStart: '#111622',
+  gradientEnd: '#070A0F',
   gradientAngle: 135,
 
   // Shape — Mega-curved luxury radius
   cardRadius: 28,
-  buttonRadius: 32,
-  inputRadius: 20,
+  buttonRadius: 30,
+  inputRadius: 22,
   chipRadius: 24,
 
   // Spacing
@@ -54,46 +56,47 @@ export const defaultTheme: EnterpriseTheme = {
   sectionPadding: 16,
 };
 
+// Light Mode: Signature vibrant Sky Blue backdrop, Crisp White sheets, Midnight Navy hero & dock
 export const defaultLightTheme: EnterpriseTheme = {
   ...defaultTheme,
-  primary: '#121214',
-  secondary: '#27272A',
-  accent: '#10B981',
+  primary: '#0C1829',
+  secondary: '#6B9FE8',
+  accent: '#00C896',
 
-  // Backgrounds — Luxury warm sand paper canvas & sand secondary cards (Nestora style)
-  background: '#F8F6F2',
+  // Backgrounds — Sky Blue canvas backdrop with pure white sheets & cards
+  background: '#6B9FE8',
   surface: '#FFFFFF',
-  surfaceAlt: '#EFECE6',
+  surfaceAlt: '#F4F7FC',
 
-  // Text — High-contrast deep charcoal typography
-  text: '#18181B',
-  textSecondary: '#52525B',
-  textMuted: '#8E8E93',
+  // Text — High-contrast deep midnight navy typography
+  text: '#0C1829',
+  textSecondary: '#475569',
+  textMuted: '#64748B',
   textInverse: '#FFFFFF',
 
   // Semantic
-  error: '#E11D48',
-  success: '#10B981',
-  warning: '#D97706',
-  info: '#2563EB',
+  error: '#EF4444',
+  success: '#00C896',
+  warning: '#F59E0B',
+  info: '#3B82F6',
 
   // Borders
-  border: 'rgba(0, 0, 0, 0.06)',
-  borderLight: 'rgba(0, 0, 0, 0.03)',
+  border: 'rgba(12, 24, 41, 0.08)',
+  borderLight: 'rgba(12, 24, 41, 0.04)',
 
   // Glass
-  glassOpacity: 0.92,
+  glassOpacity: 0.95,
   glassBlur: 16,
-  glassBorder: 'rgba(0, 0, 0, 0.06)',
+  glassBorder: 'rgba(12, 24, 41, 0.08)',
   glassSurface: '#FFFFFF',
 
   // Gradients
-  gradientStart: '#F8F6F2',
-  gradientEnd: '#EDE8E1',
+  gradientStart: '#6B9FE8',
+  gradientEnd: '#5B93E1',
 
   // Shape
   cardRadius: 28,
-  buttonRadius: 32,
-  inputRadius: 20,
+  buttonRadius: 30,
+  inputRadius: 22,
   chipRadius: 24,
 };

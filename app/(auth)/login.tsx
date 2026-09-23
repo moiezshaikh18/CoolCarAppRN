@@ -1,6 +1,6 @@
 // ============================================================
 // Login Screen — Authentication Portal
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState } from 'react';
@@ -11,12 +11,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Eye, EyeOff, Phone } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, Phone, Lock, Mail } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
-import { GlassCard } from '../../src/components/common/GlassCard';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE } from '../../src/features/enterprise/mockEnterprise';
@@ -74,16 +74,22 @@ export default function LoginScreen() {
     });
   };
 
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const inputBg = isDark ? '#141926' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* Symmetrical Top Header */}
+    <View style={{ flex: 1, backgroundColor: skyBg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 14,
-          paddingHorizontal: 22,
-          paddingBottom: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 24,
         }}
       >
         <TouchableOpacity
@@ -92,181 +98,182 @@ export default function LoginScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: isDark ? '#1C212B' : '#EFECE6',
+            backgroundColor: 'rgba(255,255,255,0.22)',
             alignItems: 'center',
             justifyContent: 'center',
+            marginBottom: 16,
           }}
         >
-          <ArrowLeft size={20} color={theme.text} />
+          <ArrowLeft size={20} color="#FFFFFF" />
         </TouchableOpacity>
+
+        <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>
+          Welcome Back
+        </Text>
+        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4, fontWeight: '500' }}>
+          Sign in to manage your workshop operations
+        </Text>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 60 }}
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+        }}
       >
-        {/* Title Section */}
-        <View style={{ marginTop: 12, marginBottom: 28 }}>
-          <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            Account Access
-          </Text>
-          <Text style={{ color: theme.text, fontSize: 32, fontWeight: '900', marginTop: 2, letterSpacing: -0.5 }}>
-            Welcome Back
-          </Text>
-          <Text style={{ color: theme.textSecondary, fontSize: 15, marginTop: 4 }}>
-            Sign in to manage your workshop operations
-          </Text>
-        </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 }}
+        >
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: borderColor,
+              gap: 16,
+              marginBottom: 20,
+            }}
+          >
+            {/* Email or Phone Input */}
+            <View>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                EMAIL OR PHONE NUMBER
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: inputBg,
+                  borderRadius: 18,
+                  paddingHorizontal: 16,
+                  height: 52,
+                  gap: 12,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                }}
+              >
+                <Mail size={18} color={theme.textMuted} />
+                <TextInput
+                  value={identifier}
+                  onChangeText={setIdentifier}
+                  placeholder="Enter email or 10-digit mobile"
+                  placeholderTextColor={theme.textMuted}
+                  autoCapitalize="none"
+                  style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
+                />
+              </View>
+            </View>
 
-        {/* Form Container in Warm Sand */}
-        <GlassCard variant="sand" padding={22} style={{ borderRadius: 28, gap: 18 }}>
-          {/* Email / Phone Field */}
-          <View>
-            <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-              EMAIL OR PHONE NUMBER
-            </Text>
-            <TextInput
-              value={identifier}
-              onChangeText={setIdentifier}
-              placeholder="e.g. owner@garage.com"
-              placeholderTextColor={theme.textMuted}
-              autoCapitalize="none"
-              style={{
-                backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                borderRadius: 20,
-                paddingHorizontal: 16,
-                height: 54,
-                color: theme.text,
-                fontSize: 15,
-                fontWeight: '600',
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-              }}
-            />
-          </View>
+            {/* Password Input */}
+            <View>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                PASSWORD
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: inputBg,
+                  borderRadius: 18,
+                  paddingHorizontal: 16,
+                  height: 52,
+                  gap: 12,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                }}
+              >
+                <Lock size={18} color={theme.textMuted} />
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter your password"
+                  placeholderTextColor={theme.textMuted}
+                  secureTextEntry={!showPassword}
+                  style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  {showPassword ? (
+                    <EyeOff size={18} color={theme.textMuted} />
+                  ) : (
+                    <Eye size={18} color={theme.textMuted} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
 
-          {/* Password Field */}
-          <View>
-            <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-              PASSWORD
-            </Text>
-            <View
+            {/* Midnight Navy Sign In Button */}
+            <TouchableOpacity
+              onPress={handleLogin}
+              activeOpacity={0.88}
               style={{
-                flexDirection: 'row',
+                backgroundColor: '#0C1829',
+                paddingVertical: 18,
+                borderRadius: 34,
                 alignItems: 'center',
-                backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                borderRadius: 20,
-                paddingHorizontal: 16,
-                height: 54,
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                justifyContent: 'center',
+                marginTop: 6,
+                shadowColor: '#000',
+                shadowOpacity: 0.35,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 6,
               }}
             >
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor={theme.textMuted}
-                secureTextEntry={!showPassword}
-                style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? (
-                  <EyeOff size={18} color={theme.textMuted} />
-                ) : (
-                  <Eye size={18} color={theme.textMuted} />
-                )}
-              </TouchableOpacity>
-            </View>
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                Sign In
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Forgot Password */}
-          <TouchableOpacity
-            onPress={() => Alert.alert('Forgot Password', 'Password reset instructions sent.')}
-            style={{ alignSelf: 'flex-end' }}
-          >
-            <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '700' }}>
-              Forgot Password?
-            </Text>
-          </TouchableOpacity>
+          {/* Divider */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16, gap: 12 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: borderColor }} />
+            <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700' }}>OR CONTINUE WITH</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: borderColor }} />
+          </View>
 
-          {/* Solid Obsidian Black Pill Login Button */}
-          <TouchableOpacity
-            onPress={handleLogin}
-            activeOpacity={0.88}
-            style={{
-              backgroundColor: isDark ? '#FFFFFF' : '#121214',
-              paddingVertical: 18,
-              borderRadius: 34,
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOpacity: 0.2,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 6,
-            }}
-          >
-            <Text style={{ color: isDark ? '#121214' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              Sign In
-            </Text>
-          </TouchableOpacity>
-        </GlassCard>
-
-        {/* Divider */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />
-          <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            or continue with
-          </Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />
-        </View>
-
-        {/* Phone OTP and Google Buttons */}
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+          {/* OTP Quick Login */}
           <TouchableOpacity
             onPress={handlePhoneOTPFlow}
+            activeOpacity={0.88}
             style={{
-              flex: 1,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
+              gap: 10,
+              backgroundColor: cardBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+              borderRadius: 30,
               paddingVertical: 16,
-              borderRadius: 24,
-              backgroundColor: isDark ? '#1C212B' : '#EFECE6',
+              marginBottom: 24,
             }}
           >
-            <Phone size={18} color={theme.text} />
-            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '700' }}>Phone OTP</Text>
+            <Phone size={18} color={isDark ? '#60A5FA' : '#1D4ED8'} />
+            <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
+              Sign in with OTP
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleLogin}
-            style={{
-              flex: 1,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              paddingVertical: 16,
-              borderRadius: 24,
-              backgroundColor: isDark ? '#1C212B' : '#EFECE6',
-            }}
-          >
-            <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>G</Text>
-            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '700' }}>Google</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Footer */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 }}>
-          <Text style={{ color: theme.textMuted, fontSize: 14 }}>Don&apos;t have a garage account? </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800' }}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+          {/* Sign Up Link */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+            <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: '500' }}>
+              Don't have a garage account?
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+              <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontSize: 14, fontWeight: '800' }}>
+                Create Account
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }

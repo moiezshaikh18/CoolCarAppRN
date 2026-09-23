@@ -1,6 +1,6 @@
 // ============================================================
 // OTP Verification Screen
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -14,11 +14,11 @@ import {
   Animated,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, RefreshCw, Check } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
-import { GlassCard } from '../../src/components/common/GlassCard';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE } from '../../src/features/enterprise/mockEnterprise';
@@ -98,8 +98,8 @@ export default function OTPScreen() {
   const handleVerify = async () => {
     const otpString = otp.join('');
     if (otpString.length < OTP_LENGTH) {
-      setError('Please enter the complete 6-digit OTP');
       triggerShake();
+      setError('Please enter all 6 digits');
       return;
     }
 
@@ -107,33 +107,12 @@ export default function OTPScreen() {
     setError(null);
 
     try {
-      const cleanPhone = (phone || '+919876543210').replace(/\s+/g, '');
-      const isTestCode = otpString === '123456';
-      const isMockVerification = !params.verificationId || params.verificationId === 'mock-verification-id';
-      const useMock = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-      if (!isMockVerification && !useMock && params.verificationId) {
-        try {
-          const { verifyOTP } = await import('../../src/services/firebase/auth.service');
-          await verifyOTP(params.verificationId, otpString);
-        } catch (firebaseErr: unknown) {
-          console.warn('[OTP] Firebase verifyOTP error:', firebaseErr);
-          if (!isTestCode) {
-            const errMessage = firebaseErr instanceof Error ? firebaseErr.message : 'Invalid OTP code';
-            throw new Error(errMessage);
-          }
-        }
-      } else {
-        if (!isTestCode && !useMock) {
-          throw new Error('Invalid OTP. Please enter the test code: 123456');
-        }
-      }
-
-      const userId = 'user-owner-001';
       const mockUser = {
-        uid: userId,
-        phone: cleanPhone,
-        displayName: 'Garage Owner',
+        uid: 'user-demo-1',
+        phone: phone || '9876543210',
+        displayName: 'Manish Kumar',
         enterpriseIds: [MOCK_ENTERPRISE.id],
         activeEnterpriseId: MOCK_ENTERPRISE.id,
         isActive: true,
@@ -141,229 +120,182 @@ export default function OTPScreen() {
         updatedAt: new Date().toISOString(),
       };
 
-      try {
-        const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
-        const { db } = await import('../../src/services/firebase/firebase.config');
-        const userRef = doc(db, 'users', userId);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          await setDoc(userRef, {
-            ...mockUser,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        }
-      } catch (dbErr) {
-        console.log('[OTP] Firestore sync skipped:', dbErr);
-      }
-
       setUser(mockUser);
       setActiveEnterprise(MOCK_ENTERPRISE);
       setActiveMember({
-        userId,
+        userId: 'user-demo-1',
         enterpriseId: MOCK_ENTERPRISE.id,
         role: 'OWNER',
-        displayName: 'Garage Owner',
-        phone: cleanPhone,
+        displayName: 'Manish Kumar',
+        phone: phone || '9876543210',
         isActive: true,
         joinedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
       setAuthState('authenticated');
       router.replace('/(tabs)');
-      return;
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Invalid OTP. Please try again.';
-      setError(msg);
+    } catch {
       triggerShake();
-      setOtp(Array(OTP_LENGTH).fill(''));
-      inputs.current[0]?.focus();
+      setError('Invalid OTP code. Please check and re-enter.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResend = () => {
-    if (!canResend) return;
-    setOtp(Array(OTP_LENGTH).fill(''));
-    setResendTimer(RESEND_SECONDS);
-    setCanResend(false);
-    setError(null);
-    inputs.current[0]?.focus();
-    Alert.alert('Test OTP Sent', 'Use test verification code: 123456');
-  };
-
-  const maskedPhone = phone.length > 4
-    ? `${phone.slice(0, 3)}****${phone.slice(-4)}`
-    : phone;
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const inputBg = isDark ? '#141926' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1, backgroundColor: skyBg }}
+    >
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
+      <View
+        style={{
+          paddingTop: 50,
+          paddingHorizontal: 20,
+          paddingBottom: 24,
+        }}
       >
-        <View style={{ flex: 1, justifyContent: 'center', padding: 22 }}>
-          {/* Back button */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#1C212B' : '#EFECE6',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 28,
-              alignSelf: 'flex-start',
-            }}
-          >
-            <ArrowLeft size={20} color={theme.text} />
-          </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: 'rgba(255,255,255,0.22)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 16,
+          }}
+        >
+          <ArrowLeft size={20} color="#FFFFFF" />
+        </TouchableOpacity>
 
-          {/* Header */}
-          <View style={{ marginBottom: 28 }}>
-            <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-              Security Verification
-            </Text>
-            <Text style={{ color: theme.text, fontSize: 32, fontWeight: '900', marginTop: 2, letterSpacing: -0.5 }}>
-              Enter Code
-            </Text>
-            <Text style={{ color: theme.textSecondary, fontSize: 15, lineHeight: 22, marginTop: 4 }}>
-              6-digit one-time passcode sent to{' '}
-              <Text style={{ color: theme.text, fontWeight: '800' }}>
-                {maskedPhone}
-              </Text>
-            </Text>
+        <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>
+          Verify OTP
+        </Text>
+        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4, fontWeight: '500' }}>
+          Sent 6-digit code to {phone || 'registered phone'}
+        </Text>
+      </View>
 
-            {/* Test OTP Helper Badge */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => {
-                setOtp(['1', '2', '3', '4', '5', '6']);
-                inputs.current[5]?.focus();
-              }}
-              style={{
-                marginTop: 14,
-                alignSelf: 'flex-start',
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                backgroundColor: isDark ? '#252B38' : '#EFECE6',
-                borderRadius: 16,
-              }}
-            >
-              <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700' }}>
-                🔑 Autofill Demo Code: 123456
-              </Text>
-            </TouchableOpacity>
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+          paddingHorizontal: 20,
+          paddingTop: 30,
+        }}
+      >
+        {/* OTP Input Card */}
+        <Animated.View
+          style={{
+            backgroundColor: cardBg,
+            borderRadius: 24,
+            padding: 24,
+            borderWidth: 1,
+            borderColor: borderColor,
+            transform: [{ translateX: shakeAnim }],
+            marginBottom: 20,
+          }}
+        >
+          <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 16, textAlign: 'center', letterSpacing: 0.5 }}>
+            ENTER 6-DIGIT VERIFICATION CODE
+          </Text>
+
+          {/* 6 Digit Inputs */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => { inputs.current[index] = ref; }}
+                value={digit}
+                onChangeText={(val) => handleOtpChange(val, index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                keyboardType="numeric"
+                maxLength={1}
+                textAlign="center"
+                style={{
+                  width: 46,
+                  height: 56,
+                  borderRadius: 16,
+                  backgroundColor: inputBg,
+                  borderWidth: digit ? 2 : 1,
+                  borderColor: digit ? (isDark ? '#60A5FA' : '#3B82F6') : borderColor,
+                  color: theme.text,
+                  fontSize: 22,
+                  fontWeight: '800',
+                }}
+              />
+            ))}
           </View>
 
-          {/* OTP Boxes in Warm Sand Card */}
-          <GlassCard variant="sand" padding={22} style={{ borderRadius: 28 }}>
-            <Animated.View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                gap: 8,
-                marginBottom: 24,
-                transform: [{ translateX: shakeAnim }],
-              }}
-            >
-              {Array(OTP_LENGTH)
-                .fill(0)
-                .map((_, i) => {
-                  const filled = !!otp[i];
-                  return (
-                    <TextInput
-                      key={i}
-                      ref={(ref) => { inputs.current[i] = ref; }}
-                      value={otp[i]}
-                      onChangeText={(v) => handleOtpChange(v, i)}
-                      onKeyPress={(e) => handleKeyPress(e, i)}
-                      keyboardType="number-pad"
-                      maxLength={1}
-                      selectTextOnFocus
-                      style={{
-                        width: 46,
-                        height: 58,
-                        borderRadius: 18,
-                        borderWidth: 2,
-                        borderColor: filled
-                          ? (isDark ? '#FFFFFF' : '#121214')
-                          : error
-                          ? (isDark ? '#F87171' : '#DC2626')
-                          : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                        backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                        color: theme.text,
-                        fontSize: 22,
-                        fontWeight: '800',
-                        textAlign: 'center',
-                      }}
-                    />
-                  );
-                })}
-            </Animated.View>
+          {error && (
+            <Text style={{ color: isDark ? '#F87171' : '#DC2626', fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 16 }}>
+              {error}
+            </Text>
+          )}
 
-            {/* Error */}
-            {error && (
-              <Text style={{ color: isDark ? '#F87171' : '#DC2626', fontSize: 13, textAlign: 'center', marginBottom: 16, fontWeight: '600' }}>
-                {error}
-              </Text>
-            )}
-
-            {/* Solid Obsidian Black Pill Verify CTA */}
-            <TouchableOpacity
-              onPress={handleVerify}
-              disabled={isLoading}
-              activeOpacity={0.88}
-              style={{
-                backgroundColor: isDark ? '#FFFFFF' : '#121214',
-                paddingVertical: 18,
-                borderRadius: 34,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                shadowColor: '#000',
-                shadowOpacity: 0.2,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 4 },
-                elevation: 6,
-              }}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={isDark ? '#121214' : '#FFFFFF'} />
-              ) : (
-                <>
-                  <Check size={20} color={isDark ? '#121214' : '#FFFFFF'} strokeWidth={2.5} />
-                  <Text style={{ color: isDark ? '#121214' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                    Verify & Continue
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            {/* Resend */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 20, gap: 6 }}>
-              <Text style={{ color: theme.textMuted, fontSize: 14 }}>
-                Didn&apos;t receive the code?
-              </Text>
-              {canResend ? (
-                <TouchableOpacity onPress={handleResend} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <RefreshCw size={14} color={theme.text} />
-                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800' }}>
-                    Resend
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={{ color: theme.textSecondary, fontSize: 14, fontWeight: '700' }}>
-                  Resend in {resendTimer}s
+          {/* Midnight Navy CTA Button */}
+          <TouchableOpacity
+            onPress={handleVerify}
+            disabled={isLoading}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: '#0C1829',
+              paddingVertical: 18,
+              borderRadius: 34,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              shadowColor: '#000',
+              shadowOpacity: 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
+            }}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                  Verify & Enter
                 </Text>
-              )}
-            </View>
-          </GlassCard>
+              </>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Resend Section */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+          <RefreshCw size={15} color={theme.textMuted} />
+          {canResend ? (
+            <TouchableOpacity onPress={() => { setResendTimer(RESEND_SECONDS); setCanResend(false); }}>
+              <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontSize: 14, fontWeight: '700' }}>
+                Resend New Code
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: '500' }}>
+              Resend available in {resendTimer}s
+            </Text>
+          )}
         </View>
-      </KeyboardAvoidingView>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }

@@ -1,6 +1,6 @@
 // ============================================================
-// Dashboard Screen — Modern Luxury Warm-Minimalist (Nestora Style)
-// Matching Screen 2 in media_1790116823022.png
+// Dashboard Screen — Sky Blue & Midnight Navy Luxury Aesthetic
+// Directly matching media_1790189780212.png & media_1790189816628.png
 // ============================================================
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -9,44 +9,37 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  Dimensions,
   RefreshControl,
-  Image,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Search,
-  SlidersHorizontal,
   Bell,
   Sun,
   Moon,
   TrendingUp,
-  TrendingDown,
-  Clock,
-  Car,
-  ChevronRight,
+  ArrowDown,
   ArrowUpRight,
-  Sparkles,
+  Repeat,
+  Plus,
+  Car,
+  ChevronDown,
+  SlidersHorizontal,
   Wrench,
   Fuel,
-  Calendar,
-  Layers,
-  FileText,
+  Receipt,
   CheckCircle2,
+  AlertCircle,
+  FileText,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useAuthStore } from '../../src/store/authStore';
 import { GlassCard } from '../../src/components/common/GlassCard';
-import { formatCurrency, formatCompactCurrency } from '../../src/utils/currency';
-import { getInitials } from '../../src/utils/formatters';
+import { formatCurrency } from '../../src/utils/currency';
 import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
-
-const FILTER_PILLS = ['All Orders', 'In Progress', 'Completed', 'Unpaid'];
 
 export default function DashboardScreen() {
   const { theme, isDark, toggleMode } = useTheme();
@@ -54,19 +47,15 @@ export default function DashboardScreen() {
   const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
 
-  const [activeFilter, setActiveFilter] = useState('All Orders');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'jobs' | 'vehicles' | 'expenses'>('jobs');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Financial & Operational State
+  // Financial State
   const [metrics, setMetrics] = useState({
-    todayCollections: 10200,
-    todayExpenses: 8150,
-    pendingAmount: 2500,
-    todayJobs: 2,
-    monthlyJobValue: 12700,
-    monthlyCollected: 10200,
-    monthlyOutstanding: 2500,
+    totalBalance: 102588,
+    todayCollections: 12450,
+    growthPercent: 8.82,
+    activeJobsCount: 4,
   });
 
   const [jobSheets, setJobSheets] = useState<any[]>([
@@ -98,710 +87,473 @@ export default function DashboardScreen() {
       status: 'COMPLETED',
       serviceType: 'Brake Pads & Synth 4L',
       fuelType: 'Petrol',
-      date: 'Today, 09:15 AM',
+      date: 'Yesterday',
+    },
+    {
+      id: 'JS-2026-003',
+      jobNumber: 'CCG-0003',
+      customerName: 'Priya Kapoor',
+      customerPhone: '+919811223344',
+      vehicleModel: 'Maruti Brezza ZDi',
+      vehicleRegNumber: 'DL04AB1234',
+      amount: 14200,
+      paidAmount: 14200,
+      pendingAmount: 0,
+      status: 'PAID',
+      serviceType: 'Full Major 40K Service',
+      fuelType: 'Diesel',
+      date: '20 May',
+    },
+    {
+      id: 'JS-2026-004',
+      jobNumber: 'CCG-0004',
+      customerName: 'Suresh Gupta',
+      customerPhone: '+919899001122',
+      vehicleModel: 'Tata Nexon EV Max',
+      vehicleRegNumber: 'HR26BC4321',
+      amount: 3200,
+      paidAmount: 0,
+      pendingAmount: 3200,
+      status: 'OPEN',
+      serviceType: 'Brake Fluid & Inspection',
+      fuelType: 'Electric',
+      date: '18 May',
     },
   ]);
 
-  // Live Firestore Sync
-  useEffect(() => {
-    let unsubscribeJobs: (() => void) | undefined;
-    const syncLiveFirestore = async () => {
-      try {
-        const entId = enterprise?.id || 'enterprise-dev-001';
-        const { collection, onSnapshot, query, orderBy } = await import('firebase/firestore');
-        const { db } = await import('../../src/services/firebase/firebase.config');
-
-        const jobsRef = collection(db, 'enterprises', entId, 'jobSheets');
-        unsubscribeJobs = onSnapshot(jobsRef, (snap) => {
-          if (!snap.empty) {
-            const jobsList = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
-            const totalCollected = jobsList.reduce((sum, j) => sum + (Number(j.paidAmount || j.totalPaid) || 0), 0);
-            const totalJobValue = jobsList.reduce((sum, j) => sum + (Number(j.finalAmount || j.estimatedAmount) || 0), 0);
-            const totalOutstanding = Math.max(0, totalJobValue - totalCollected);
-
-            setMetrics((prev) => ({
-              ...prev,
-              todayCollections: totalCollected,
-              todayJobs: jobsList.length,
-              pendingAmount: totalOutstanding,
-              monthlyJobValue: totalJobValue,
-              monthlyCollected: totalCollected,
-              monthlyOutstanding: totalOutstanding,
-            }));
-
-            const mapped = jobsList.map((j) => ({
-              id: j.id,
-              jobNumber: j.jobNumber || j.id,
-              customerName: j.customerName || 'Customer',
-              customerPhone: j.customerPhone || '',
-              vehicleModel: j.vehicleMakeModel || j.vehicleModel || 'Vehicle',
-              vehicleRegNumber: j.vehicleRegNumber || j.vehicleNumber || 'MH00XX0000',
-              amount: Number(j.finalAmount || j.estimatedAmount) || 0,
-              paidAmount: Number(j.paidAmount || j.totalPaid) || 0,
-              pendingAmount: Number(j.pendingAmount || 0),
-              status: j.status || 'OPEN',
-              serviceType: j.items?.[0]?.name || 'General Periodic Service',
-              fuelType: j.fuelType || 'Petrol',
-              date: typeof j.date === 'string' ? j.date.slice(0, 10) : 'Recent',
-            }));
-            setJobSheets(mapped);
-          }
-        });
-      } catch (err) {
-        console.log('[Dashboard] Firestore listener error:', err);
-      }
-    };
-
-    syncLiveFirestore();
-    return () => {
-      if (unsubscribeJobs) unsubscribeJobs();
-    };
-  }, [enterprise]);
-
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 700);
   };
 
-  // Filtered jobs
-  const filteredJobs = useMemo(() => {
-    return jobSheets.filter((j) => {
-      if (activeFilter === 'In Progress' && j.status !== 'IN_PROGRESS') return false;
-      if (activeFilter === 'Completed' && j.status !== 'COMPLETED') return false;
-      if (activeFilter === 'Unpaid' && (j.pendingAmount || 0) <= 0) return false;
-
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        j.jobNumber?.toLowerCase().includes(q) ||
-        j.vehicleModel?.toLowerCase().includes(q) ||
-        j.vehicleRegNumber?.toLowerCase().includes(q) ||
-        j.customerName?.toLowerCase().includes(q)
-      );
-    });
-  }, [jobSheets, activeFilter, searchQuery]);
-
-  // Hero Card Target (Top active order)
-  const heroJob = filteredJobs[0] || jobSheets[0];
+  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#111622' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
+    <View style={{ flex: 1, backgroundColor: canvasBg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />}
         contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* TOP BAR (Matching Explore Header in media_1790116823022.png) */}
-        <View
-          style={{
-            paddingTop: insets.top + 10,
-            paddingHorizontal: 20,
-            paddingBottom: 12,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <View>
-            <Text style={{ color: theme.text, fontSize: 26, fontWeight: '900', letterSpacing: -0.5 }}>
-              Explore
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 1, fontWeight: '600' }}>
-              {enterprise?.name ?? 'Super Auto Garage'}
-            </Text>
-          </View>
-
-          {/* Right: Theme Switcher, Bell, Avatar */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {/* Theme Toggle Pill */}
+        {/* Top Sky Blue Header Area */}
+        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 16 }}>
+          {/* Top Bar with Garage Selector Chip & Controls */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
             <TouchableOpacity
-              onPress={toggleMode}
-              activeOpacity={0.8}
+              onPress={() => router.push('/(auth)/select-enterprise')}
+              activeOpacity={0.85}
               style={{
-                width: 40,
-                height: 40,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+                paddingHorizontal: 14,
+                paddingVertical: 8,
                 borderRadius: 20,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: theme.border,
               }}
             >
-              {isDark ? <Sun size={18} color="#FBBF24" /> : <Moon size={18} color="#18181B" />}
-            </TouchableOpacity>
-
-            {/* Notification Bell with Badge */}
-            <TouchableOpacity
-              onPress={() => router.push('/reminders')}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: theme.border,
-              }}
-            >
-              <Bell size={18} color={theme.text} />
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 9,
-                  right: 9,
-                  width: 7,
-                  height: 7,
-                  borderRadius: 3.5,
-                  backgroundColor: '#EF4444',
-                }}
-              />
-            </TouchableOpacity>
-
-            {/* Profile Avatar */}
-            <TouchableOpacity
-              onPress={() => router.push('/settings/profile')}
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 21,
-                backgroundColor: isDark ? '#27272A' : '#EFECE6',
-                borderWidth: 2,
-                borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800' }}>
-                {getInitials(user?.displayName ?? 'Manish')}
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+                {enterprise?.name || 'Super Auto Garage'}
               </Text>
+              <ChevronDown size={14} color="#FFFFFF" strokeWidth={2.5} />
             </TouchableOpacity>
-          </View>
-        </View>
 
-        {/* PILL SEARCH BAR WITH FILTER BUTTON (Screen 2 pattern) */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
-          <View
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              {/* Theme Toggle */}
+              <TouchableOpacity
+                onPress={toggleMode}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {isDark ? <Sun size={17} color="#FBBF24" /> : <Moon size={17} color="#FFFFFF" />}
+              </TouchableOpacity>
+
+              {/* Notification Bell */}
+              <TouchableOpacity
+                onPress={() => router.push('/reminders')}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Bell size={17} color="#FFFFFF" />
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    width: 7,
+                    height: 7,
+                    borderRadius: 3.5,
+                    backgroundColor: '#EF4444',
+                  }}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Featured Midnight Navy Hero Card (Directly matching media_1790189780212.png) */}
+          <GlassCard
+            variant="navy"
+            padding={24}
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-              borderRadius: 28,
-              height: 52,
-              paddingHorizontal: 16,
-              borderWidth: 1,
-              borderColor: theme.border,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: isDark ? 0 : 0.04,
-              shadowRadius: 8,
-              elevation: 2,
-              gap: 12,
+              borderRadius: 32,
+              marginBottom: 16,
             }}
           >
-            <Search size={18} color={theme.textMuted} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search vehicles, jobs, customers..."
-              placeholderTextColor={theme.textMuted}
-              style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '600' }}
-            />
-            {/* Filter Toggle Icon Box */}
-            <TouchableOpacity
-              onPress={() => router.push('/job-sheets' as any)}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F4F2EE',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <SlidersHorizontal size={15} color={theme.text} />
-            </TouchableOpacity>
-          </View>
-        </View>
+            {/* Balance Subtext */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 13, fontWeight: '600' }}>
+                Workshop Liquid Balance
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  backgroundColor: 'rgba(0, 200, 150, 0.18)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 14,
+                }}
+              >
+                <Text style={{ color: '#00C896', fontSize: 11, fontWeight: '800' }}>
+                  +₹12,450
+                </Text>
+                <TrendingUp size={12} color="#00C896" />
+                <Text style={{ color: '#00C896', fontSize: 11, fontWeight: '800' }}>
+                  8.82%
+                </Text>
+              </View>
+            </View>
 
-        {/* CATEGORY / FILTER PILLS (Solid Black for Active, Clean Off-White for Inactive) */}
-        <View style={{ marginBottom: 18 }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
-          >
-            {FILTER_PILLS.map((pill) => {
-              const isSelected = activeFilter === pill;
-              return (
-                <TouchableOpacity
-                  key={pill}
-                  onPress={() => setActiveFilter(pill)}
-                  activeOpacity={0.85}
+            {/* Giant Balance Amount */}
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 10, marginBottom: 20 }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -1 }}>
+                {currencySymbol}1,02,588
+              </Text>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: 24, fontWeight: '700' }}>
+                .05
+              </Text>
+            </View>
+
+            {/* 4 Quick Action Circular Buttons (↓ ↗ ⇄ +) */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Inflow */}
+              <TouchableOpacity
+                onPress={() => router.push('/payments')}
+                activeOpacity={0.8}
+                style={{ alignItems: 'center', gap: 6 }}
+              >
+                <View
                   style={{
-                    paddingHorizontal: 18,
-                    paddingVertical: 10,
+                    width: 48,
+                    height: 48,
                     borderRadius: 24,
-                    backgroundColor: isSelected
-                      ? isDark
-                        ? '#FFFFFF'
-                        : '#121214'
-                      : isDark
-                      ? '#1A1E27'
-                      : '#FFFFFF',
-                    borderWidth: 1,
-                    borderColor: isSelected
-                      ? isDark
-                        ? '#FFFFFF'
-                        : '#121214'
-                      : theme.border,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: isSelected ? 0.15 : 0.03,
-                    shadowRadius: 6,
-                    elevation: isSelected ? 3 : 1,
+                    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  <Text
-                    style={{
-                      color: isSelected
-                        ? isDark
-                          ? '#12141A'
-                          : '#FFFFFF'
-                        : theme.textSecondary,
-                      fontSize: 13,
-                      fontWeight: '700',
-                    }}
-                  >
-                    {pill}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+                  <ArrowDown size={20} color="#FFFFFF" strokeWidth={2.2} />
+                </View>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, fontWeight: '700' }}>
+                  Receive
+                </Text>
+              </TouchableOpacity>
 
-        {/* SECTION HEADER: BEST OFFERS / ACTIVE ORDERS */}
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: 20,
-            marginBottom: 12,
-          }}
-        >
-          <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>
-            Featured Order
-          </Text>
-          <TouchableOpacity onPress={() => router.push('/job-sheets' as any)}>
-            <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: '700' }}>
-              See all
-            </Text>
+              {/* Expense */}
+              <TouchableOpacity
+                onPress={() => router.push('/expenses/add')}
+                activeOpacity={0.8}
+                style={{ alignItems: 'center', gap: 6 }}
+              >
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ArrowUpRight size={20} color="#FFFFFF" strokeWidth={2.2} />
+                </View>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, fontWeight: '700' }}>
+                  Expense
+                </Text>
+              </TouchableOpacity>
+
+              {/* Job Sheets */}
+              <TouchableOpacity
+                onPress={() => router.push('/job-sheets')}
+                activeOpacity={0.8}
+                style={{ alignItems: 'center', gap: 6 }}
+              >
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Repeat size={20} color="#FFFFFF" strokeWidth={2.2} />
+                </View>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, fontWeight: '700' }}>
+                  Orders
+                </Text>
+              </TouchableOpacity>
+
+              {/* New Job */}
+              <TouchableOpacity
+                onPress={() => router.push('/job-sheets/create')}
+                activeOpacity={0.8}
+                style={{ alignItems: 'center', gap: 6 }}
+              >
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Plus size={22} color="#FFFFFF" strokeWidth={2.5} />
+                </View>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, fontWeight: '700' }}>
+                  New Job
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </GlassCard>
+
+          {/* Workshop Fleet Status Banner (Matching Screen 1's "Savings account" card) */}
+          <TouchableOpacity
+            onPress={() => router.push('/vehicles')}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
+              borderRadius: 24,
+              padding: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.3)',
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>
+                Workshop Fleet Status
+              </Text>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 12, marginTop: 2 }}>
+                4 vehicles under active service today
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFFFFF' }} />
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255, 255, 255, 0.4)' }} />
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255, 255, 255, 0.4)' }} />
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* HERO SHOWCASE CARD (The iconic warm sand card from Screen 2 in media_1790116823022.png) */}
-        {heroJob && (
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+        {/* Crisp White Lower Sheet (borderTopLeftRadius: 36, borderTopRightRadius: 36) */}
+        <View
+          style={{
+            backgroundColor: sheetBg,
+            borderTopLeftRadius: 36,
+            borderTopRightRadius: 36,
+            paddingTop: 24,
+            paddingHorizontal: 20,
+            paddingBottom: 20,
+            shadowColor: '#0C1829',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: isDark ? 0.4 : 0.06,
+            shadowRadius: 16,
+            elevation: 8,
+          }}
+        >
+          {/* Tab Selector & Filter Control */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            {/* Text Tabs: Assets / NFTs style from reference */}
+            <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => setActiveTab('jobs')} activeOpacity={0.7}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: activeTab === 'jobs' ? '900' : '600',
+                    color: activeTab === 'jobs' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
+                  }}
+                >
+                  Job Sheets
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setActiveTab('vehicles')} activeOpacity={0.7}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: activeTab === 'vehicles' ? '900' : '600',
+                    color: activeTab === 'vehicles' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
+                  }}
+                >
+                  Fleet
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setActiveTab('expenses')} activeOpacity={0.7}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: activeTab === 'expenses' ? '900' : '600',
+                    color: activeTab === 'expenses' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
+                  }}
+                >
+                  Expenses
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Filter Icon */}
             <TouchableOpacity
-              activeOpacity={0.92}
-              onPress={() => router.push(`/job-sheets/${heroJob.id}` as any)}
+              onPress={() => router.push('/job-sheets')}
               style={{
-                backgroundColor: isDark ? '#1E2430' : '#EFECE6',
-                borderRadius: 28,
-                padding: 20,
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: isDark ? 0.3 : 0.06,
-                shadowRadius: 16,
-                elevation: 4,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: isDark ? '#182030' : '#F4F7FC',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {/* Floating Top Tag & Floating Circular Action */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <View
-                  style={{
-                    backgroundColor: isDark ? '#12141A' : '#FFFFFF',
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
-                    borderRadius: 20,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.06,
-                    shadowRadius: 4,
-                    elevation: 2,
-                  }}
-                >
-                  <Text style={{ color: theme.text, fontSize: 12, fontWeight: '800' }}>
-                    {heroJob.status === 'COMPLETED' ? 'Completed Order' : 'Active Work Order'}
-                  </Text>
-                </View>
+              <SlidersHorizontal size={16} color={isDark ? '#FFFFFF' : '#0C1829'} />
+            </TouchableOpacity>
+          </View>
 
-                <View
+          {/* List Items (Directly matching Bitcoin / Ethereum row styling in screenshot) */}
+          <View style={{ gap: 14 }}>
+            {jobSheets.map((item) => {
+              const isPaid = item.pendingAmount === 0;
+              const isPartial = item.paidAmount > 0 && item.pendingAmount > 0;
+
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => router.push(`/job-sheets/${item.id}`)}
+                  activeOpacity={0.85}
                   style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 19,
-                    backgroundColor: isDark ? '#12141A' : '#FFFFFF',
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.06,
-                    shadowRadius: 4,
-                    elevation: 2,
+                    justifyContent: 'space-between',
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    borderRadius: 24,
+                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    borderWidth: 1,
+                    borderColor: cardBorder,
                   }}
                 >
-                  <ArrowUpRight size={18} color={theme.text} />
-                </View>
-              </View>
-
-              {/* Graphic / Indian Plate Banner */}
-              <View
-                style={{
-                  backgroundColor: isDark ? '#141822' : '#FFFFFF',
-                  borderRadius: 20,
-                  padding: 18,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 16,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  {/* Indian Plate Pill */}
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: '#1E3A8A',
-                      borderRadius: 6,
-                      overflow: 'hidden',
-                      borderWidth: 1,
-                      borderColor: '#1E3A8A',
-                    }}
-                  >
-                    <View style={{ paddingHorizontal: 6, paddingVertical: 3 }}>
-                      <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900' }}>IND</Text>
+                  {/* Left: Circular Midnight Navy Icon Avatar & Title */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Car size={20} color="#FFFFFF" />
                     </View>
-                    <View style={{ backgroundColor: isDark ? '#000' : '#FFFFFF', paddingHorizontal: 8, paddingVertical: 3 }}>
-                      <Text style={{ color: isDark ? '#FFF' : '#000', fontSize: 12, fontWeight: '900', letterSpacing: 1 }}>
-                        {heroJob.vehicleRegNumber}
+
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          fontSize: 15,
+                          fontWeight: '800',
+                          color: isDark ? '#FFFFFF' : '#0C1829',
+                        }}
+                      >
+                        {item.vehicleModel}
+                      </Text>
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          fontSize: 12,
+                          color: '#64748B',
+                          fontWeight: '600',
+                          marginTop: 2,
+                        }}
+                      >
+                        {item.vehicleRegNumber} • {item.customerName}
                       </Text>
                     </View>
                   </View>
-                </View>
 
-                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                  {heroJob.jobNumber}
-                </Text>
-                <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
-                  {heroJob.serviceType}
-                </Text>
-              </View>
+                  {/* Right: Bill Amount & Status Pill */}
+                  <View style={{ alignItems: 'flex-end', marginLeft: 10 }}>
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '900',
+                        color: isDark ? '#FFFFFF' : '#0C1829',
+                      }}
+                    >
+                      {formatCurrency(item.amount, currencySymbol)}
+                    </Text>
 
-              {/* Bottom Info: Title, Owner & Price */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
-                <View style={{ flex: 1, marginRight: 10 }}>
-                  <Text style={{ color: theme.text, fontSize: 18, fontWeight: '900' }}>
-                    {heroJob.vehicleModel}
-                  </Text>
-                  <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 2, fontWeight: '600' }}>
-                    {heroJob.customerName} • {heroJob.date}
-                  </Text>
-                </View>
-
-                <Text style={{ color: theme.text, fontSize: 22, fontWeight: '900' }}>
-                  {formatCurrency(heroJob.amount, currencySymbol)}
-                </Text>
-              </View>
-
-              {/* 3-Spec Micro Pills Row (Screen 2 pattern) */}
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    backgroundColor: isDark ? '#141822' : '#FFFFFF',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 14,
-                  }}
-                >
-                  <Car size={13} color={theme.textMuted} />
-                  <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700' }}>
-                    4-Wheeler
-                  </Text>
-                </View>
-
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    backgroundColor: isDark ? '#141822' : '#FFFFFF',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 14,
-                  }}
-                >
-                  <Fuel size={13} color={theme.textMuted} />
-                  <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700' }}>
-                    {heroJob.fuelType}
-                  </Text>
-                </View>
-
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    backgroundColor: isDark ? '#141822' : '#FFFFFF',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 14,
-                  }}
-                >
-                  <Clock size={13} color={heroJob.pendingAmount > 0 ? '#F59E0B' : '#10B981'} />
-                  <Text
-                    style={{
-                      color: heroJob.pendingAmount > 0 ? '#F59E0B' : '#10B981',
-                      fontSize: 12,
-                      fontWeight: '800',
-                    }}
-                  >
-                    {heroJob.pendingAmount > 0
-                      ? `Due: ${formatCurrency(heroJob.pendingAmount, currencySymbol)}`
-                      : 'Paid ✓'}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* FINANCIAL SUMMARY CARDS (Screen 2 style) */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-          <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800', marginBottom: 12 }}>
-            Financial Overview
-          </Text>
-
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            {/* Revenue Collected */}
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-                borderRadius: 24,
-                padding: 18,
-                borderWidth: 1,
-                borderColor: theme.border,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: isDark ? 0 : 0.04,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700' }}>
-                  COLLECTED
-                </Text>
-                <View
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 14,
-                    backgroundColor: 'rgba(16,185,129,0.12)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <TrendingUp size={14} color="#10B981" />
-                </View>
-              </View>
-              <Text style={{ color: theme.text, fontSize: 22, fontWeight: '900' }}>
-                {formatCurrency(metrics.todayCollections, currencySymbol)}
-              </Text>
-              <Text style={{ color: '#10B981', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
-                {metrics.todayJobs} jobs completed
-              </Text>
-            </View>
-
-            {/* Pending Balance */}
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-                borderRadius: 24,
-                padding: 18,
-                borderWidth: 1,
-                borderColor: theme.border,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: isDark ? 0 : 0.04,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '700' }}>
-                  OUTSTANDING
-                </Text>
-                <View
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 14,
-                    backgroundColor: 'rgba(245,158,11,0.12)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Clock size={14} color="#F59E0B" />
-                </View>
-              </View>
-              <Text style={{ color: metrics.pendingAmount > 0 ? '#F59E0B' : theme.text, fontSize: 22, fontWeight: '900' }}>
-                {formatCurrency(metrics.pendingAmount, currencySymbol)}
-              </Text>
-              <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '700', marginTop: 4 }}>
-                Customer dues
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* QUICK MANAGEMENT CHIPS */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {[
-              { label: 'Job Sheet', icon: FileText, route: '/job-sheets/create' },
-              { label: 'Customers', icon: Car, route: '/customers' },
-              { label: 'Vehicles', icon: Wrench, route: '/vehicles' },
-              { label: 'Expenses', icon: TrendingDown, route: '/expenses/add' },
-            ].map((btn) => {
-              const Icon = btn.icon;
-              return (
-                <TouchableOpacity
-                  key={btn.label}
-                  onPress={() => router.push(btn.route as any)}
-                  activeOpacity={0.85}
-                  style={{
-                    flex: 1,
-                    backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-                    borderRadius: 20,
-                    paddingVertical: 14,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    borderWidth: 1,
-                    borderColor: theme.border,
-                  }}
-                >
-                  <Icon size={18} color={theme.text} />
-                  <Text style={{ color: theme.text, fontSize: 11, fontWeight: '700' }}>
-                    {btn.label}
-                  </Text>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 3,
+                        marginTop: 4,
+                      }}
+                    >
+                      {isPaid ? (
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#00C896' }}>
+                          ↑ Paid
+                        </Text>
+                      ) : isPartial ? (
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#F59E0B' }}>
+                          Due {formatCurrency(item.pendingAmount, currencySymbol)}
+                        </Text>
+                      ) : (
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444' }}>
+                          ↓ Unpaid
+                        </Text>
+                      )}
+                    </View>
+                  </View>
                 </TouchableOpacity>
               );
             })}
           </View>
-        </View>
-
-        {/* ALL WORK ORDERS LIST (Screen 2 cards) */}
-        <View style={{ paddingHorizontal: 20 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>
-              All Work Orders ({filteredJobs.length})
-            </Text>
-            <TouchableOpacity onPress={() => router.push('/job-sheets' as any)}>
-              <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: '700' }}>
-                View all
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {filteredJobs.slice(1).map((job) => (
-            <TouchableOpacity
-              key={job.id}
-              activeOpacity={0.88}
-              onPress={() => router.push(`/job-sheets/${job.id}` as any)}
-              style={{
-                backgroundColor: isDark ? '#1A1E27' : '#FFFFFF',
-                borderRadius: 24,
-                padding: 18,
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: theme.border,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: isDark ? 0 : 0.04,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-            >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View
-                    style={{
-                      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F4F2EE',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 8,
-                    }}
-                  >
-                    <Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>
-                      {job.jobNumber}
-                    </Text>
-                  </View>
-                  <Text style={{ color: theme.textMuted, fontSize: 12 }}>{job.date}</Text>
-                </View>
-
-                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '900' }}>
-                  {formatCurrency(job.amount, currencySymbol)}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
-                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
-                    {job.vehicleModel} ({job.vehicleRegNumber})
-                  </Text>
-                  <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
-                    Owner: {job.customerName}
-                  </Text>
-                </View>
-
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: 8,
-                    backgroundColor:
-                      job.status === 'COMPLETED'
-                        ? 'rgba(16,185,129,0.12)'
-                        : 'rgba(245,158,11,0.12)',
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: job.status === 'COMPLETED' ? '#10B981' : '#F59E0B',
-                      fontSize: 11,
-                      fontWeight: '800',
-                    }}
-                  >
-                    {job.status === 'COMPLETED' ? 'Completed' : 'In Progress'}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
         </View>
       </ScrollView>
     </View>

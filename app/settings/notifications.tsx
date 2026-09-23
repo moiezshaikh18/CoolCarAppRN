@@ -1,6 +1,6 @@
 // ============================================================
 // Notification Settings Screen — Master Design
-// Strictly follows media_1790116823022.png aesthetic
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState } from 'react';
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,9 +22,9 @@ import {
   AlertTriangle,
   Receipt,
   BarChart3,
+  Check,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
-import { GlassCard } from '../../src/components/common/GlassCard';
 
 export default function NotificationsSettingsScreen() {
   const { theme, isDark } = useTheme();
@@ -38,22 +39,24 @@ export default function NotificationsSettingsScreen() {
     Alert.alert('Preferences Saved', 'Notification alert settings updated successfully.');
   };
 
-  const canvasBg = isDark ? '#14171F' : '#F8F6F2';
-  const circleBtnBg = isDark ? '#1C212B' : '#EFECE6';
-  const primaryBtnBg = isDark ? '#FFFFFF' : '#121214';
-  const primaryBtnText = isDark ? '#121214' : '#FFFFFF';
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      {/* Symmetrical Top Header */}
+    <View style={{ flex: 1, backgroundColor: skyBg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 8,
+          paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 14,
+          paddingBottom: 20,
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          gap: 12,
         }}
       >
         <TouchableOpacity
@@ -62,214 +65,209 @@ export default function NotificationsSettingsScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: circleBtnBg,
+            backgroundColor: 'rgba(255,255,255,0.22)',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <ArrowLeft size={20} color={theme.text} />
+          <ArrowLeft size={20} color="#FFFFFF" />
         </TouchableOpacity>
-
-        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 }}>
-          Notifications
-        </Text>
-
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: circleBtnBg,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Bell size={18} color={theme.text} />
+        <View>
+          <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
+            Notifications
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
+            Alert preferences & reminders
+          </Text>
         </View>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}
-      >
-        {/* Main Notification Toggles Card */}
-        <GlassCard
-          variant="sand"
-          padding={20}
-          style={{
-            borderRadius: 28,
-            gap: 16,
-          }}
-        >
-          <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.2 }}>
-            Alert Preferences
-          </Text>
-
-          {/* Service Reminders */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, paddingRight: 12 }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Calendar size={20} color={theme.text} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
-                  Service Reminders
-                </Text>
-                <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                  Automated upcoming vehicle maintenance alerts
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={serviceReminders}
-              onValueChange={setServiceReminders}
-              trackColor={{ false: isDark ? '#262D3B' : '#DFDCD4', true: primaryBtnBg }}
-              thumbColor={serviceReminders ? primaryBtnText : '#FFFFFF'}
-            />
-          </View>
-
-          <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#DFDCD4' }} />
-
-          {/* Low Stock Alerts */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, paddingRight: 12 }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <AlertTriangle size={20} color={theme.text} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
-                  Low Inventory Alerts
-                </Text>
-                <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                  Notify when spare parts fall below threshold
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={lowStockAlerts}
-              onValueChange={setLowStockAlerts}
-              trackColor={{ false: isDark ? '#262D3B' : '#DFDCD4', true: primaryBtnBg }}
-              thumbColor={lowStockAlerts ? primaryBtnText : '#FFFFFF'}
-            />
-          </View>
-
-          <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#DFDCD4' }} />
-
-          {/* Payment Receipts */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, paddingRight: 12 }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Receipt size={20} color={theme.text} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
-                  Payment Receipts
-                </Text>
-                <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                  Notifications when customer settlements are logged
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={paymentReceipts}
-              onValueChange={setPaymentReceipts}
-              trackColor={{ false: isDark ? '#262D3B' : '#DFDCD4', true: primaryBtnBg }}
-              thumbColor={paymentReceipts ? primaryBtnText : '#FFFFFF'}
-            />
-          </View>
-
-          <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#DFDCD4' }} />
-
-          {/* Daily Financial Summary */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, paddingRight: 12 }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <BarChart3 size={20} color={theme.text} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
-                  Daily Financial Digest
-                </Text>
-                <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                  Evening summary of cash collections and expenses
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={dailySummary}
-              onValueChange={setDailySummary}
-              trackColor={{ false: isDark ? '#262D3B' : '#DFDCD4', true: primaryBtnBg }}
-              thumbColor={dailySummary ? primaryBtnText : '#FFFFFF'}
-            />
-          </View>
-        </GlassCard>
-      </ScrollView>
-
-      {/* Floating Solid Obsidian CTA Button */}
+      {/* Signature Mega-Curved Lower Content Sheet */}
       <View
         style={{
-          position: 'absolute',
-          bottom: 24,
-          left: 20,
-          right: 20,
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
         }}
       >
-        <TouchableOpacity
-          activeOpacity={0.88}
-          onPress={handleSave}
-          style={{
-            backgroundColor: primaryBtnBg,
-            paddingVertical: 18,
-            borderRadius: 34,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.18,
-            shadowRadius: 10,
-            elevation: 4,
-          }}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 60 }}
         >
-          <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
-            Save Preferences
-          </Text>
-        </TouchableOpacity>
+          {/* Main Notification Toggles Card */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: borderColor,
+              gap: 16,
+              marginBottom: 20,
+            }}
+          >
+            {/* Service Due Reminders */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, marginRight: 12 }}>
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#EFF6FF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Calendar size={20} color={isDark ? '#FFFFFF' : '#3B82F6'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
+                    Service Due Reminders
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
+                    Notify customers when periodic service is approaching
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={serviceReminders}
+                onValueChange={setServiceReminders}
+                trackColor={{ false: isDark ? '#1E293B' : '#E2E8F0', true: '#0C1829' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            <View style={{ height: 1, backgroundColor: borderColor }} />
+
+            {/* Low Stock Alerts */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, marginRight: 12 }}>
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#EFF6FF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <AlertTriangle size={20} color={isDark ? '#FFFFFF' : '#3B82F6'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
+                    Low Stock Threshold
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
+                    Trigger alert when inventory reaches minimum level
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={lowStockAlerts}
+                onValueChange={setLowStockAlerts}
+                trackColor={{ false: isDark ? '#1E293B' : '#E2E8F0', true: '#0C1829' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            <View style={{ height: 1, backgroundColor: borderColor }} />
+
+            {/* Payment Receipts */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, marginRight: 12 }}>
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#EFF6FF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Receipt size={20} color={isDark ? '#FFFFFF' : '#3B82F6'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
+                    Payment Receipts
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
+                    Auto-send digital receipts on payment collection
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={paymentReceipts}
+                onValueChange={setPaymentReceipts}
+                trackColor={{ false: isDark ? '#1E293B' : '#E2E8F0', true: '#0C1829' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            <View style={{ height: 1, backgroundColor: borderColor }} />
+
+            {/* Daily Evening Summary */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, marginRight: 12 }}>
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: isDark ? '#141926' : '#EFF6FF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <BarChart3 size={20} color={isDark ? '#FFFFFF' : '#3B82F6'} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>
+                    Daily Financial Summary
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
+                    Receive end-of-day revenue & jobs completed digest
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={dailySummary}
+                onValueChange={setDailySummary}
+                trackColor={{ false: isDark ? '#1E293B' : '#E2E8F0', true: '#0C1829' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+          </View>
+
+          {/* Midnight Navy CTA */}
+          <TouchableOpacity
+            onPress={handleSave}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: '#0C1829',
+              paddingVertical: 18,
+              borderRadius: 34,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              shadowColor: '#000',
+              shadowOpacity: 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
+            }}
+          >
+            <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              Save Alert Preferences
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
     </View>
   );

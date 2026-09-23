@@ -1,7 +1,7 @@
 // ============================================================
 // Enterprise Branding & Themes Screen — Master Section 4 & 5
 // Multi-Enterprise Dynamic Color Schemes & Garage Branding
-// Strictly follows media_1790116823022.png aesthetic
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState } from 'react';
@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,7 +25,6 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
-import { GlassCard } from '../../src/components/common/GlassCard';
 
 const ENTERPRISE_THEMES = [
   {
@@ -101,29 +101,27 @@ export default function EnterpriseBrandingScreen() {
     }
 
     setLoading(false);
-    Alert.alert(
-      'Branding Applied',
-      `Enterprise theme updated to "${themeOption.name}". Colors reflect instantly across all garage screens!`,
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Branding Updated', `Applied theme for ${themeOption.name}!`);
   };
 
-  const canvasBg = isDark ? '#14171F' : '#F8F6F2';
-  const circleBtnBg = isDark ? '#1C212B' : '#EFECE6';
-  const primaryBtnBg = isDark ? '#FFFFFF' : '#121214';
-  const primaryBtnText = isDark ? '#121214' : '#FFFFFF';
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      {/* Symmetrical Top Header */}
+    <View style={{ flex: 1, backgroundColor: skyBg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 8,
+          paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 14,
+          paddingBottom: 20,
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          gap: 12,
         }}
       >
         <TouchableOpacity
@@ -132,248 +130,169 @@ export default function EnterpriseBrandingScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: circleBtnBg,
+            backgroundColor: 'rgba(255,255,255,0.22)',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <ArrowLeft size={20} color={theme.text} />
+          <ArrowLeft size={20} color="#FFFFFF" />
         </TouchableOpacity>
-
-        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 }}>
-          Branding & Themes
-        </Text>
-
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: circleBtnBg,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Sparkles size={18} color={theme.text} />
+        <View>
+          <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
+            Branding & Themes
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
+            Multi-enterprise color palette customization
+          </Text>
         </View>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+        }}
       >
-        {/* Info Hero Card */}
-        <GlassCard
-          variant="sand"
-          padding={20}
-          style={{
-            borderRadius: 28,
-            marginBottom: 20,
-            gap: 10,
-          }}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 60 }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {/* Active Enterprise Banner */}
+          <View
+            style={{
+              backgroundColor: '#0C1829',
+              borderRadius: 26,
+              padding: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 16,
+              marginBottom: 20,
+              shadowColor: '#000',
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 6,
+            }}
+          >
             <View
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: isDark ? '#262D3B' : '#DFDCD4',
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: 'rgba(255,255,255,0.15)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Building2 size={18} color={theme.text} />
+              <Building2 size={24} color="#FFFFFF" />
             </View>
-            <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-              Multi-Enterprise Themes
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>
+                {activeEnterprise?.name || 'Active Garage'}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 }}>
+                Current Palette: {ENTERPRISE_THEMES.find((t) => t.id === selectedThemeId)?.name || 'Custom'}
+              </Text>
+            </View>
           </View>
-          <Text style={{ color: theme.textMuted, fontSize: 13, lineHeight: 19 }}>
-            Each garage maintains its own distinct visual identity. Selecting a theme dynamically transforms accents, badges, and graphs across the entire app without code modifications.
+
+          <Text
+            style={{
+              color: theme.textMuted,
+              fontSize: 11,
+              fontWeight: '800',
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              marginBottom: 14,
+              paddingLeft: 4,
+            }}
+          >
+            Available Enterprise Palettes
           </Text>
-        </GlassCard>
 
-        {/* Section Title */}
-        <Text
-          style={{
-            color: theme.textMuted,
-            fontSize: 11,
-            fontWeight: '800',
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
-            marginBottom: 12,
-            marginLeft: 4,
-          }}
-        >
-          Select Garage Brand Preset
-        </Text>
-
-        {/* Preset Cards */}
-        <View style={{ gap: 14 }}>
-          {ENTERPRISE_THEMES.map((item) => {
-            const isSelected = selectedThemeId === item.id;
-            return (
-              <TouchableOpacity
-                key={item.id}
-                activeOpacity={0.88}
-                onPress={() => handleApplyTheme(item)}
-              >
-                <GlassCard
-                  variant="sand"
-                  padding={20}
+          {/* Theme Options */}
+          <View style={{ gap: 14 }}>
+            {ENTERPRISE_THEMES.map((themeOption) => {
+              const isSelected = selectedThemeId === themeOption.id;
+              return (
+                <TouchableOpacity
+                  key={themeOption.id}
+                  activeOpacity={0.88}
+                  onPress={() => handleApplyTheme(themeOption)}
                   style={{
-                    borderRadius: 28,
-                    borderWidth: isSelected ? 2 : 1,
-                    borderColor: isSelected ? (isDark ? '#FFFFFF' : '#121214') : (isDark ? '#262D3B' : '#DFDCD4'),
+                    backgroundColor: cardBg,
+                    borderRadius: 24,
+                    padding: 18,
+                    borderWidth: 1,
+                    borderColor: isSelected ? '#0C1829' : borderColor,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    shadowColor: '#000',
+                    shadowOpacity: isDark ? 0.3 : 0.04,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 4 },
+                    elevation: 2,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
-                      {/* Brand Circle Preview */}
-                      <View
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: 24,
-                          backgroundColor: item.primary,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          shadowColor: item.primary,
-                          shadowOffset: { width: 0, height: 4 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 6,
-                          elevation: 3,
-                        }}
-                      >
-                        <Palette size={20} color="#FFFFFF" />
-                      </View>
-
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                          {item.name}
-                        </Text>
-                        <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                          {item.description}
-                        </Text>
-                      </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                    {/* Color Swatch Circle */}
+                    <View
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 24,
+                        backgroundColor: themeOption.primary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        shadowColor: themeOption.primary,
+                        shadowOpacity: 0.4,
+                        shadowRadius: 8,
+                        elevation: 4,
+                      }}
+                    >
+                      <Palette size={20} color="#FFFFFF" />
                     </View>
 
-                    {isSelected ? (
-                      <View
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 16,
-                          backgroundColor: primaryBtnBg,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Check size={16} color={primaryBtnText} strokeWidth={3} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
+                        {themeOption.name}
+                      </Text>
+                      <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
+                        {themeOption.description}
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
+                        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: themeOption.primary }} />
+                        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: themeOption.secondary }} />
+                        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: themeOption.accent }} />
                       </View>
-                    ) : (
-                      <View
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 16,
-                          borderWidth: 2,
-                          borderColor: isDark ? '#262D3B' : '#DFDCD4',
-                        }}
-                      />
-                    )}
+                    </View>
                   </View>
 
-                  {/* Swatches Row */}
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+                  {/* Active indicator */}
+                  {isSelected && (
                     <View
                       style={{
-                        flex: 1,
-                        height: 28,
-                        borderRadius: 14,
-                        backgroundColor: item.primary,
-                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: '#0C1829',
                         alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
-                        Primary
-                      </Text>
+                      <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
                     </View>
-                    <View
-                      style={{
-                        flex: 1,
-                        height: 28,
-                        borderRadius: 14,
-                        backgroundColor: item.secondary,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
-                        Secondary
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        flex: 1,
-                        height: 28,
-                        borderRadius: 14,
-                        backgroundColor: item.accent,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text style={{ color: '#000000', fontSize: 10, fontWeight: '800' }}>
-                        Accent
-                      </Text>
-                    </View>
-                  </View>
-                </GlassCard>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Floating Solid Obsidian CTA Button */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 24,
-          left: 20,
-          right: 20,
-        }}
-      >
-        <TouchableOpacity
-          activeOpacity={0.88}
-          onPress={() => {
-            const current = ENTERPRISE_THEMES.find((t) => t.id === selectedThemeId);
-            if (current) handleApplyTheme(current);
-          }}
-          disabled={loading}
-          style={{
-            backgroundColor: primaryBtnBg,
-            paddingVertical: 18,
-            borderRadius: 34,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.18,
-            shadowRadius: 10,
-            elevation: 4,
-          }}
-        >
-          {loading ? (
-            <ActivityIndicator color={primaryBtnText} />
-          ) : (
-            <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
-              Confirm Active Theme
-            </Text>
-          )}
-        </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
       </View>
     </View>
   );

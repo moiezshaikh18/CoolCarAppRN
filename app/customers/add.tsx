@@ -1,6 +1,6 @@
 // ============================================================
 // Add Customer Screen — Form for registering customers
-// Luxury Warm-Minimalist Aesthetic (Nestora style)
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState } from 'react';
@@ -12,13 +12,13 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, User, Phone, Mail, MapPin, FileText, Check } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
-import { GlassCard } from '../../src/components/common/GlassCard';
 import { useCustomerStore } from '../../src/store/customerStore';
 
 export default function AddCustomerScreen() {
@@ -84,236 +84,268 @@ export default function AddCustomerScreen() {
     ]);
   };
 
+  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const inputBg = isDark ? '#141926' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 60 }}
+    <View style={{ flex: 1, backgroundColor: skyBg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+
+      {/* Symmetrical Sky Blue Top Header */}
+      <View
+        style={{
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+        }}
       >
-        {/* Symmetrical Top Header */}
-        <View
+        <TouchableOpacity
+          onPress={() => router.back()}
           style={{
-            paddingTop: insets.top + 14,
-            paddingHorizontal: 22,
-            paddingBottom: 20,
-            flexDirection: 'row',
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: 'rgba(255,255,255,0.22)',
             alignItems: 'center',
-            gap: 14,
+            justifyContent: 'center',
           }}
         >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#1C212B' : '#EFECE6',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ArrowLeft size={20} color={theme.text} />
-          </TouchableOpacity>
-          <View>
-            <Text style={{ color: theme.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
-              Add Customer
-            </Text>
-            <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 1 }}>
-              Register new client in workshop database
-            </Text>
-          </View>
+          <ArrowLeft size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View>
+          <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
+            Add Customer
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
+            Register new car owner profile
+          </Text>
         </View>
+      </View>
 
-        {/* Form Fields Card in Warm Sand */}
-        <View style={{ paddingHorizontal: 22 }}>
-          <GlassCard variant="sand" padding={22} style={{ borderRadius: 28, gap: 18 }}>
-            {/* Customer Name */}
-            <View>
-              <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '700', marginBottom: 8, letterSpacing: 0.3 }}>
-                FULL NAME *
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
-                  paddingHorizontal: 16,
-                  height: 54,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                }}
-              >
-                <User size={18} color={theme.textMuted} />
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="e.g. Ramesh Kumar"
-                  placeholderTextColor={theme.textMuted}
-                  style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-                />
-              </View>
-            </View>
-
-            {/* Mobile Number */}
-            <View>
-              <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '700', marginBottom: 8, letterSpacing: 0.3 }}>
-                PHONE NUMBER *
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
-                  paddingHorizontal: 16,
-                  height: 54,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                }}
-              >
-                <Phone size={18} color={theme.textMuted} />
-                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>+91</Text>
-                <TextInput
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="98765 43210"
-                  placeholderTextColor={theme.textMuted}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-                />
-              </View>
-            </View>
-
-            {/* Email Address */}
-            <View>
-              <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '700', marginBottom: 8, letterSpacing: 0.3 }}>
-                EMAIL (OPTIONAL)
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
-                  paddingHorizontal: 16,
-                  height: 54,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                }}
-              >
-                <Mail size={18} color={theme.textMuted} />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="customer@email.com"
-                  placeholderTextColor={theme.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-                />
-              </View>
-            </View>
-
-            {/* Address */}
-            <View>
-              <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '700', marginBottom: 8, letterSpacing: 0.3 }}>
-                ADDRESS / CITY (OPTIONAL)
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
-                  paddingHorizontal: 16,
-                  height: 54,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                }}
-              >
-                <MapPin size={18} color={theme.textMuted} />
-                <TextInput
-                  value={address}
-                  onChangeText={setAddress}
-                  placeholder="e.g. Bandra West, Mumbai"
-                  placeholderTextColor={theme.textMuted}
-                  style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-                />
-              </View>
-            </View>
-
-            {/* Notes */}
-            <View>
-              <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '700', marginBottom: 8, letterSpacing: 0.3 }}>
-                GARAGE NOTES (OPTIONAL)
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'flex-start',
-                  gap: 12,
-                  backgroundColor: isDark ? '#252B38' : '#FFFFFF',
-                  borderRadius: 20,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  minHeight: 90,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                }}
-              >
-                <FileText size={18} color={theme.textMuted} style={{ marginTop: 2 }} />
-                <TextInput
-                  value={notes}
-                  onChangeText={setNotes}
-                  placeholder="e.g. Regular customer, prefers synthetic engine oil"
-                  placeholderTextColor={theme.textMuted}
-                  multiline
-                  style={{ flex: 1, color: theme.text, fontSize: 14, textAlignVertical: 'top', fontWeight: '500' }}
-                />
-              </View>
-            </View>
-          </GlassCard>
-
-          {/* Solid Black Pill Submit Button */}
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={loading}
-            activeOpacity={0.88}
-            style={{
-              marginTop: 20,
-              backgroundColor: isDark ? '#FFFFFF' : '#121214',
-              paddingVertical: 18,
-              borderRadius: 34,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              shadowColor: '#000',
-              shadowOpacity: 0.2,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 6,
-            }}
-          >
-            {loading ? (
-              <ActivityIndicator color={isDark ? '#121214' : '#FFFFFF'} />
-            ) : (
-              <>
-                <Check size={20} color={isDark ? '#121214' : '#FFFFFF'} strokeWidth={2.5} />
-                <Text style={{ color: isDark ? '#121214' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                  Save Customer Profile
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 60 }}
+        >
+          <View style={{ gap: 16 }}>
+            <View
+              style={{
+                backgroundColor: cardBg,
+                borderRadius: 24,
+                padding: 20,
+                borderWidth: 1,
+                borderColor: borderColor,
+                gap: 16,
+              }}
+            >
+              {/* Full Name */}
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                  FULL NAME *
                 </Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: inputBg,
+                    borderRadius: 18,
+                    paddingHorizontal: 16,
+                    height: 52,
+                    gap: 12,
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                >
+                  <User size={18} color={theme.textMuted} />
+                  <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="e.g. Ramesh Kumar"
+                    placeholderTextColor={theme.textMuted}
+                    style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
+                  />
+                </View>
+              </View>
+
+              {/* Mobile Phone */}
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                  MOBILE NUMBER *
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: inputBg,
+                    borderRadius: 18,
+                    paddingHorizontal: 16,
+                    height: 52,
+                    gap: 12,
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                >
+                  <Phone size={18} color={theme.textMuted} />
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>+91</Text>
+                  <TextInput
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="98765 43210"
+                    placeholderTextColor={theme.textMuted}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
+                  />
+                </View>
+              </View>
+
+              {/* Email Address */}
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                  EMAIL ADDRESS (OPTIONAL)
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: inputBg,
+                    borderRadius: 18,
+                    paddingHorizontal: 16,
+                    height: 52,
+                    gap: 12,
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                >
+                  <Mail size={18} color={theme.textMuted} />
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="ramesh@example.com"
+                    placeholderTextColor={theme.textMuted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
+                  />
+                </View>
+              </View>
+
+              {/* Physical Address */}
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                  ADDRESS / LOCALITY
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: inputBg,
+                    borderRadius: 18,
+                    paddingHorizontal: 16,
+                    height: 52,
+                    gap: 12,
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                >
+                  <MapPin size={18} color={theme.textMuted} />
+                  <TextInput
+                    value={address}
+                    onChangeText={setAddress}
+                    placeholder="Sector 14, Andheri West"
+                    placeholderTextColor={theme.textMuted}
+                    style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
+                  />
+                </View>
+              </View>
+
+              {/* Notes */}
+              <View>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
+                  INTERNAL NOTES
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    backgroundColor: inputBg,
+                    borderRadius: 18,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    gap: 12,
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                >
+                  <FileText size={18} color={theme.textMuted} style={{ marginTop: 2 }} />
+                  <TextInput
+                    value={notes}
+                    onChangeText={setNotes}
+                    placeholder="VIP customer, corporate fleet owner, etc."
+                    placeholderTextColor={theme.textMuted}
+                    multiline
+                    style={{
+                      flex: 1,
+                      color: theme.text,
+                      fontSize: 14,
+                      minHeight: 60,
+                      textAlignVertical: 'top',
+                      fontWeight: '500',
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Midnight Navy Pill Submit Button */}
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={loading}
+              activeOpacity={0.88}
+              style={{
+                backgroundColor: '#0C1829',
+                paddingVertical: 18,
+                borderRadius: 34,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                shadowColor: '#000',
+                shadowOpacity: 0.35,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 6,
+              }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                    Save Customer Profile
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }
