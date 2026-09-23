@@ -27,6 +27,7 @@ import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { router } from 'expo-router';
+import { useExpenseStore } from '../../src/store/expenseStore';
 
 interface JobSheetEntry {
   id: string;
@@ -64,6 +65,7 @@ export default function EntriesScreen() {
   const [currentDate] = useState('Today');
   const [jobs, setJobs] = useState<JobSheetEntry[]>(DEFAULT_JOBS);
   const [expenses, setExpenses] = useState<ExpenseEntry[]>(DEFAULT_EXPENSES);
+  const realExpenses = useExpenseStore((s) => s.expenses);
 
   // Live Firestore Sync
   useEffect(() => {
@@ -126,7 +128,7 @@ export default function EntriesScreen() {
   }, [enterprise?.id]);
 
   const totalJobsAmount = jobs.reduce((sum, j) => sum + j.amount, 0);
-  const totalExpensesAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpensesAmount = realExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
   const sheetBg = isDark ? '#111622' : '#FFFFFF';
@@ -263,7 +265,7 @@ export default function EntriesScreen() {
                   color: activeTab === 'expenses' ? (isDark ? '#0C1829' : '#FFFFFF') : '#64748B',
                 }}
               >
-                Expenses ({expenses.length})
+                Expenses ({realExpenses.length})
               </Text>
             </TouchableOpacity>
           </View>
@@ -369,43 +371,57 @@ export default function EntriesScreen() {
             </View>
           ) : (
             <View style={{ gap: 12 }}>
-              {expenses.map((item) => (
-                <View
-                  key={item.id}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    borderRadius: 22,
-                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
-                    <View
-                      style={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: 21,
-                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Receipt size={18} color="#FFFFFF" />
+              {realExpenses.length === 0 ? (
+                <View style={{ padding: 24, alignItems: 'center' }}>
+                  <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '700' }}>No Expenses Logged Today</Text>
+                </View>
+              ) : (
+                realExpenses.map((item) => (
+                  <View
+                    key={item.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      borderRadius: 22,
+                      backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <View
+                        style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: 21,
+                          backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Receipt size={18} color="#FFFFFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                          {item.categoryName || item.description}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                          {item.spentBy ? `Taken by: ${item.spentBy}` : 'General Expense'} {item.time ? `• ${item.time}` : ''}
+                        </Text>
+                        <Text style={{ fontSize: 10, color: '#6B9FE8', fontWeight: '700', marginTop: 1 }}>
+                          {item.paymentMode} {item.paymentAccountName ? `(${item.paymentAccountName})` : ''}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', flex: 1 }}>
-                      {item.category}
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#EF4444' }}>
+                      -{formatCurrency(item.amount, currencySymbol)}
                     </Text>
                   </View>
-                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#EF4444' }}>
-                    -{formatCurrency(item.amount, currencySymbol)}
-                  </Text>
-                </View>
-              ))}
+                ))
+              )}
             </View>
           )}
         </View>

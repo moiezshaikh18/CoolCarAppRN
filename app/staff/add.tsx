@@ -1,6 +1,6 @@
 // ============================================================
 // Add Staff Screen — Register Mechanic / Helper
-// Plain Simple English Terms
+// Joining Date, Official Documents, Salary & Role
 // ============================================================
 
 import React, { useState } from 'react';
@@ -21,19 +21,28 @@ import {
   Phone,
   Check,
   Calendar,
+  FileText,
+  CreditCard,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useEmployeeStore } from '../../src/store/employeeStore';
-import { Employee, SalaryType } from '../../src/types/employee.types';
+import { Employee, SalaryType, OfficialDocType } from '../../src/types/employee.types';
 
 const COMMON_ROLES = [
   'Head AC Mechanic',
   'AC Mechanic',
   'AC Helper',
+  'Mechanical Technician',
   'Car Electrician',
-  'Fitter',
   'Workshop Supervisor',
+];
+
+const DOC_TYPES: { label: string; value: OfficialDocType }[] = [
+  { label: 'Aadhaar Card', value: 'AADHAAR' },
+  { label: 'PAN Card', value: 'PAN' },
+  { label: 'Driving License', value: 'DRIVING_LICENSE' },
+  { label: 'Voter ID', value: 'VOTER_ID' },
 ];
 
 export default function AddStaffScreen() {
@@ -48,6 +57,8 @@ export default function AddStaffScreen() {
   const [salaryType, setSalaryType] = useState<SalaryType>('MONTHLY');
   const [salaryAmount, setSalaryAmount] = useState('20000');
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().slice(0, 10));
+  const [officialDocType, setOfficialDocType] = useState<OfficialDocType>('AADHAAR');
+  const [officialDocNumber, setOfficialDocNumber] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleSave = () => {
@@ -74,7 +85,10 @@ export default function AddStaffScreen() {
       role,
       salaryType,
       salaryAmount: salaryNum,
-      joiningDate,
+      joiningDate: joiningDate.trim() || new Date().toISOString().slice(0, 10),
+      status: 'ACTIVE',
+      officialDocType,
+      officialDocNumber: officialDocNumber.trim(),
       currentAdvance: 0,
       totalPaidSalary: 0,
       isActive: true,
@@ -98,317 +112,425 @@ export default function AddStaffScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
 
-      {/* Symmetrical Sky Blue Top Header */}
-      <View
-        style={{
-          paddingTop: insets.top + 10,
-          paddingHorizontal: 20,
-          paddingBottom: 20,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: 'rgba(255,255,255,0.22)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ArrowLeft size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View>
-          <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
-            Add Staff Member
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
-            Register new mechanic or helper
-          </Text>
+      {/* Header */}
+      <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255,255,255,0.22)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ArrowLeft size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View>
+            <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '800' }}>
+              Add Staff Member
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
+              Cool Car Workshop Staff
+            </Text>
+          </View>
         </View>
       </View>
 
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Form Sheet */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
           borderTopLeftRadius: 36,
           borderTopRightRadius: 36,
-          overflow: 'hidden',
+          paddingTop: 20,
+          paddingHorizontal: 20,
         }}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 60 }}
-        >
-          <View style={{ gap: 16 }}>
-            {/* Basic Info Card */}
-            <View
-              style={{
-                backgroundColor: cardBg,
-                borderRadius: 24,
-                padding: 20,
-                borderWidth: 1,
-                borderColor: borderColor,
-                gap: 16,
-              }}
-            >
-              {/* Full Name */}
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  FULL NAME *
-                </Text>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: inputBg,
-                    borderRadius: 18,
-                    paddingHorizontal: 16,
-                    height: 52,
-                    gap: 12,
-                    borderWidth: 1,
-                    borderColor: borderColor,
-                  }}
-                >
-                  <User size={18} color={theme.textMuted} />
-                  <TextInput
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="e.g. Irfan Khan"
-                    placeholderTextColor={theme.textMuted}
-                    style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-                  />
-                </View>
-              </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+          {/* Card 1: Basic Info */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor,
+              gap: 14,
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+              Personal & Contact Details
+            </Text>
 
-              {/* Phone Number */}
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  PHONE NUMBER *
-                </Text>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: inputBg,
-                    borderRadius: 18,
-                    paddingHorizontal: 16,
-                    height: 52,
-                    gap: 12,
-                    borderWidth: 1,
-                    borderColor: borderColor,
-                  }}
-                >
-                  <Phone size={18} color={theme.textMuted} />
-                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>+91</Text>
-                  <TextInput
-                    value={phone}
-                    onChangeText={setPhone}
-                    placeholder="98200 11223"
-                    placeholderTextColor={theme.textMuted}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-                  />
-                </View>
-              </View>
-
-              {/* Job Role Selection */}
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  JOB ROLE / WORK TYPE
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {COMMON_ROLES.map((r) => {
-                    const isSelected = role === r;
-                    return (
-                      <TouchableOpacity
-                        key={r}
-                        onPress={() => setRole(r)}
-                        style={{
-                          paddingHorizontal: 14,
-                          paddingVertical: 8,
-                          borderRadius: 16,
-                          backgroundColor: isSelected ? '#0C1829' : inputBg,
-                        }}
-                      >
-                        <Text style={{ color: isSelected ? '#FFFFFF' : theme.text, fontSize: 13, fontWeight: '700' }}>
-                          {r}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
+            {/* Full Name */}
+            <View>
+              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
+                Full Name *
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  paddingHorizontal: 12,
+                  height: 48,
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor,
+                }}
+              >
+                <User size={18} color={theme.textMuted} />
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="e.g. Irfan Khan"
+                  placeholderTextColor="#94A3B8"
+                  style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '700' }}
+                />
               </View>
             </View>
 
-            {/* Salary Setup Card */}
-            <View
-              style={{
-                backgroundColor: cardBg,
-                borderRadius: 24,
-                padding: 20,
-                borderWidth: 1,
-                borderColor: borderColor,
-                gap: 16,
-              }}
-            >
-              {/* Salary Type Toggle */}
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  SALARY PAYMENT TYPE
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity
-                    onPress={() => setSalaryType('MONTHLY')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 12,
-                      borderRadius: 18,
-                      alignItems: 'center',
-                      backgroundColor: salaryType === 'MONTHLY' ? '#0C1829' : inputBg,
-                    }}
-                  >
-                    <Text style={{ color: salaryType === 'MONTHLY' ? '#FFFFFF' : theme.text, fontSize: 14, fontWeight: '700' }}>
-                      Monthly Salary
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => setSalaryType('DAILY')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 12,
-                      borderRadius: 18,
-                      alignItems: 'center',
-                      backgroundColor: salaryType === 'DAILY' ? '#0C1829' : inputBg,
-                    }}
-                  >
-                    <Text style={{ color: salaryType === 'DAILY' ? '#FFFFFF' : theme.text, fontSize: 14, fontWeight: '700' }}>
-                      Daily Wage
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+            {/* Mobile Number */}
+            <View>
+              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
+                Mobile Number *
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  paddingHorizontal: 12,
+                  height: 48,
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor,
+                }}
+              >
+                <Phone size={18} color={theme.textMuted} />
+                <Text style={{ color: theme.textSecondary, fontWeight: '700', fontSize: 14 }}>+91</Text>
+                <TextInput
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="98200 11223"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '700' }}
+                />
               </View>
+            </View>
 
-              {/* Fixed Salary Amount */}
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  SALARY AMOUNT ({currencySymbol}) *
+            {/* Role Selection */}
+            <View>
+              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 8 }}>
+                Job Role
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {COMMON_ROLES.map((r) => {
+                  const isSel = r === role;
+                  return (
+                    <TouchableOpacity
+                      key={r}
+                      onPress={() => setRole(r)}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 12,
+                        backgroundColor: isSel
+                          ? (isDark ? '#FFFFFF' : '#0F172A')
+                          : (isDark ? '#1E293B' : '#F1F5F9'),
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '700',
+                          color: isSel
+                            ? (isDark ? '#0F172A' : '#FFFFFF')
+                            : (isDark ? '#FFFFFF' : '#475569'),
+                        }}
+                      >
+                        {r}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+
+          {/* Card 2: Official Document & Joining Date */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor,
+              gap: 14,
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+              Official Documents & Joining Date
+            </Text>
+
+            {/* Joining Date */}
+            <View>
+              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
+                Joining Date (YYYY-MM-DD)
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  paddingHorizontal: 12,
+                  height: 48,
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor,
+                }}
+              >
+                <Calendar size={18} color={theme.textMuted} />
+                <TextInput
+                  value={joiningDate}
+                  onChangeText={setJoiningDate}
+                  placeholder="2024-01-15"
+                  placeholderTextColor="#94A3B8"
+                  style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '700' }}
+                />
+              </View>
+            </View>
+
+            {/* Document Type Selector */}
+            <View>
+              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 8 }}>
+                Document Type
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {DOC_TYPES.map((dt) => {
+                  const isSel = dt.value === officialDocType;
+                  return (
+                    <TouchableOpacity
+                      key={dt.value}
+                      onPress={() => setOfficialDocType(dt.value)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderRadius: 12,
+                        backgroundColor: isSel
+                          ? (isDark ? '#FFFFFF' : '#0F172A')
+                          : (isDark ? '#1E293B' : '#F1F5F9'),
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '700',
+                          color: isSel
+                            ? (isDark ? '#0F172A' : '#FFFFFF')
+                            : (isDark ? '#FFFFFF' : '#475569'),
+                        }}
+                      >
+                        {dt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Document Number */}
+            <View>
+              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
+                Document Number (Aadhaar / PAN / DL)
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  paddingHorizontal: 12,
+                  height: 48,
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor,
+                }}
+              >
+                <CreditCard size={18} color={theme.textMuted} />
+                <TextInput
+                  value={officialDocNumber}
+                  onChangeText={setOfficialDocNumber}
+                  placeholder="e.g. 4821 9081 2341 or ABCPS8912K"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="characters"
+                  style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '700' }}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Card 3: Salary Terms */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 16,
+              marginBottom: 24,
+              borderWidth: 1,
+              borderColor,
+              gap: 14,
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+              Salary Structure
+            </Text>
+
+            {/* Type Toggle: Monthly vs Daily */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setSalaryType('MONTHLY')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  backgroundColor: salaryType === 'MONTHLY'
+                    ? (isDark ? '#FFFFFF' : '#0F172A')
+                    : (isDark ? '#1E293B' : '#F1F5F9'),
+                }}
+              >
+                <Text
+                  style={{
+                    color: salaryType === 'MONTHLY'
+                      ? (isDark ? '#0F172A' : '#FFFFFF')
+                      : (isDark ? '#FFFFFF' : '#475569'),
+                    fontWeight: '800',
+                    fontSize: 13,
+                  }}
+                >
+                  Monthly Salary
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setSalaryType('DAILY')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  backgroundColor: salaryType === 'DAILY'
+                    ? (isDark ? '#FFFFFF' : '#0F172A')
+                    : (isDark ? '#1E293B' : '#F1F5F9'),
+                }}
+              >
+                <Text
+                  style={{
+                    color: salaryType === 'DAILY'
+                      ? (isDark ? '#0F172A' : '#FFFFFF')
+                      : (isDark ? '#FFFFFF' : '#475569'),
+                    fontWeight: '800',
+                    fontSize: 13,
+                  }}
+                >
+                  Daily Wage
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Salary Amount */}
+            <View>
+              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
+                {salaryType === 'MONTHLY' ? 'Monthly Salary (₹)' : 'Daily Rate (₹)'}
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  height: 52,
+                  gap: 8,
+                  borderWidth: 1,
+                  borderColor,
+                }}
+              >
+                <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 18, fontWeight: '800' }}>
+                  {currencySymbol}
                 </Text>
                 <TextInput
                   value={salaryAmount}
                   onChangeText={setSalaryAmount}
-                  placeholder={salaryType === 'MONTHLY' ? '20000' : '700'}
-                  placeholderTextColor={theme.textMuted}
                   keyboardType="numeric"
-                  style={{
-                    backgroundColor: inputBg,
-                    borderRadius: 18,
-                    paddingHorizontal: 16,
-                    height: 52,
-                    color: theme.text,
-                    fontSize: 16,
-                    fontWeight: '800',
-                    borderWidth: 1,
-                    borderColor: borderColor,
-                  }}
-                />
-              </View>
-
-              {/* Joining Date */}
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  JOINING DATE
-                </Text>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: inputBg,
-                    borderRadius: 18,
-                    paddingHorizontal: 16,
-                    height: 52,
-                    gap: 12,
-                    borderWidth: 1,
-                    borderColor: borderColor,
-                  }}
-                >
-                  <Calendar size={18} color={theme.textMuted} />
-                  <TextInput
-                    value={joiningDate}
-                    onChangeText={setJoiningDate}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={theme.textMuted}
-                    style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '600' }}
-                  />
-                </View>
-              </View>
-
-              {/* Notes */}
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  SKILLS & NOTES
-                </Text>
-                <TextInput
-                  value={notes}
-                  onChangeText={setNotes}
-                  placeholder="e.g. Expert in compressor overhaul and wiring"
-                  placeholderTextColor={theme.textMuted}
-                  multiline
-                  style={{
-                    backgroundColor: inputBg,
-                    borderRadius: 18,
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    minHeight: 70,
-                    color: theme.text,
-                    fontSize: 14,
-                    textAlignVertical: 'top',
-                    fontWeight: '500',
-                    borderWidth: 1,
-                    borderColor: borderColor,
-                  }}
+                  placeholder="20000"
+                  placeholderTextColor="#94A3B8"
+                  style={{ flex: 1, color: theme.text, fontSize: 18, fontWeight: '800' }}
                 />
               </View>
             </View>
 
-            {/* Midnight Navy Submit CTA */}
-            <TouchableOpacity
-              onPress={handleSave}
-              activeOpacity={0.88}
-              style={{
-                backgroundColor: '#0C1829',
-                paddingVertical: 18,
-                borderRadius: 34,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                shadowColor: '#000',
-                shadowOpacity: 0.35,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 4 },
-                elevation: 6,
-              }}
-            >
-              <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                Save Staff Member
+            {/* Notes */}
+            <View>
+              <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
+                Notes / Skills
               </Text>
-            </TouchableOpacity>
+              <TextInput
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="e.g. AC compressor, wiring, tools provided"
+                placeholderTextColor="#94A3B8"
+                style={{
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: theme.text,
+                  fontSize: 13,
+                  fontWeight: '600',
+                  borderWidth: 1,
+                  borderColor,
+                }}
+              />
+            </View>
           </View>
+
+          {/* Submit CTA */}
+          <TouchableOpacity
+            onPress={handleSave}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: isDark ? '#FFFFFF' : '#0F172A',
+              paddingVertical: 16,
+              borderRadius: 22,
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOpacity: isDark ? 0.3 : 0.1,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 3,
+            }}
+          >
+            <Text style={{ color: isDark ? '#0F172A' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              Save Staff Member
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
     </View>
   );
 }
-

@@ -1,9 +1,9 @@
 // ============================================================
-// Staff Detail Screen — Profile, Salary & Advance History
-// Plain Simple English Terms
+// Staff Detail Screen — Profile, Official Documents, Salary & Advance History
+// Plain Simple English Terms: Joining Date, Documents, Leaving Date
 // ============================================================
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Linking,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,8 +22,10 @@ import {
   Banknote,
   DollarSign,
   Calendar,
-  AlertCircle,
+  CreditCard,
   FileText,
+  UserX,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -35,7 +38,7 @@ export default function StaffDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { getEmployeeById, getPaymentsByEmployeeId } = useEmployeeStore();
+  const { getEmployeeById, getPaymentsByEmployeeId, markEmployeeAsLeft } = useEmployeeStore();
   const staff = getEmployeeById(id);
   const paymentHistory = getPaymentsByEmployeeId(id);
 
@@ -50,7 +53,27 @@ export default function StaffDetailScreen() {
     );
   }
 
+  const handleMarkAsLeft = () => {
+    Alert.alert(
+      'Mark as Ex-Staff?',
+      `Are you sure ${staff.name} has left Cool Car workshop?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm Left',
+          style: 'destructive',
+          onPress: () => {
+            const today = new Date().toISOString().slice(0, 10);
+            markEmployeeAsLeft(staff.id, today);
+            Alert.alert('Status Updated', `${staff.name} marked as Ex-Employee (Left: ${today}).`);
+          },
+        },
+      ]
+    );
+  };
+
   const hasAdvance = (staff.currentAdvance || 0) > 0;
+  const isLeft = staff.status === 'LEFT';
   const skyBg = isDark ? '#070A0F' : '#6B9FE8';
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
   const cardBg = isDark ? '#101927' : '#FFFFFF';
@@ -120,18 +143,32 @@ export default function StaffDetailScreen() {
           <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '900' }}>
             {staff.name}
           </Text>
-          <View
-            style={{
-              backgroundColor: '#0C1829',
-              paddingHorizontal: 12,
-              paddingVertical: 4,
-              borderRadius: 12,
-              marginTop: 6,
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
-              {staff.role}
-            </Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+            <View
+              style={{
+                backgroundColor: '#0C1829',
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                {staff.role}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: isLeft ? 'rgba(239, 68, 68, 0.3)' : 'rgba(52, 211, 153, 0.3)',
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ color: isLeft ? '#FCA5A5' : '#6EE7B7', fontSize: 12, fontWeight: '800' }}>
+                {isLeft ? `Left (${staff.leavingDate || 'Ex'})` : 'Active'}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -156,7 +193,7 @@ export default function StaffDetailScreen() {
               backgroundColor: '#0C1829',
               borderRadius: 28,
               padding: 22,
-              marginBottom: 18,
+              marginBottom: 16,
               shadowColor: '#000',
               shadowOpacity: 0.35,
               shadowRadius: 14,
@@ -186,7 +223,7 @@ export default function StaffDetailScreen() {
               {formatCurrency(staff.currentAdvance || 0, currencySymbol)}
             </Text>
             <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 }}>
-              To be adjusted against next monthly salary payment
+              To be deducted against next salary payment
             </Text>
 
             {/* Quick 2-Grid Specs */}
@@ -207,55 +244,127 @@ export default function StaffDetailScreen() {
             </View>
           </View>
 
-          {/* Quick Action Buttons */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
-            <TouchableOpacity
-              onPress={() => router.push({ pathname: '/staff/pay', params: { staffId: staff.id, defaultType: 'SALARY' } } as any)}
-              activeOpacity={0.88}
-              style={{
-                flex: 1,
-                backgroundColor: '#0C1829',
-                paddingVertical: 14,
-                borderRadius: 22,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                shadowColor: '#000',
-                shadowOpacity: 0.25,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 4 },
-                elevation: 4,
-              }}
-            >
-              <Banknote size={17} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
-                Pay Salary
-              </Text>
-            </TouchableOpacity>
+          {/* Official Document & Employment Dates Card */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor,
+              gap: 12,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Official Documents & Employment
+            </Text>
 
-            <TouchableOpacity
-              onPress={() => router.push({ pathname: '/staff/pay', params: { staffId: staff.id, defaultType: 'ADVANCE' } } as any)}
-              activeOpacity={0.88}
-              style={{
-                flex: 1,
-                backgroundColor: isDark ? '#1E293B' : '#EFF6FF',
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#BFDBFE',
-                paddingVertical: 14,
-                borderRadius: 22,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <DollarSign size={17} color={isDark ? '#60A5FA' : '#1D4ED8'} />
-              <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontSize: 14, fontWeight: '800' }}>
-                Give Advance
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <CreditCard size={16} color="#6B9FE8" />
+                <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: '600' }}>
+                  {staff.officialDocType || 'Document'}:
+                </Text>
+              </View>
+              <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800' }}>
+                {staff.officialDocNumber || 'Not Uploaded'}
               </Text>
-            </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Calendar size={16} color="#6B9FE8" />
+                <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: '600' }}>
+                  Joining Date:
+                </Text>
+              </View>
+              <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800' }}>
+                {staff.joiningDate || 'N/A'}
+              </Text>
+            </View>
+
+            {isLeft ? (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <UserX size={16} color="#EF4444" />
+                  <Text style={{ color: '#EF4444', fontSize: 13, fontWeight: '600' }}>
+                    Leaving Date:
+                  </Text>
+                </View>
+                <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: '800' }}>
+                  {staff.leavingDate || 'Left'}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handleMarkAsLeft}
+                style={{
+                  marginTop: 4,
+                  paddingVertical: 8,
+                  alignItems: 'center',
+                  borderRadius: 12,
+                  backgroundColor: isDark ? '#261414' : '#FEE2E2',
+                }}
+              >
+                <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '800' }}>
+                  Mark Staff as Left (Ex-Employee)
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
+
+          {/* Quick Action Buttons: Pay Salary / Give Advance */}
+          {!isLeft && (
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/staff/pay', params: { staffId: staff.id, defaultType: 'SALARY' } } as any)}
+                activeOpacity={0.88}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#0C1829',
+                  paddingVertical: 14,
+                  borderRadius: 22,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.25,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 4,
+                }}
+              >
+                <Banknote size={17} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                  Pay Salary
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/staff/pay', params: { staffId: staff.id, defaultType: 'ADVANCE' } } as any)}
+                activeOpacity={0.88}
+                style={{
+                  flex: 1,
+                  backgroundColor: isDark ? '#1E293B' : '#EFF6FF',
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#BFDBFE',
+                  paddingVertical: 14,
+                  borderRadius: 22,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <DollarSign size={17} color={isDark ? '#60A5FA' : '#1D4ED8'} />
+                <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontSize: 14, fontWeight: '800' }}>
+                  Give Advance
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Payment History Ledger */}
           <Text
@@ -333,7 +442,7 @@ export default function StaffDetailScreen() {
                           {isAdvance ? 'Advance Given' : `Salary (${item.forMonth || 'Month'})`}
                         </Text>
                         <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
-                          {item.date} • Paid via {item.paymentMode}
+                          {item.date} • {item.paymentMode} {item.bankAccountName ? `(${item.bankAccountName})` : ''}
                         </Text>
                         {item.notes ? (
                           <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2, fontStyle: 'italic' }}>
@@ -362,4 +471,3 @@ export default function StaffDetailScreen() {
     </View>
   );
 }
-

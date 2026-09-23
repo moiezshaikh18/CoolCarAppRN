@@ -36,34 +36,30 @@ import { getInitials, formatRoleLabel } from '../../src/utils/formatters';
 
 const MENU_SECTIONS = [
   {
-    title: 'Operations Hub',
+    title: 'Core Workshop Modules',
     items: [
-      { label: 'Job Sheets (Work Orders)', icon: FileSpreadsheet, route: '/job-sheets' },
       { label: 'Staff & Salary Tracker', icon: Users, route: '/staff' },
+      { label: 'Daily Job Sheets (AC & Mech)', icon: FileSpreadsheet, route: '/job-sheets' },
+      { label: 'Daily Expenses Ledger', icon: Receipt, route: '/entries' },
+      { label: 'Spare Part Purchase Chalans', icon: Package, route: '/inventory' },
+      { label: 'Bank Accounts & Cash Counter', icon: Wallet, route: '/bank-accounts' },
+    ],
+  },
+  {
+    title: 'Garage Records & Tools',
+    items: [
       { label: 'Customers Directory', icon: Users, route: '/customers' },
       { label: 'Vehicles Fleet', icon: Car, route: '/vehicles' },
-      { label: 'Spare Parts & Inventory', icon: Package, route: '/inventory' },
-      { label: 'Bank Accounts & Cash Counter', icon: Wallet, route: '/bank-accounts' },
-      { label: 'Customer Payments & Receipts', icon: Receipt, route: '/payments' },
       { label: 'Service Due Reminders', icon: Calendar, route: '/reminders' },
       { label: 'Expense Categories', icon: Building2, route: '/expenses/categories' },
     ],
   },
   {
-    title: 'Enterprise & Security',
+    title: 'System & Backup',
     items: [
-      { label: 'Team Members & Roles (RBAC)', icon: Shield, route: '/settings/users' },
-      { label: 'Garage Profile & Branding', icon: Palette, route: '/settings/branding' },
-      { label: 'Business Address & GST', icon: Building2, route: '/settings/business' },
-    ],
-  },
-  {
-    title: 'System & Data',
-    items: [
-      { label: 'Notification Alerts', icon: Bell, route: '/settings/notifications' },
       { label: 'Export Reports (PDF / Excel)', icon: Download, route: '/settings/export' },
       { label: 'Cloud Backup & Sync', icon: Database, route: '/settings/backup' },
-      { label: 'About Garage Expense Tracker', icon: Info, route: '/settings/about' },
+      { label: 'About Cool Car Workshop', icon: Info, route: '/settings/about' },
     ],
   },
 ];

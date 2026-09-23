@@ -27,8 +27,10 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useEmployeeStore } from '../../src/store/employeeStore';
 import { useExpenseStore } from '../../src/store/expenseStore';
-import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { PaymentType, SalaryPayment } from '../../src/types/employee.types';
+import { PaymentMode } from '../../src/types/payment.types';
+import { BankPaymentSelector } from '../../src/components/common/BankPaymentSelector';
+import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { formatCurrency } from '../../src/utils/currency';
 
 const MONTHS = [
@@ -44,7 +46,7 @@ export default function PayStaffScreen() {
 
   const { employees, recordSalaryPayment } = useEmployeeStore();
   const { addExpense } = useExpenseStore();
-  const { accounts } = useBankAccountStore();
+  const { accounts, debitAccount } = useBankAccountStore();
 
   const [selectedStaffId, setSelectedStaffId] = useState<string>(
     params.staffId || (employees[0]?.id ?? '')
@@ -53,8 +55,9 @@ export default function PayStaffScreen() {
     params.defaultType === 'ADVANCE' ? 'ADVANCE' : 'SALARY'
   );
   const [amount, setAmount] = useState('');
-  const [paymentMode, setPaymentMode] = useState<'CASH' | 'UPI'>('CASH');
-  const [selectedBankId, setSelectedBankId] = useState<string>(accounts[0]?.id || '');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || 'bank-cash');
+  const [selectedAccountName, setSelectedAccountName] = useState<string>(accounts[0]?.accountName || 'Cash Counter');
   const [forMonth, setForMonth] = useState(`${MONTHS[new Date().getMonth()]} ${new Date().getFullYear()}`);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
@@ -93,8 +96,9 @@ export default function PayStaffScreen() {
       type: paymentType,
       amount: num,
       date,
-      paymentMode,
-      bankAccountId: paymentMode === 'UPI' ? selectedBankId : undefined,
+      paymentMode: paymentMode === 'CARD_SWIPE' ? 'UPI' : paymentMode,
+      bankAccountId: selectedAccountId,
+      bankAccountName: selectedAccountName,
       forMonth: paymentType === 'SALARY' ? forMonth : undefined,
       notes: notes.trim() || undefined,
       createdAt: new Date().toISOString(),
@@ -103,7 +107,12 @@ export default function PayStaffScreen() {
     // 1. Save in Employee Store
     recordSalaryPayment(paymentRecord);
 
-    // 2. Automatically Log in Garage Expenses
+    // 2. Debit the Bank Account / Cash drawer
+    if (selectedAccountId) {
+      debitAccount(selectedAccountId, num);
+    }
+
+    // 3. Automatically Log in Garage Expenses
     const expenseRecord = {
       id: `exp-${Date.now()}`,
       enterpriseId: entId,
@@ -111,8 +120,11 @@ export default function PayStaffScreen() {
       categoryName: paymentType === 'SALARY' ? 'Staff Salary' : 'Staff Advance',
       amount: num,
       paymentMode,
-      paymentAccountId: paymentMode === 'UPI' ? selectedBankId : undefined,
+      paymentAccountId: selectedAccountId,
+      paymentAccountName: selectedAccountName,
       date,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      spentBy: selectedStaff.name,
       description: `${paymentType === 'SALARY' ? 'Salary paid to' : 'Advance given to'} ${selectedStaff.name}${notes ? ` - ${notes}` : ''}`,
       voided: false,
       createdBy: 'user-owner',
@@ -336,43 +348,17 @@ export default function PayStaffScreen() {
                 />
               </View>
 
-              {/* Payment Mode (Cash vs UPI) */}
-              <View>
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 }}>
-                  PAYMENT MODE
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity
-                    onPress={() => setPaymentMode('CASH')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 12,
-                      borderRadius: 16,
-                      alignItems: 'center',
-                      backgroundColor: paymentMode === 'CASH' ? '#0C1829' : inputBg,
-                    }}
-                  >
-                    <Text style={{ color: paymentMode === 'CASH' ? '#FFFFFF' : theme.text, fontSize: 14, fontWeight: '800' }}>
-                      Cash
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => setPaymentMode('UPI')}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 12,
-                      borderRadius: 16,
-                      alignItems: 'center',
-                      backgroundColor: paymentMode === 'UPI' ? '#0C1829' : inputBg,
-                    }}
-                  >
-                    <Text style={{ color: paymentMode === 'UPI' ? '#FFFFFF' : theme.text, fontSize: 14, fontWeight: '800' }}>
-                      UPI / Online
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              {/* Payment Mode & Bank Account Selector */}
+              <BankPaymentSelector
+                paymentMode={paymentMode}
+                onPaymentModeChange={setPaymentMode}
+                selectedAccountId={selectedAccountId}
+                onAccountChange={(accId, accName) => {
+                  setSelectedAccountId(accId);
+                  setSelectedAccountName(accName);
+                }}
+                label="PAYMENT SOURCE / ACCOUNT *"
+              />
 
               {/* For Month (if Salary) */}
               {paymentType === 'SALARY' && (

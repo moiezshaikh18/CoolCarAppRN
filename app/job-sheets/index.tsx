@@ -189,6 +189,26 @@ export default function JobSheetsScreen() {
           <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', flex: 1 }} numberOfLines={1}>
             {item.vehicleMake ? `${item.vehicleMake} ${item.vehicleModel || ''}` : item.vehicleModel || 'Vehicle'}
           </Text>
+          {item.workCategory && (
+            <View
+              style={{
+                backgroundColor: item.workCategory === 'AC' ? (isDark ? 'rgba(107,159,232,0.2)' : '#EFF6FF') : (isDark ? 'rgba(245,158,11,0.2)' : '#FEF3C7'),
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color: item.workCategory === 'AC' ? (isDark ? '#60A5FA' : '#1D4ED8') : (isDark ? '#FBBF24' : '#B45309'),
+                  fontSize: 10,
+                  fontWeight: '800',
+                }}
+              >
+                {item.workCategory === 'AC' ? '❄️ AC' : item.workCategory === 'MECHANICAL' ? '🔧 Mech' : '⚙️ Both'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Customer & Call */}

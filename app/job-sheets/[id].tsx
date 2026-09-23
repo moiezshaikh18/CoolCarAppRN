@@ -58,12 +58,16 @@ export default function JobSheetDetailsScreen() {
       vehicleNumber: 'MH02AB1234',
       vehicleMake: 'Honda',
       vehicleModel: 'City ZX i-VTEC',
+      workCategory: 'AC' as const,
       assignedMechanicName: 'Irfan Khan (Head AC Mechanic)',
       subtotal: 5150,
       discount: 250,
+      previousPendingAmount: 0,
       finalAmount: 4900,
       totalPaid: 3000,
       pendingAmount: 1900,
+      paymentMode: 'UPI' as const,
+      bankAccountName: 'HDFC Current A/c (Primary)',
       items: [
         { id: '1', name: 'AC Gas Refill (R134a)', type: 'SERVICE' as const, quantity: 1, unitPrice: 1800, amount: 1800 },
         { id: '2', name: 'Cooling Coil Service & Clean', type: 'SERVICE' as const, quantity: 1, unitPrice: 2500, amount: 2500 },
@@ -194,8 +198,22 @@ export default function JobSheetDetailsScreen() {
             </Text>
           </View>
 
-          {/* Status & Payment Pills */}
+          {/* Status & Payment & Work Category Pills */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+            {/* Work Category Pill */}
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 16,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>
+                {job.workCategory === 'AC' ? '❄️ AC Work' : job.workCategory === 'MECHANICAL' ? '🔧 Mechanical' : '⚙️ Both'}
+              </Text>
+            </View>
+
             {/* Status Pill */}
             <View
               style={{
@@ -433,16 +451,16 @@ export default function JobSheetDetailsScreen() {
               {/* 4-Box Spec Metric Grid */}
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
-                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Subtotal</Text>
+                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Current Work</Text>
                   <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
                     {formatCurrency(job.subtotal, currencySymbol)}
                   </Text>
                 </GlassCard>
 
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
-                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Discount</Text>
-                  <Text style={{ color: '#34D399', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
-                    -{formatCurrency(job.discount, currencySymbol)}
+                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Previous Due</Text>
+                  <Text style={{ color: (job.previousPendingAmount || 0) > 0 ? '#EF4444' : '#34D399', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
+                    {formatCurrency(job.previousPendingAmount || 0, currencySymbol)}
                   </Text>
                 </GlassCard>
               </View>
@@ -462,6 +480,22 @@ export default function JobSheetDetailsScreen() {
                   </Text>
                 </GlassCard>
               </View>
+
+              {/* Payment Mode & Bank Account Info Card */}
+              {job.paymentMode && (
+                <GlassCard
+                  variant={isDark ? 'navy' : 'sand'}
+                  padding={14}
+                  style={{ borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700' }}>
+                    Payment Mode & Account:
+                  </Text>
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '800' }}>
+                    {job.paymentMode} {job.bankAccountName ? `• ${job.bankAccountName}` : ''}
+                  </Text>
+                </GlassCard>
+              )}
 
               {/* Customer Contact Card */}
               <GlassCard

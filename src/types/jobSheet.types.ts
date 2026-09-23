@@ -20,6 +20,8 @@ export interface JobItem {
   serviceId?: string; // if type === SERVICE
 }
 
+export type WorkCategory = 'AC' | 'MECHANICAL' | 'BOTH';
+
 export interface JobSheet {
   id: string;
   enterpriseId: string;
@@ -31,15 +33,21 @@ export interface JobSheet {
   vehicleNumber?: string; // denormalized
   vehicleMake?: string;
   vehicleModel?: string;
+  workCategory: WorkCategory;
   date: Date | string;
   status: JobStatus;
   items: JobItem[];
   subtotal: number;
   discount: number;
-  finalAmount: number;
+  previousPendingAmount: number;
+  finalAmount: number; // (subtotal - discount) + previousPendingAmount
+  amountCollectedNow: number;
   totalPaid: number;
   pendingAmount: number;
   paymentStatus: PaymentStatus;
+  paymentMode?: PaymentMode;
+  bankAccountId?: string;
+  bankAccountName?: string;
   assignedMechanicId?: string;
   assignedMechanicName?: string;
   notes?: string;

@@ -24,6 +24,9 @@ export interface Expense {
   paymentAccountId?: string; // null for CASH
   paymentAccountName?: string; // denormalized
   date: Date | string;
+  time?: string; // e.g. "02:30 PM"
+  spentBy?: string; // e.g. "Irfan Khan" or "Vendor" (Kisne Liya)
+  spentByEmployeeId?: string;
   description?: string;
   voided: boolean;
   voidReason?: string;

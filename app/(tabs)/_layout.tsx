@@ -131,7 +131,7 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
         snapHeight="half"
       >
         <View style={{ gap: 12, paddingBottom: 16 }}>
-          {/* New Job Sheet */}
+          {/* 1. New Job Sheet */}
           <TouchableOpacity
             onPress={() => {
               setAddSheetOpen(false);
@@ -161,15 +161,15 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '800' }}>
-                Create Job Sheet
+                Create Daily Job Sheet
               </Text>
               <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
-                Search vehicle, assign parts & labor
+                ❄️ AC Work or 🔧 Mechanical Work entry
               </Text>
             </View>
           </TouchableOpacity>
 
-          {/* Add Expense */}
+          {/* 2. Record Expense */}
           <TouchableOpacity
             onPress={() => {
               setAddSheetOpen(false);
@@ -199,19 +199,19 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '800' }}>
-                Record Expense
+                Daily Expense Entry
               </Text>
               <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
-                Parts, tools, utilities or salaries
+                Reason, Kisne Liya (Staff) & Bank deduction
               </Text>
             </View>
           </TouchableOpacity>
 
-          {/* Add Vehicle */}
+          {/* 3. Inward Purchase Chalan */}
           <TouchableOpacity
             onPress={() => {
               setAddSheetOpen(false);
-              router.push('/vehicles/add');
+              router.push('/inventory/chalan-add');
             }}
             activeOpacity={0.85}
             style={{
@@ -237,10 +237,86 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '800' }}>
-                Register Vehicle
+                Inward Purchase Chalan
               </Text>
               <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
-                Add vehicle to existing or new customer
+                Spare parts for multiple cars in 1 chalan
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* 4. Pay Staff Salary / Advance */}
+          <TouchableOpacity
+            onPress={() => {
+              setAddSheetOpen(false);
+              router.push('/staff/pay' as any);
+            }}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 16,
+              borderRadius: 22,
+              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              gap: 14,
+            }}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0C1829',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Wallet size={20} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '800' }}>
+                Pay Staff Salary / Advance
+              </Text>
+              <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
+                Record salary payment with bank/cash deduction
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* 5. Add Bank Account */}
+          <TouchableOpacity
+            onPress={() => {
+              setAddSheetOpen(false);
+              router.push('/bank-accounts/add');
+            }}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 16,
+              borderRadius: 22,
+              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              gap: 14,
+            }}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#0C1829',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Plus size={20} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '800' }}>
+                Add Bank Account
+              </Text>
+              <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
+                Link unlimited current, savings or UPI accounts
               </Text>
             </View>
           </TouchableOpacity>

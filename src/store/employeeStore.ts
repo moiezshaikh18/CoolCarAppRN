@@ -1,6 +1,6 @@
 // ============================================================
 // Employee & Salary Store — Cool Car Staff Management
-// Plain, Simple English Terms
+// Plain, Simple English Terms: Documents, Joining & Leaving Dates
 // ============================================================
 
 import { create } from 'zustand';
@@ -18,6 +18,9 @@ const DEFAULT_EMPLOYEES: Employee[] = [
     salaryType: 'MONTHLY',
     salaryAmount: 24000,
     joiningDate: '2023-04-10',
+    status: 'ACTIVE',
+    officialDocType: 'AADHAAR',
+    officialDocNumber: '4821 9081 2341',
     currentAdvance: 3000,
     totalPaidSalary: 144000,
     isActive: true,
@@ -34,6 +37,9 @@ const DEFAULT_EMPLOYEES: Employee[] = [
     salaryType: 'MONTHLY',
     salaryAmount: 14000,
     joiningDate: '2024-01-15',
+    status: 'ACTIVE',
+    officialDocType: 'AADHAAR',
+    officialDocNumber: '8910 2345 6712',
     currentAdvance: 1500,
     totalPaidSalary: 56000,
     isActive: true,
@@ -50,6 +56,9 @@ const DEFAULT_EMPLOYEES: Employee[] = [
     salaryType: 'MONTHLY',
     salaryAmount: 20000,
     joiningDate: '2023-08-01',
+    status: 'ACTIVE',
+    officialDocType: 'PAN',
+    officialDocNumber: 'ABCPS8912K',
     currentAdvance: 0,
     totalPaidSalary: 120000,
     isActive: true,
@@ -69,6 +78,8 @@ const DEFAULT_PAYMENTS: SalaryPayment[] = [
     amount: 24000,
     date: '2026-09-05',
     paymentMode: 'UPI',
+    bankAccountId: 'bank-hdfc',
+    bankAccountName: 'HDFC Current A/c (Primary)',
     forMonth: 'August 2026',
     notes: 'Full monthly salary transferred via UPI',
     createdAt: new Date().toISOString(),
@@ -82,6 +93,8 @@ const DEFAULT_PAYMENTS: SalaryPayment[] = [
     amount: 3000,
     date: '2026-09-18',
     paymentMode: 'CASH',
+    bankAccountId: 'bank-cash',
+    bankAccountName: 'Cash Counter / In Hand',
     notes: 'Family medical advance',
     createdAt: new Date().toISOString(),
   },
@@ -94,6 +107,8 @@ const DEFAULT_PAYMENTS: SalaryPayment[] = [
     amount: 1500,
     date: '2026-09-12',
     paymentMode: 'CASH',
+    bankAccountId: 'bank-cash',
+    bankAccountName: 'Cash Counter / In Hand',
     notes: 'Travel emergency advance',
     createdAt: new Date().toISOString(),
   },
@@ -109,6 +124,7 @@ interface EmployeeStore {
   setSalaryPayments: (payments: SalaryPayment[]) => void;
   addEmployee: (employee: Employee) => void;
   updateEmployee: (id: string, updates: Partial<Employee>) => void;
+  markEmployeeAsLeft: (id: string, leavingDate: string) => void;
   deleteEmployee: (id: string) => void;
   recordSalaryPayment: (payment: SalaryPayment) => void;
   getEmployeeById: (id: string) => Employee | undefined;
@@ -133,6 +149,21 @@ export const useEmployeeStore = create<EmployeeStore>()(
         set((state) => ({
           employees: state.employees.map((emp) =>
             emp.id === id ? { ...emp, ...updates, updatedAt: new Date().toISOString() } : emp
+          ),
+        })),
+
+      markEmployeeAsLeft: (id, leavingDate) =>
+        set((state) => ({
+          employees: state.employees.map((emp) =>
+            emp.id === id
+              ? {
+                  ...emp,
+                  status: 'LEFT',
+                  isActive: false,
+                  leavingDate: leavingDate || new Date().toISOString().split('T')[0],
+                  updatedAt: new Date().toISOString(),
+                }
+              : emp
           ),
         })),
 
@@ -183,4 +214,3 @@ export const useEmployeeStore = create<EmployeeStore>()(
     }
   )
 );
-

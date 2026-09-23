@@ -1,10 +1,10 @@
 // ============================================================
-// Inventory & Spare Parts Screen — Rules 14 & 15
-// Low Stock Warnings & Parts Management
+// Inventory & Spare Parts Screen — Cool Car Workshop
+// Module 4: Daily Inward Purchase Chalans & Parts Catalog
 // Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   FlatList,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,249 +23,218 @@ import {
   Package,
   AlertTriangle,
   ChevronRight,
+  FileSpreadsheet,
+  Car,
+  Receipt,
+  Store,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useInventoryStore } from '../../src/store/inventoryStore';
+import { useChalanStore } from '../../src/store/chalanStore';
 import { formatCurrency } from '../../src/utils/currency';
 import { SparePart } from '../../src/types/inventory.types';
-
-const DEFAULT_PARTS: SparePart[] = [
-  {
-    id: 'part-001',
-    enterpriseId: 'enterprise-dev-001',
-    name: 'Castrol Magnatec 5W-30 (4L)',
-    partNumber: 'CAS-5W30-4L',
-    purchasePrice: 2200,
-    sellingPrice: 3100,
-    stockQuantity: 12,
-    minimumStock: 4,
-    unit: 'Can',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'part-002',
-    enterpriseId: 'enterprise-dev-001',
-    name: 'Front Brake Pads Set (Honda / Hyundai)',
-    partNumber: 'BP-FRT-022',
-    purchasePrice: 1800,
-    sellingPrice: 2800,
-    stockQuantity: 2,
-    minimumStock: 5,
-    unit: 'Set',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'part-003',
-    enterpriseId: 'enterprise-dev-001',
-    name: 'Bosch Oil Filter Spin-On',
-    partNumber: 'OF-BSH-401',
-    purchasePrice: 250,
-    sellingPrice: 450,
-    stockQuantity: 18,
-    minimumStock: 6,
-    unit: 'Pcs',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'part-004',
-    enterpriseId: 'enterprise-dev-001',
-    name: 'AC Gas R134a Canister',
-    partNumber: 'GAS-R134-450G',
-    purchasePrice: 950,
-    sellingPrice: 1800,
-    stockQuantity: 1,
-    minimumStock: 3,
-    unit: 'Can',
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+import { PurchaseChalan } from '../../src/types/chalan.types';
 
 export default function InventoryScreen() {
   const { theme, isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { parts, setParts } = useInventoryStore();
 
-  const [activeTab, setActiveTab] = useState<'ALL' | 'LOW_STOCK'>('ALL');
+  const { parts } = useInventoryStore();
+  const { chalans } = useChalanStore();
+
+  const [mainTab, setMainTab] = useState<'CHALANS' | 'CATALOG'>('CHALANS');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Firestore sync
-  useEffect(() => {
-    const entId = enterpriseId || 'enterprise-dev-001';
-    let unsubscribe: () => void;
+  // Filtered Chalans
+  const filteredChalans = useMemo(() => {
+    if (!searchQuery.trim()) return chalans;
+    const q = searchQuery.toLowerCase();
+    return chalans.filter(
+      (c) =>
+        c.chalanNumber.toLowerCase().includes(q) ||
+        c.vendorName.toLowerCase().includes(q) ||
+        c.items.some(
+          (it) =>
+            it.partName.toLowerCase().includes(q) ||
+            it.assignedVehicleNumber.toLowerCase().includes(q)
+        )
+    );
+  }, [chalans, searchQuery]);
 
-    async function subscribeParts() {
-      try {
-        const { collection, onSnapshot } = await import('firebase/firestore');
-        const { db } = await import('../../src/services/firebase/firebase.config');
-        const invRef = collection(db, 'enterprises', entId, 'inventory');
-
-        unsubscribe = onSnapshot(
-          invRef,
-          (snapshot) => {
-            const list: SparePart[] = [];
-            snapshot.forEach((doc) => {
-              list.push({ id: doc.id, ...(doc.data() as any) });
-            });
-            if (list.length > 0) {
-              setParts(list);
-            } else if (parts.length === 0) {
-              setParts(DEFAULT_PARTS);
-            }
-          },
-          (err) => {
-            console.log('[Inventory] listener error:', err);
-            if (parts.length === 0) setParts(DEFAULT_PARTS);
-          }
-        );
-      } catch (err) {
-        console.log('[Inventory] setup error:', err);
-        if (parts.length === 0) setParts(DEFAULT_PARTS);
-      }
-    }
-
-    subscribeParts();
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [enterpriseId]);
-
-  const displayParts = parts.length > 0 ? parts : DEFAULT_PARTS;
-
+  // Filtered Parts
   const filteredParts = useMemo(() => {
-    return displayParts.filter((p) => {
-      if (activeTab === 'LOW_STOCK' && p.stockQuantity > p.minimumStock) {
-        return false;
-      }
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      return (
+    if (!searchQuery.trim()) return parts;
+    const q = searchQuery.toLowerCase();
+    return parts.filter(
+      (p) =>
         p.name.toLowerCase().includes(q) ||
         (p.partNumber && p.partNumber.toLowerCase().includes(q))
-      );
-    });
-  }, [displayParts, activeTab, searchQuery]);
+    );
+  }, [parts, searchQuery]);
 
-  const lowStockItems = displayParts.filter((p) => p.stockQuantity <= p.minimumStock);
+  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const sheetBg = isDark ? '#111622' : '#FFFFFF';
+  const cardBg = isDark ? '#182030' : '#F8FAFD';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
+  const textMuted = '#64748B';
 
-  const renderPartCard = ({ item }: { item: SparePart }) => {
-    const isLow = item.stockQuantity <= item.minimumStock;
-    const isOut = item.stockQuantity <= 0;
-    const margin = item.sellingPrice - item.purchasePrice;
-    const marginPercent = Math.round((margin / (item.sellingPrice || 1)) * 100);
+  const renderChalanCard = ({ item }: { item: PurchaseChalan }) => {
+    const isFullyPaid = item.pendingAmount <= 0;
+    const isPartial = item.amountPaid > 0 && item.pendingAmount > 0;
 
     return (
       <View
         style={{
-          backgroundColor: isDark ? '#101927' : '#FFFFFF',
+          backgroundColor: cardBg,
           borderRadius: 24,
-          padding: 16,
-          marginBottom: 12,
+          padding: 18,
+          marginBottom: 14,
           borderWidth: 1,
-          borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+          borderColor: cardBorder,
           shadowColor: '#000',
-          shadowOpacity: isDark ? 0.3 : 0.04,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDark ? 0.3 : 0.05,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 3 },
           elevation: 2,
         }}
       >
-        {/* Top: Name & SKU */}
+        {/* Top: Chalan No, Vendor & Status */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-          <View style={{ flex: 1, marginRight: 10 }}>
-            <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-              {item.name}
-            </Text>
-            {item.partNumber && (
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 17, fontWeight: '900', color: textPrimary }}>
+                {item.chalanNumber}
+              </Text>
               <View
                 style={{
-                  alignSelf: 'flex-start',
-                  marginTop: 4,
                   paddingHorizontal: 8,
-                  paddingVertical: 3,
+                  paddingVertical: 2,
                   borderRadius: 8,
-                  backgroundColor: isDark ? '#141926' : '#F1F5F9',
+                  backgroundColor: '#6B9FE8',
                 }}
               >
-                <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700' }}>
-                  SKU: {item.partNumber}
+                <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                  {item.items.length} {item.items.length === 1 ? 'part' : 'parts'}
                 </Text>
               </View>
-            )}
+            </View>
+
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#6B9FE8', marginTop: 2 }}>
+              {item.vendorName}
+            </Text>
           </View>
 
-          {/* Stock Badge */}
+          {/* Status Badge */}
           <View
             style={{
               paddingHorizontal: 10,
               paddingVertical: 4,
-              borderRadius: 10,
-              backgroundColor: isOut
-                ? (isDark ? '#450A0A' : '#FEE2E2')
-                : isLow
-                ? (isDark ? '#3B2F04' : '#FEF3C7')
-                : (isDark ? '#064E3B' : '#DCFCE7'),
+              borderRadius: 12,
+              backgroundColor: isFullyPaid
+                ? 'rgba(0, 200, 150, 0.15)'
+                : isPartial
+                ? 'rgba(245, 158, 11, 0.15)'
+                : 'rgba(239, 68, 68, 0.15)',
             }}
           >
             <Text
               style={{
-                color: isOut
-                  ? (isDark ? '#F87171' : '#DC2626')
-                  : isLow
-                  ? (isDark ? '#FBBF24' : '#B45309')
-                  : (isDark ? '#34D399' : '#15803D'),
                 fontSize: 11,
-                fontWeight: '800',
+                fontWeight: '900',
+                color: isFullyPaid ? '#00C896' : isPartial ? '#F59E0B' : '#EF4444',
               }}
             >
-              {isOut
-                ? 'Out of Stock'
-                : isLow
-                ? `Low: ${item.stockQuantity} ${item.unit || 'pcs'}`
-                : `${item.stockQuantity} ${item.unit || 'pcs'} Available`}
+              {isFullyPaid ? 'Paid' : isPartial ? 'Partial Paid' : 'Pending'}
             </Text>
           </View>
         </View>
 
-        {/* Pricing Row */}
+        {/* Date, Time & Bank Account */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: textMuted }}>
+            {item.date} • {item.time}
+          </Text>
+          {item.bankAccountName && (
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>
+              • {item.paymentMode} ({item.bankAccountName})
+            </Text>
+          )}
+        </View>
+
+        {/* Itemized Parts with Multi-Vehicle Tags */}
+        <View
+          style={{
+            backgroundColor: isDark ? '#111622' : '#FFFFFF',
+            borderRadius: 16,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: cardBorder,
+            marginBottom: 12,
+            gap: 8,
+          }}
+        >
+          {item.items.map((part, idx) => (
+            <View
+              key={part.id || idx}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingVertical: 2,
+              }}
+            >
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary }} numberOfLines={1}>
+                  {part.partName} <Text style={{ color: textMuted, fontWeight: '500' }}>({part.quantity}x)</Text>
+                </Text>
+
+                {/* Car Tag Capsule */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <Car size={11} color="#6B9FE8" />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8' }}>
+                    {part.assignedVehicleNumber}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: '800', color: textPrimary }}>
+                ₹{part.totalPrice.toLocaleString()}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Financial Footer */}
         <View
           style={{
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: isDark ? '#141926' : '#F8FAFC',
-            borderRadius: 16,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
+            paddingTop: 8,
+            borderTopWidth: 1,
+            borderTopColor: cardBorder,
           }}
         >
           <View>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Cost Price</Text>
-            <Text style={{ color: theme.textSecondary, fontSize: 14, fontWeight: '700', marginTop: 2 }}>
-              {formatCurrency(item.purchasePrice, currencySymbol)}
+            <Text style={{ fontSize: 11, fontWeight: '600', color: textMuted }}>
+              Chalan Total
             </Text>
-          </View>
-
-          <View style={{ alignItems: 'center' }}>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Selling Price</Text>
-            <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800', marginTop: 2 }}>
-              {formatCurrency(item.sellingPrice, currencySymbol)}
+            <Text style={{ fontSize: 16, fontWeight: '900', color: textPrimary }}>
+              ₹{item.totalAmount.toLocaleString()}
             </Text>
           </View>
 
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Margin</Text>
-            <Text style={{ color: isDark ? '#34D399' : '#15803D', fontSize: 13, fontWeight: '800', marginTop: 2 }}>
-              +{formatCurrency(margin, currencySymbol)} ({marginPercent}%)
+            <Text style={{ fontSize: 11, fontWeight: '600', color: isFullyPaid ? '#00C896' : '#EF4444' }}>
+              {isFullyPaid ? 'Settled Full' : `Due: ₹${item.pendingAmount.toLocaleString()}`}
+            </Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#00C896' }}>
+              Paid: ₹{item.amountPaid.toLocaleString()}
             </Text>
           </View>
         </View>
@@ -272,153 +242,201 @@ export default function InventoryScreen() {
     );
   };
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const renderPartCard = ({ item }: { item: SparePart }) => {
+    const isLow = item.stockQuantity <= item.minimumStock;
+    const isOut = item.stockQuantity <= 0;
 
-  return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
-
-      {/* Symmetrical Sky Blue Top Header */}
+    return (
       <View
         style={{
-          paddingTop: insets.top + 10,
-          paddingHorizontal: 20,
-          paddingBottom: 16,
+          backgroundColor: cardBg,
+          borderRadius: 24,
+          padding: 16,
+          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: cardBorder,
         }}
       >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+          <View style={{ flex: 1, marginRight: 10 }}>
+            <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '800' }}>
+              {item.name}
+            </Text>
+            {item.partNumber && (
+              <Text style={{ color: textMuted, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
+                SKU: {item.partNumber}
+              </Text>
+            )}
+          </View>
+
+          <View
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 10,
+              backgroundColor: isOut ? '#EF4444' : isLow ? '#F59E0B' : '#00C896',
+            }}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+              {item.stockQuantity} {item.unit || 'pcs'}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: isDark ? '#111622' : '#FFFFFF',
+            borderRadius: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+          }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '600', color: textMuted }}>
+            Cost: ₹{item.purchasePrice}
+          </Text>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: textPrimary }}>
+            Selling: ₹{item.sellingPrice}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+      <StatusBar barStyle="light-content" />
+
+      {/* Sky Blue Header */}
+      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <TouchableOpacity
               onPress={() => router.back()}
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: 'rgba(255,255,255,0.22)',
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <ArrowLeft size={20} color="#FFFFFF" />
+              <ArrowLeft size={18} color="#FFFFFF" />
             </TouchableOpacity>
+
             <View>
-              <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
-                Spare Parts
+              <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '900', letterSpacing: -0.4 }}>
+                Spare Parts & Chalans
               </Text>
-              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
-                {displayParts.length} catalog items
+              <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600' }}>
+                Cool Car Workshop Inventory
               </Text>
             </View>
           </View>
 
+          {/* Quick Add Button */}
           <TouchableOpacity
-            onPress={() => router.push('/inventory/add')}
+            onPress={() => {
+              if (mainTab === 'CHALANS') router.push('/inventory/chalan-add');
+              else router.push('/inventory/add');
+            }}
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: '#0C1829',
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: isDark ? '#FFFFFF' : '#0C1829',
               alignItems: 'center',
               justifyContent: 'center',
               shadowColor: '#000',
-              shadowOpacity: 0.25,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 4,
+              shadowOpacity: 0.2,
+              shadowRadius: 6,
+              elevation: 3,
             }}
           >
-            <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
+            <Plus size={20} color={isDark ? '#0C1829' : '#FFFFFF'} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
 
-        {/* LOW STOCK ALERT BANNER (Rule 14 & 15) */}
-        {lowStockItems.length > 0 && (
-          <TouchableOpacity
-            activeOpacity={0.88}
-            onPress={() => setActiveTab('LOW_STOCK')}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255, 237, 213, 0.95)',
-              borderRadius: 18,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              gap: 10,
-              marginBottom: 12,
-            }}
-          >
-            <AlertTriangle size={18} color="#C2410C" />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#9A3412', fontSize: 12, fontWeight: '800' }}>
-                Low Stock Threshold ({lowStockItems.length} items)
-              </Text>
-              <Text style={{ color: '#C2410C', fontSize: 11, marginTop: 1 }}>
-                Tap to view parts requiring immediate supplier order
-              </Text>
-            </View>
-            <ChevronRight size={16} color="#9A3412" />
-          </TouchableOpacity>
-        )}
-
-        {/* Search Pill */}
+        {/* Search Input */}
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: isDark ? '#141926' : 'rgba(255,255,255,0.24)',
-            borderRadius: 22,
-            paddingHorizontal: 16,
-            height: 48,
-            gap: 10,
+            backgroundColor: isDark ? '#141926' : 'rgba(255,255,255,0.25)',
+            borderRadius: 20,
+            paddingHorizontal: 14,
+            height: 44,
+            gap: 8,
             marginBottom: 12,
           }}
         >
-          <Search size={18} color={isDark ? '#94A3B8' : 'rgba(255,255,255,0.85)'} />
+          <Search size={16} color={isDark ? '#94A3B8' : 'rgba(255,255,255,0.85)'} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search parts by name or SKU..."
+            placeholder={mainTab === 'CHALANS' ? 'Search by chalan no, vendor, or car...' : 'Search parts by name...'}
             placeholderTextColor={isDark ? '#64748B' : 'rgba(255,255,255,0.7)'}
-            style={{ flex: 1, color: '#FFFFFF', fontSize: 14, fontWeight: '500' }}
+            style={{ flex: 1, color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
           />
         </View>
 
-        {/* Capsule Filter Tabs */}
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        {/* Tab Switcher: Inward Purchase Chalans vs Catalog */}
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: isDark ? '#141926' : 'rgba(255,255,255,0.22)',
+            borderRadius: 22,
+            padding: 4,
+          }}
+        >
           <TouchableOpacity
-            onPress={() => setActiveTab('ALL')}
+            onPress={() => setMainTab('CHALANS')}
             style={{
               flex: 1,
-              paddingVertical: 9,
-              borderRadius: 20,
-              backgroundColor: activeTab === 'ALL' ? '#0C1829' : 'rgba(255,255,255,0.2)',
+              paddingVertical: 10,
+              borderRadius: 18,
+              backgroundColor: mainTab === 'CHALANS' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: activeTab === 'ALL' ? '800' : '600' }}>
-              All Parts ({displayParts.length})
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '800',
+                color: mainTab === 'CHALANS' ? (isDark ? '#0C1829' : '#FFFFFF') : '#FFFFFF',
+              }}
+            >
+              Daily Purchase Chalans ({chalans.length})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('LOW_STOCK')}
+            onPress={() => setMainTab('CATALOG')}
             style={{
               flex: 1,
-              paddingVertical: 9,
-              borderRadius: 20,
-              backgroundColor: activeTab === 'LOW_STOCK' ? '#0C1829' : 'rgba(255,255,255,0.2)',
+              paddingVertical: 10,
+              borderRadius: 18,
+              backgroundColor: mainTab === 'CATALOG' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: activeTab === 'LOW_STOCK' ? '800' : '600' }}>
-              Low Stock ({lowStockItems.length})
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '800',
+                color: mainTab === 'CATALOG' ? (isDark ? '#0C1829' : '#FFFFFF') : '#FFFFFF',
+              }}
+            >
+              Parts Stock ({parts.length})
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Curved Lower Sheet */}
       <View
         style={{
           flex: 1,
@@ -429,51 +447,71 @@ export default function InventoryScreen() {
           overflow: 'hidden',
         }}
       >
-        <FlatList
-          data={filteredParts}
-          keyExtractor={(item) => item.id}
-          renderItem={renderPartCard}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110, paddingTop: 4 }}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 }}>
-              <Package size={40} color={theme.textMuted} />
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                No Spare Parts Found
-              </Text>
-              <Text style={{ color: theme.textMuted, fontSize: 13, textAlign: 'center' }}>
-                {searchQuery ? 'Try matching a different keyword or SKU' : 'Add parts to manage stock and job sheet usage'}
-              </Text>
-            </View>
-          }
-        />
+        {mainTab === 'CHALANS' ? (
+          <FlatList
+            data={filteredChalans}
+            keyExtractor={(item) => item.id}
+            renderItem={renderChalanCard}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110, paddingTop: 6 }}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 10 }}>
+                <Receipt size={40} color={textMuted} />
+                <Text style={{ color: textPrimary, fontSize: 16, fontWeight: '800' }}>
+                  No Purchase Chalans Found
+                </Text>
+                <Text style={{ color: textMuted, fontSize: 13, textAlign: 'center' }}>
+                  Record inward spare parts chalan for vehicles or workshop stock
+                </Text>
+              </View>
+            }
+          />
+        ) : (
+          <FlatList
+            data={filteredParts}
+            keyExtractor={(item) => item.id}
+            renderItem={renderPartCard}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110, paddingTop: 6 }}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 10 }}>
+                <Package size={40} color={textMuted} />
+                <Text style={{ color: textPrimary, fontSize: 16, fontWeight: '800' }}>
+                  No Parts in Catalog
+                </Text>
+              </View>
+            }
+          />
+        )}
 
-        {/* Bottom Floating Midnight Navy CTA */}
-        <View style={{ position: 'absolute', bottom: 24, left: 20, right: 20 }}>
-          <TouchableOpacity
-            onPress={() => router.push('/inventory/add')}
-            activeOpacity={0.88}
-            style={{
-              backgroundColor: '#0C1829',
-              paddingVertical: 16,
-              borderRadius: 32,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              shadowColor: '#000',
-              shadowOpacity: 0.35,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 5 },
-              elevation: 6,
-            }}
-          >
-            <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              Add New Spare Part
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Floating Bottom CTA for New Inward Chalan */}
+        {mainTab === 'CHALANS' && (
+          <View style={{ position: 'absolute', bottom: 24, left: 20, right: 20 }}>
+            <TouchableOpacity
+              onPress={() => router.push('/inventory/chalan-add')}
+              activeOpacity={0.88}
+              style={{
+                backgroundColor: isDark ? '#FFFFFF' : '#0C1829',
+                paddingVertical: 16,
+                borderRadius: 32,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                shadowColor: '#000',
+                shadowOpacity: 0.3,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 5 },
+                elevation: 6,
+              }}
+            >
+              <Plus size={20} color={isDark ? '#0C1829' : '#FFFFFF'} strokeWidth={2.5} />
+              <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
+                New Inward Purchase Chalan
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );

@@ -1,7 +1,7 @@
 // ============================================================
-// Add New Entry Screen — Income & Expense Ledger
-// Strict Master Business Rules (UPI/Card requires bank account)
-// Sky Blue & Midnight Navy Luxury Aesthetic (media_1790189780212.png)
+// Add Daily Expense Screen — Cool Car Workshop
+// Reason, Kisne Liya (Spent By), Exact Time & Date, Bank/Cash Binding
+// Sky Blue (#6B9FE8) & Midnight Navy (#0C1829) Luxury Aesthetic
 // ============================================================
 
 import React, { useState } from 'react';
@@ -12,87 +12,122 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
-  ChevronDown,
-  Building,
-  Check,
-  Plus,
-  Minus,
+  User,
+  Calendar,
+  Clock,
+  Tag,
+  FileText,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { GlassCard } from '../../src/components/common/GlassCard';
-import { router, useLocalSearchParams } from 'expo-router';
+import { BankPaymentSelector } from '../../src/components/common/BankPaymentSelector';
+import { router } from 'expo-router';
 import { PaymentMode } from '../../src/types/payment.types';
+import { useExpenseStore } from '../../src/store/expenseStore';
+import { useEmployeeStore } from '../../src/store/employeeStore';
+import { useBankAccountStore } from '../../src/store/bankAccountStore';
+import { formatCurrency } from '../../src/utils/currency';
 
-const CATEGORIES_INCOME = [
-  'Service Income',
-  'Spare Parts Sale',
-  'Car Wash & Detailing',
-  'Consulting / Inspection',
-  'Other Income',
-];
-
-const CATEGORIES_EXPENSE = [
+const COMMON_EXPENSE_REASONS = [
+  'Tea & Snacks for Staff',
+  'Workshop Electricity Bill',
   'Shop Rent',
-  'Electricity Bill',
-  'Salary',
-  'Tools & Equipment',
-  'Oil & Lubricants',
-  'Parts & Material',
-  'Tea & Snacks',
-  'Miscellaneous',
+  'Petrol / Diesel for Test Drive',
+  'Hardware & Fasteners / Screws',
+  'Nitrogen Cylinder Refill',
+  'Oxygen / Gas Welding Rods',
+  'Compressor Oil & Lubricants',
+  'Cleaning Detergent & Acid Wash',
+  'Miscellaneous Workshop Expense',
 ];
 
-const BANK_ACCOUNTS = [
-  { id: 'bank-1', name: 'HDFC Bank - 8923' },
-  { id: 'bank-2', name: 'ICICI Bank - 4401' },
-  { id: 'bank-3', name: 'State Bank of India - 1092' },
-  { id: 'bank-4', name: 'Axis Bank - 7721' },
-];
-
-export default function AddNewEntryScreen() {
+export default function AddExpenseScreen() {
   const { theme, isDark } = useTheme();
-  const { currencySymbol } = useEnterprise();
+  const { currencySymbol, enterpriseId } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ type?: string }>();
 
-  const [entryType, setEntryType] = useState<'income' | 'expense'>(
-    params.type === 'income' ? 'income' : 'expense'
+  const { addExpense } = useExpenseStore();
+  const { employees } = useEmployeeStore();
+  const { accounts, debitAccount } = useBankAccountStore();
+
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState(COMMON_EXPENSE_REASONS[0]);
+  const [customReason, setCustomReason] = useState('');
+
+  // Kisne Liya (Who took the money)
+  const [spentBy, setSpentBy] = useState(employees[0]?.name || 'Irfan Khan');
+  const [customSpentBy, setCustomSpentBy] = useState('');
+
+  // Date and Time
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [time, setTime] = useState(
+    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   );
-  const [amount, setAmount] = useState('5000');
-  const [selectedCategory, setSelectedCategory] = useState(
-    params.type === 'income' ? 'Service Income' : 'Parts & Material'
-  );
+
+  // Payment Mode & Bank Account
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
-  const [selectedBankId, setSelectedBankId] = useState(BANK_ACCOUNTS[0].id);
-  const [note, setNote] = useState('Full service charge');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || 'bank-cash');
+  const [selectedAccountName, setSelectedAccountName] = useState<string>(accounts[0]?.accountName || 'Cash Counter');
+  const [notes, setNotes] = useState('');
 
-  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [bankModalOpen, setBankModalOpen] = useState(false);
-
-  const categories = entryType === 'income' ? CATEGORIES_INCOME : CATEGORIES_EXPENSE;
+  const effectiveReason = customReason.trim() || reason;
+  const effectiveSpentBy = customSpentBy.trim() || spentBy;
 
   const handleSave = () => {
     const num = parseFloat(amount.replace(/[^0-9.]/g, ''));
     if (isNaN(num) || num <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount.');
+      Alert.alert('Amount Required', 'Please enter a valid expense amount.');
       return;
     }
 
-    if ((paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') && !selectedBankId) {
-      Alert.alert('Bank Account Required', 'UPI and Card Swipe require selecting a bank account.');
+    if (!effectiveReason) {
+      Alert.alert('Reason Required', 'Please specify what the money was spent for.');
       return;
     }
+
+    if (!effectiveSpentBy) {
+      Alert.alert('Person Required', 'Please specify who took the money (Kisne Liya).');
+      return;
+    }
+
+    // Debit the selected bank account / cash drawer
+    if (selectedAccountId) {
+      debitAccount(selectedAccountId, num);
+    }
+
+    const entId = enterpriseId || 'enterprise-cool-car';
+    const expenseId = `exp-${Date.now()}`;
+
+    const newExpense = {
+      id: expenseId,
+      enterpriseId: entId,
+      categoryId: 'cat-general-expense',
+      categoryName: effectiveReason,
+      amount: num,
+      paymentMode,
+      paymentAccountId: selectedAccountId,
+      paymentAccountName: selectedAccountName,
+      date,
+      time,
+      spentBy: effectiveSpentBy,
+      description: `${effectiveReason} — Taken by: ${effectiveSpentBy}${notes ? ` (${notes})` : ''}`,
+      voided: false,
+      createdBy: 'Cool Car Manager',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    addExpense(newExpense);
 
     Alert.alert(
-      'Entry Recorded',
-      `Successfully logged ${entryType === 'income' ? 'Income' : 'Expense'} of ${currencySymbol}${num} via ${paymentMode}!`,
-      [{ text: 'OK', onPress: () => router.back() }]
+      'Expense Logged!',
+      `Recorded ${currencySymbol}${num} for "${effectiveReason}"\nTaken by: ${effectiveSpentBy}\nPaid from: ${selectedAccountName}`,
+      [{ text: 'Done', onPress: () => router.back() }]
     );
   };
 
@@ -105,105 +140,32 @@ export default function AddNewEntryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: canvasBg }}>
       {/* Sky Blue Header */}
-      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
+      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <TouchableOpacity
             onPress={() => router.back()}
             style={{
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              borderRadius: 20,
+              width: 44,
+              height: 44,
+              borderRadius: 22,
               backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Cancel</Text>
-          </TouchableOpacity>
-
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-            New Transaction
-          </Text>
-
-          <View style={{ width: 60 }} />
-        </View>
-
-        {/* Income / Expense Capsule Switcher */}
-        <View
-          style={{
-            flexDirection: 'row',
-            backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
-            borderRadius: 24,
-            padding: 4,
-            width: 220,
-            marginBottom: 20,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => {
-              setEntryType('income');
-              setSelectedCategory(CATEGORIES_INCOME[0]);
-            }}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: 20,
-              backgroundColor: entryType === 'income' ? '#FFFFFF' : 'transparent',
               alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <Text
-              style={{
-                color: entryType === 'income' ? '#0C1829' : '#FFFFFF',
-                fontSize: 13,
-                fontWeight: '800',
-              }}
-            >
-              Inflow
-            </Text>
+            <ChevronLeft size={22} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => {
-              setEntryType('expense');
-              setSelectedCategory(CATEGORIES_EXPENSE[0]);
-            }}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: 20,
-              backgroundColor: entryType === 'expense' ? '#FFFFFF' : 'transparent',
-              alignItems: 'center',
-            }}
-          >
-            <Text
-              style={{
-                color: entryType === 'expense' ? '#0C1829' : '#FFFFFF',
-                fontSize: 13,
-                fontWeight: '800',
-              }}
-            >
-              Expense
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+              Add Daily Expense
             </Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12, fontWeight: '600' }}>
+              Cool Car Workshop Ledger
+            </Text>
+          </View>
 
-        {/* Big Amount Typography Input */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 32, fontWeight: '800', marginRight: 4 }}>
-            {currencySymbol}
-          </Text>
-          <TextInput
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
-            style={{
-              color: '#FFFFFF',
-              fontSize: 44,
-              fontWeight: '900',
-              letterSpacing: -1,
-              textAlign: 'center',
-              minWidth: 120,
-            }}
-          />
+          <View style={{ width: 44 }} />
         </View>
       </View>
 
@@ -214,7 +176,7 @@ export default function AddNewEntryScreen() {
           backgroundColor: sheetBg,
           borderTopLeftRadius: 36,
           borderTopRightRadius: 36,
-          paddingTop: 24,
+          paddingTop: 22,
           paddingHorizontal: 20,
           shadowColor: '#0C1829',
           shadowOffset: { width: 0, height: -4 },
@@ -223,125 +185,297 @@ export default function AddNewEntryScreen() {
           elevation: 8,
         }}
       >
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
-          {/* Category Dropdown Pill */}
-          <View style={{ marginBottom: 16 }}>
-            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
-              Category
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+          {/* Card 1: Amount to Pay */}
+          <GlassCard
+            variant={isDark ? 'navy' : 'sand'}
+            padding={16}
+            style={{ borderRadius: 24, marginBottom: 18 }}
+          >
+            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 6 }}>
+              Expense Amount *
             </Text>
-            <TouchableOpacity
-              onPress={() => setCategoryModalOpen(true)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                borderWidth: 1,
-                borderColor: cardBorder,
-              }}
-            >
-              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800' }}>
-                {selectedCategory}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 28, fontWeight: '900' }}>
+                {currencySymbol}
               </Text>
-              <ChevronDown size={18} color="#64748B" />
-            </TouchableOpacity>
-          </View>
+              <TextInput
+                value={amount}
+                onChangeText={setAmount}
+                placeholder="0.00"
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                autoFocus
+                style={{
+                  flex: 1,
+                  fontSize: 28,
+                  fontWeight: '900',
+                  color: isDark ? '#FFFFFF' : '#0C1829',
+                }}
+              />
+            </View>
+          </GlassCard>
 
-          {/* Payment Mode Selection Chips */}
-          <View style={{ marginBottom: 16 }}>
-            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
-              Payment Mode
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {(['CASH', 'UPI', 'CARD_SWIPE'] as PaymentMode[]).map((mode) => {
-                const isSelected = paymentMode === mode;
+          {/* Card 2: What was the expense for? (Reason / Category) */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 18,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              gap: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Tag size={16} color="#6B9FE8" />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Kya Chiz Ke Liye Paise Gaye (Reason) *
+              </Text>
+            </View>
+
+            {/* Quick Reason Pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {COMMON_EXPENSE_REASONS.map((r) => {
+                const isSel = r === reason && !customReason.trim();
                 return (
                   <TouchableOpacity
-                    key={mode}
-                    onPress={() => setPaymentMode(mode)}
+                    key={r}
+                    onPress={() => {
+                      setReason(r);
+                      setCustomReason('');
+                    }}
                     style={{
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 20,
-                      backgroundColor: isSelected ? primaryBtnBg : (isDark ? '#141926' : '#F8FAFD'),
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 14,
+                      backgroundColor: isSel
+                        ? (isDark ? '#FFFFFF' : '#0C1829')
+                        : (isDark ? '#1C2538' : '#FFFFFF'),
                       borderWidth: 1,
-                      borderColor: isSelected ? primaryBtnBg : cardBorder,
+                      borderColor: cardBorder,
                     }}
                   >
                     <Text
                       style={{
-                        color: isSelected ? primaryBtnText : (isDark ? '#FFFFFF' : '#0C1829'),
                         fontSize: 12,
-                        fontWeight: '800',
+                        fontWeight: '700',
+                        color: isSel
+                          ? (isDark ? '#0C1829' : '#FFFFFF')
+                          : (isDark ? '#FFFFFF' : '#0C1829'),
                       }}
                     >
-                      {mode === 'CARD_SWIPE' ? 'Card Swipe' : mode}
+                      {r}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
-            </View>
-          </View>
+            </ScrollView>
 
-          {/* Bank Account Selection (when UPI or CARD) */}
-          {(paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') && (
-            <View style={{ marginBottom: 16 }}>
-              <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
-                Receiving / Paying Bank Account
-              </Text>
-              <TouchableOpacity
-                onPress={() => setBankModalOpen(true)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingVertical: 14,
-                  paddingHorizontal: 16,
-                  borderRadius: 22,
-                  backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                  borderWidth: 1,
-                  borderColor: cardBorder,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Building size={16} color="#64748B" />
-                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800' }}>
-                    {BANK_ACCOUNTS.find((b) => b.id === selectedBankId)?.name || 'Select Bank'}
-                  </Text>
-                </View>
-                <ChevronDown size={18} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Remarks Note */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
-              Note / Description
-            </Text>
+            {/* Custom Reason Input */}
             <TextInput
-              value={note}
-              onChangeText={setNote}
-              placeholder="e.g. Engine oil 4L purchase bill"
+              value={customReason}
+              onChangeText={setCustomReason}
+              placeholder="Or type custom reason e.g. Bumper clip packet"
               placeholderTextColor="#94A3B8"
               style={{
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                borderRadius: 14,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 13,
+                fontWeight: '600',
+                color: isDark ? '#FFFFFF' : '#0C1829',
                 borderWidth: 1,
                 borderColor: cardBorder,
-                color: isDark ? '#FFFFFF' : '#0C1829',
-                fontSize: 15,
-                fontWeight: '600',
               }}
             />
           </View>
 
-          {/* Submit Solid Midnight Navy Button */}
+          {/* Card 3: Kisne Liya (Who took the money) */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 18,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              gap: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <User size={16} color="#6B9FE8" />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Kisne Liya / Spent By *
+              </Text>
+            </View>
+
+            {/* Quick Staff Selection Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {['Workshop Cashier / Self', ...employees.map((e) => e.name), 'Vendor / Delivery Boy'].map((person) => {
+                const isSel = person === spentBy && !customSpentBy.trim();
+                return (
+                  <TouchableOpacity
+                    key={person}
+                    onPress={() => {
+                      setSpentBy(person);
+                      setCustomSpentBy('');
+                    }}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 14,
+                      backgroundColor: isSel
+                        ? (isDark ? '#FFFFFF' : '#0C1829')
+                        : (isDark ? '#1C2538' : '#FFFFFF'),
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: isSel
+                          ? (isDark ? '#0C1829' : '#FFFFFF')
+                          : (isDark ? '#FFFFFF' : '#0C1829'),
+                      }}
+                    >
+                      {person}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Custom Name Input */}
+            <TextInput
+              value={customSpentBy}
+              onChangeText={setCustomSpentBy}
+              placeholder="Or type person name (e.g. Ramesh Mechanic)"
+              placeholderTextColor="#94A3B8"
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                borderRadius: 14,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 13,
+                fontWeight: '600',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                borderWidth: 1,
+                borderColor: cardBorder,
+              }}
+            />
+          </View>
+
+          {/* Card 4: Date & Exact Time */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 18,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 10 }}>
+              Date & Time
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1.2 }}>
+                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600', marginBottom: 4 }}>Date</Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                    borderRadius: 14,
+                    paddingHorizontal: 10,
+                    height: 44,
+                    gap: 6,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <Calendar size={15} color="#64748B" />
+                  <TextInput
+                    value={date}
+                    onChangeText={setDate}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#94A3B8"
+                    style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '700' }}
+                  />
+                </View>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600', marginBottom: 4 }}>Time</Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                    borderRadius: 14,
+                    paddingHorizontal: 10,
+                    height: 44,
+                    gap: 6,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <Clock size={15} color="#64748B" />
+                  <TextInput
+                    value={time}
+                    onChangeText={setTime}
+                    placeholder="02:30 PM"
+                    placeholderTextColor="#94A3B8"
+                    style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '700' }}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Card 5: Payment Mode & Bank Account Deduction */}
+          <BankPaymentSelector
+            paymentMode={paymentMode}
+            onPaymentModeChange={setPaymentMode}
+            selectedAccountId={selectedAccountId}
+            onAccountChange={(accId, accName) => {
+              setSelectedAccountId(accId);
+              setSelectedAccountName(accName);
+            }}
+            label="Paid From (Bank Account / Cash Drawer) *"
+          />
+
+          {/* Optional Notes */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+              Extra Note (Optional)
+            </Text>
+            <TextInput
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="e.g. Paid for tea vendor at corner shop"
+              placeholderTextColor="#94A3B8"
+              style={{
+                backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                borderRadius: 16,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                fontSize: 13,
+                fontWeight: '600',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                borderWidth: 1,
+                borderColor: cardBorder,
+              }}
+            />
+          </View>
+
+          {/* Submit CTA */}
           <TouchableOpacity
             onPress={handleSave}
             activeOpacity={0.88}
@@ -359,71 +493,11 @@ export default function AddNewEntryScreen() {
             }}
           >
             <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
-              Save {entryType === 'income' ? 'Income' : 'Expense'}
+              Save Expense Entry
             </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
-
-      {/* Category Modal */}
-      <Modal visible={categoryModalOpen} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: sheetBg, borderTopLeftRadius: 36, borderTopRightRadius: 36, padding: 24, gap: 10 }}>
-            <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 18, fontWeight: '800', marginBottom: 10 }}>
-              Select Category
-            </Text>
-            {categories.map((c) => (
-              <TouchableOpacity
-                key={c}
-                onPress={() => {
-                  setSelectedCategory(c);
-                  setCategoryModalOpen(false);
-                }}
-                style={{
-                  paddingVertical: 14,
-                  paddingHorizontal: 16,
-                  borderRadius: 20,
-                  backgroundColor: selectedCategory === c ? (isDark ? '#1C2538' : '#F4F7FC') : 'transparent',
-                }}
-              >
-                <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: selectedCategory === c ? '800' : '600' }}>
-                  {c}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Bank Modal */}
-      <Modal visible={bankModalOpen} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: sheetBg, borderTopLeftRadius: 36, borderTopRightRadius: 36, padding: 24, gap: 10 }}>
-            <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 18, fontWeight: '800', marginBottom: 10 }}>
-              Select Bank Account
-            </Text>
-            {BANK_ACCOUNTS.map((b) => (
-              <TouchableOpacity
-                key={b.id}
-                onPress={() => {
-                  setSelectedBankId(b.id);
-                  setBankModalOpen(false);
-                }}
-                style={{
-                  paddingVertical: 14,
-                  paddingHorizontal: 16,
-                  borderRadius: 20,
-                  backgroundColor: selectedBankId === b.id ? (isDark ? '#1C2538' : '#F4F7FC') : 'transparent',
-                }}
-              >
-                <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: selectedBankId === b.id ? '800' : '600' }}>
-                  {b.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
