@@ -38,6 +38,8 @@ import { BankPaymentSelector } from '../../src/components/common/BankPaymentSele
 import { ChalanItem, PurchaseChalan } from '../../src/types/chalan.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { formatCurrency } from '../../src/utils/currency';
+import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
+import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
 
 const VENDOR_PRESETS = [
   'National Auto Spares',
@@ -79,7 +81,7 @@ export default function AddPurchaseChalanScreen() {
   const [notes, setNotes] = useState('');
 
   const now = new Date();
-  const [date] = useState(now.toISOString().split('T')[0]);
+  const [date, setDate] = useState(now.toISOString().split('T')[0]);
   const [time] = useState(
     now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
   );
@@ -103,6 +105,29 @@ export default function AddPurchaseChalanScreen() {
     accounts[0]?.accountName || 'Cash Counter'
   );
   const [amountPaidCustom, setAmountPaidCustom] = useState<string | null>(null);
+
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'error' | 'warning' | 'success' | 'info' = 'warning',
+    buttons?: any[]
+  ) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      onClose: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+    });
+  };
 
   // Totals
   const grandTotal = useMemo(() => {
@@ -160,20 +185,21 @@ export default function AddPurchaseChalanScreen() {
 
   const handleSaveChalan = () => {
     if (!chalanNumber.trim()) {
-      Alert.alert('Chalan No Required', 'Please enter a chalan number.');
+      showAlert('Chalan No Required', 'Please enter a chalan number.', 'warning');
       return;
     }
     if (!vendorName.trim()) {
-      Alert.alert('Vendor Required', 'Please enter or select a supplier / vendor name.');
+      showAlert('Vendor Required', 'Please enter or select a supplier / vendor name.', 'warning');
       return;
     }
 
     // Validate items
     const invalidItem = items.find((it) => !it.partName.trim() || !(parseFloat(it.unitPrice) > 0));
     if (invalidItem) {
-      Alert.alert(
+      showAlert(
         'Incomplete Parts',
-        'Please ensure each spare part has a name and a valid purchase price.'
+        'Please ensure each spare part has a name and a valid purchase price.',
+        'warning'
       );
       return;
     }
@@ -238,10 +264,11 @@ export default function AddPurchaseChalanScreen() {
       });
     }
 
-    Alert.alert(
+    showAlert(
       'Chalan Saved Successfully',
       `Chalan ${newChalan.chalanNumber} for ${items.length} items (Total: ₹${grandTotal.toLocaleString()}) recorded.`,
-      [{ text: 'View Chalans', onPress: () => router.replace('/inventory') }]
+      'success',
+      [{ text: 'View Chalans', style: 'default', onPress: () => router.replace('/inventory') }]
     );
   };
 
@@ -344,7 +371,8 @@ export default function AddPurchaseChalanScreen() {
                 <Text style={{ fontSize: 12, fontWeight: '700', color: textMuted, marginBottom: 6 }}>
                   Date & Time
                 </Text>
-                <View
+                <TouchableOpacity
+                  onPress={() => setIsCalendarOpen(true)}
                   style={{
                     backgroundColor: inputBg,
                     borderRadius: 14,
@@ -354,9 +382,9 @@ export default function AddPurchaseChalanScreen() {
                   }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary }}>
-                    {date} • {time}
+                    📅 {date} • {time}
                   </Text>
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -804,6 +832,18 @@ export default function AddPurchaseChalanScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* CALENDAR PICKER MODAL */}
+      <CalendarPickerModal
+        visible={isCalendarOpen}
+        selectedDate={date}
+        onSelectDate={setDate}
+        onClose={() => setIsCalendarOpen(false)}
+        title="Select Chalan Date"
+      />
+
+      {/* THEMED CUSTOM ALERT MODAL */}
+      <ThemedAlert {...alertConfig} />
     </View>
   );
 }

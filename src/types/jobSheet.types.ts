@@ -35,6 +35,7 @@ export interface JobSheet {
   vehicleModel?: string;
   workCategory: WorkCategory;
   date: Date | string;
+  time?: string;
   status: JobStatus;
   items: JobItem[];
   subtotal: number;

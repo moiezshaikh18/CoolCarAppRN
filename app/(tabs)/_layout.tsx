@@ -26,10 +26,10 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
 
   const tabConfig = [
-    { name: 'index', label: 'Wallet', icon: Wallet },
+    { name: 'index', label: 'Home', icon: Wallet },
     { name: 'entries', label: 'Tracking', icon: TrendingUp },
     { name: 'add', label: '', icon: Plus, isAction: true },
-    { name: 'reports', label: 'Analytics', icon: LayoutGrid },
+    { name: 'reports', label: 'Report', icon: LayoutGrid },
     { name: 'more', label: 'Settings', icon: Settings },
   ];
 
@@ -340,10 +340,10 @@ export default function TabLayout() {
         },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Wallet' }} />
+      <Tabs.Screen name="index" options={{ title: 'Home' }} />
       <Tabs.Screen name="entries" options={{ title: 'Tracking' }} />
       <Tabs.Screen name="add" options={{ title: 'Action' }} />
-      <Tabs.Screen name="reports" options={{ title: 'Analytics' }} />
+      <Tabs.Screen name="reports" options={{ title: 'Report' }} />
       <Tabs.Screen name="more" options={{ title: 'Settings' }} />
     </Tabs>
   );

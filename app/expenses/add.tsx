@@ -32,6 +32,8 @@ import { useExpenseStore } from '../../src/store/expenseStore';
 import { useEmployeeStore } from '../../src/store/employeeStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { formatCurrency } from '../../src/utils/currency';
+import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
+import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
 
 const COMMON_EXPENSE_REASONS = [
   'Tea & Snacks for Staff',
@@ -74,6 +76,28 @@ export default function AddExpenseScreen() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || 'bank-cash');
   const [selectedAccountName, setSelectedAccountName] = useState<string>(accounts[0]?.accountName || 'Cash Counter');
   const [notes, setNotes] = useState('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'error' | 'warning' | 'success' | 'info' = 'warning',
+    buttons?: any[]
+  ) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      onClose: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+    });
+  };
 
   const effectiveReason = customReason.trim() || reason;
   const effectiveSpentBy = customSpentBy.trim() || spentBy;
@@ -81,17 +105,17 @@ export default function AddExpenseScreen() {
   const handleSave = () => {
     const num = parseFloat(amount.replace(/[^0-9.]/g, ''));
     if (isNaN(num) || num <= 0) {
-      Alert.alert('Amount Required', 'Please enter a valid expense amount.');
+      showAlert('Amount Required', 'Please enter a valid expense amount.', 'warning');
       return;
     }
 
     if (!effectiveReason) {
-      Alert.alert('Reason Required', 'Please specify what the money was spent for.');
+      showAlert('Reason Required', 'Please specify what the money was spent for.', 'warning');
       return;
     }
 
     if (!effectiveSpentBy) {
-      Alert.alert('Person Required', 'Please specify who took the money (Kisne Liya).');
+      showAlert('Person Required', 'Please specify who took the money (Kisne Liya).', 'warning');
       return;
     }
 
@@ -124,10 +148,11 @@ export default function AddExpenseScreen() {
 
     addExpense(newExpense);
 
-    Alert.alert(
+    showAlert(
       'Expense Logged!',
       `Recorded ${currencySymbol}${num} for "${effectiveReason}"\nTaken by: ${effectiveSpentBy}\nPaid from: ${selectedAccountName}`,
-      [{ text: 'Done', onPress: () => router.back() }]
+      'success',
+      [{ text: 'Done', style: 'default', onPress: () => router.back() }]
     );
   };
 
@@ -387,7 +412,8 @@ export default function AddExpenseScreen() {
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1.2 }}>
                 <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600', marginBottom: 4 }}>Date</Text>
-                <View
+                <TouchableOpacity
+                  onPress={() => setIsCalendarOpen(true)}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -400,15 +426,11 @@ export default function AddExpenseScreen() {
                     borderColor: cardBorder,
                   }}
                 >
-                  <Calendar size={15} color="#64748B" />
-                  <TextInput
-                    value={date}
-                    onChangeText={setDate}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor="#94A3B8"
-                    style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '700' }}
-                  />
-                </View>
+                  <Calendar size={15} color="#6B9FE8" />
+                  <Text style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '700' }}>
+                    {date}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <View style={{ flex: 1 }}>
@@ -498,6 +520,18 @@ export default function AddExpenseScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* CALENDAR PICKER MODAL */}
+      <CalendarPickerModal
+        visible={isCalendarOpen}
+        selectedDate={date}
+        onSelectDate={setDate}
+        onClose={() => setIsCalendarOpen(false)}
+        title="Select Expense Date"
+      />
+
+      {/* THEMED CUSTOM ALERT MODAL */}
+      <ThemedAlert {...alertConfig} />
     </View>
   );
 }

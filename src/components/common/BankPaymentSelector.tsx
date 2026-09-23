@@ -399,3 +399,4 @@ export function BankPaymentSelector({
     </View>
   );
 }
+

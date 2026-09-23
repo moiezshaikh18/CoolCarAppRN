@@ -35,6 +35,7 @@ import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { JobStatus } from '../../src/types/jobSheet.types';
+import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 
 export default function JobSheetDetailsScreen() {
   const { theme, isDark } = useTheme();
@@ -51,6 +52,7 @@ export default function JobSheetDetailsScreen() {
       id: params.id ?? 'JS-2026-001',
       jobNumber: 'CCG-1024',
       date: 'Today, 11:30 AM',
+      time: '11:30 AM',
       status: 'IN_PROGRESS' as JobStatus,
       paymentStatus: 'PARTIALLY_PAID' as const,
       customerName: 'Rajesh Sharma',
@@ -164,32 +166,37 @@ export default function JobSheetDetailsScreen() {
           </View>
 
           {/* Central Car Badge */}
-          <View
-            style={{
-              width: 68,
-              height: 68,
-              borderRadius: 34,
-              backgroundColor: isDark ? '#1C2538' : '#0C1829',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 12,
-              shadowColor: '#0C1829',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.3,
-              shadowRadius: 12,
-              elevation: 4,
-            }}
-          >
-            <Car size={32} color="#FFFFFF" />
+          {/* Distinct Car Silhouette & Badge */}
+          <View style={{ marginBottom: 10 }}>
+            <DynamicCarIllustration modelName={job.vehicleModel} size={70} showBadge={true} />
           </View>
 
           {/* Vehicle Model & Registration */}
-          <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '900', letterSpacing: -0.3 }}>
             {job.vehicleModel}
           </Text>
-          <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 14, fontWeight: '700', marginTop: 2 }}>
-            {job.vehicleNumber} • {job.customerName}
+          <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 14, fontWeight: '800', marginTop: 2 }}>
+            {job.vehicleNumber} • <Text style={{ fontWeight: '600' }}>{job.customerName}</Text>
           </Text>
+
+          {/* Intake Date & Logged Time (Direct User Request) */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              marginTop: 6,
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 12,
+            }}
+          >
+            <Clock size={13} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+              Logged: {job.time || '11:30 AM'} • {typeof job.date === 'string' ? job.date : 'Today'}
+            </Text>
+          </View>
 
           {/* Prominent Amount */}
           <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 12, marginBottom: 8 }}>

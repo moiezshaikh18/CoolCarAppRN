@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   Linking,
   StatusBar,
-  Alert,
+  Switch,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,11 +26,15 @@ import {
   FileText,
   UserX,
   CheckCircle2,
+  Shield,
+  ShieldCheck,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useEmployeeStore } from '../../src/store/employeeStore';
 import { formatCurrency } from '../../src/utils/currency';
+import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
+import { EmployeePrivileges } from '../../src/types/employee.types';
 
 export default function StaffDetailScreen() {
   const { theme, isDark } = useTheme();
@@ -38,9 +42,44 @@ export default function StaffDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { getEmployeeById, getPaymentsByEmployeeId, markEmployeeAsLeft } = useEmployeeStore();
+  const { getEmployeeById, getPaymentsByEmployeeId, markEmployeeAsLeft, updateEmployee } = useEmployeeStore();
   const staff = getEmployeeById(id);
   const paymentHistory = getPaymentsByEmployeeId(id);
+
+  const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (title: string, message: string, type: 'error' | 'warning' | 'success' | 'info' = 'warning', buttons?: any[]) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      onClose: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+    });
+  };
+
+  const [privileges, setPrivileges] = useState<EmployeePrivileges>(
+    staff?.privileges || {
+      canCreateJobSheets: true,
+      canRecordExpenses: staff?.role?.toLowerCase().includes('manager') ?? false,
+      canManageChalans: true,
+      canViewBankBalances: staff?.role?.toLowerCase().includes('manager') ?? false,
+      canViewReports: false,
+    }
+  );
+
+  const togglePrivilege = (key: keyof EmployeePrivileges) => {
+    if (!staff) return;
+    const updated = { ...privileges, [key]: !privileges[key] };
+    setPrivileges(updated);
+    updateEmployee(staff.id, { privileges: updated });
+    showAlert('Privileges Updated', `Staff permissions for ${staff.name} saved.`, 'success');
+  };
 
   if (!staff) {
     return (
@@ -54,9 +93,10 @@ export default function StaffDetailScreen() {
   }
 
   const handleMarkAsLeft = () => {
-    Alert.alert(
+    showAlert(
       'Mark as Ex-Staff?',
       `Are you sure ${staff.name} has left Cool Car workshop?`,
+      'warning',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -65,7 +105,7 @@ export default function StaffDetailScreen() {
           onPress: () => {
             const today = new Date().toISOString().slice(0, 10);
             markEmployeeAsLeft(staff.id, today);
-            Alert.alert('Status Updated', `${staff.name} marked as Ex-Employee (Left: ${today}).`);
+            showAlert('Status Updated', `${staff.name} marked as Ex-Employee (Left: ${today}).`, 'success');
           },
         },
       ]
@@ -366,6 +406,91 @@ export default function StaffDetailScreen() {
             </View>
           )}
 
+          {/* Admin Staff Privileges Card */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor,
+              gap: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <ShieldCheck size={18} color="#6B9FE8" />
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Staff Privileges (Admin Control)
+                </Text>
+                <Text style={{ fontSize: 11, color: theme.textMuted }}>
+                  Toggle what this employee can perform in the app
+                </Text>
+              </View>
+            </View>
+
+            {/* Toggle 1: Create Job Sheets */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text }}>
+                Create & Edit Daily Job Sheets
+              </Text>
+              <Switch
+                value={privileges.canCreateJobSheets}
+                onValueChange={() => togglePrivilege('canCreateJobSheets')}
+                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+              />
+            </View>
+
+            {/* Toggle 2: Record Expenses */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text }}>
+                Record Daily Workshop Expenses
+              </Text>
+              <Switch
+                value={privileges.canRecordExpenses}
+                onValueChange={() => togglePrivilege('canRecordExpenses')}
+                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+              />
+            </View>
+
+            {/* Toggle 3: Manage Purchase Chalans */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text }}>
+                Manage Purchase Chalans & Parts
+              </Text>
+              <Switch
+                value={privileges.canManageChalans}
+                onValueChange={() => togglePrivilege('canManageChalans')}
+                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+              />
+            </View>
+
+            {/* Toggle 4: View Bank Balances */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text }}>
+                View Bank Balances & Cash Counter
+              </Text>
+              <Switch
+                value={privileges.canViewBankBalances}
+                onValueChange={() => togglePrivilege('canViewBankBalances')}
+                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+              />
+            </View>
+
+            {/* Toggle 5: View Financial Reports */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text }}>
+                View Profit & Loss Reports
+              </Text>
+              <Switch
+                value={privileges.canViewReports}
+                onValueChange={() => togglePrivilege('canViewReports')}
+                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+              />
+            </View>
+          </View>
+
           {/* Payment History Ledger */}
           <Text
             style={{
@@ -468,6 +593,8 @@ export default function StaffDetailScreen() {
           )}
         </ScrollView>
       </View>
+
+      <ThemedAlert {...alertConfig} />
     </View>
   );
 }

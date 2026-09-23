@@ -50,7 +50,6 @@ const MENU_SECTIONS = [
     items: [
       { label: 'Customers Directory', icon: Users, route: '/customers' },
       { label: 'Vehicles Fleet', icon: Car, route: '/vehicles' },
-      { label: 'Service Due Reminders', icon: Calendar, route: '/reminders' },
       { label: 'Expense Categories', icon: Building2, route: '/expenses/categories' },
     ],
   },

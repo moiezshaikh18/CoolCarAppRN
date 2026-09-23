@@ -1,6 +1,9 @@
 // ============================================================
-// Splash Screen — Master Design
-// Dark luxury obsidian aesthetic matching media_1790116823022.png
+// Splash Screen — Cool Car Workshop
+// Exact Replica of Physical Shop Signboard (media_1790196926050.png)
+// Deep Royal Blue (#153580), Speed-Line Aerodynamic Car,
+// Cursive 'Cool Car', 'CAR A/C REPAIRS', Pune Phone Numbers,
+// Hindi/Marathi title & 'Our Perfection... Your Satisfaction'
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
@@ -10,27 +13,36 @@ import {
   Animated,
   StyleSheet,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Warehouse, Car } from 'lucide-react-native';
+import { SignboardSpeedCar } from '../../src/components/common/CarIllustrations';
+
+const { width } = Dimensions.get('window');
 
 export default function SplashScreen() {
-  const [logoScale] = useState(() => new Animated.Value(0.75));
-  const [logoOpacity] = useState(() => new Animated.Value(0));
-  const [textOpacity] = useState(() => new Animated.Value(0));
+  const [logoScale] = useState(() => new Animated.Value(0.9));
+  const [boardOpacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    // Fade and scale in
     Animated.parallel([
-      Animated.spring(logoScale, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
-      Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(textOpacity, { toValue: 1, duration: 800, delay: 200, useNativeDriver: true }),
+      Animated.spring(logoScale, {
+        toValue: 1,
+        tension: 40,
+        friction: 6,
+        useNativeDriver: true,
+      }),
+      Animated.timing(boardOpacity, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
     ]).start();
 
-    // Auto navigate to Welcome Onboarding after 2.2 seconds
+    // Smooth navigation to Welcome Onboarding after 2.5 seconds
     const timer = setTimeout(() => {
       router.replace('/(auth)/welcome');
-    }, 2200);
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -39,37 +51,59 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Center Logo & Title */}
-      <View style={styles.centerContent}>
-        <Animated.View
-          style={[
-            styles.logoWrapper,
-            {
-              transform: [{ scale: logoScale }],
-              opacity: logoOpacity,
-            },
-          ]}
-        >
-          <View style={styles.logoBadge}>
-            <View style={styles.roofIcon}>
-              <Warehouse size={44} color="#FFFFFF" strokeWidth={2} />
-              <View style={styles.carInside}>
-                <Car size={20} color="#EFECE6" />
+      {/* Signboard Replicating Physical Workshop Board */}
+      <Animated.View
+        style={[
+          styles.signboardWrapper,
+          {
+            opacity: boardOpacity,
+            transform: [{ scale: logoScale }],
+          },
+        ]}
+      >
+        <View style={styles.signboardCard}>
+          {/* Top Brand Badges Bar */}
+          <View style={styles.brandsBar}>
+            {['MARUTI', 'HYUNDAI', 'TATA', 'HONDA', 'MAHINDRA'].map((brand, i) => (
+              <View key={brand} style={styles.brandChip}>
+                <Text style={styles.brandText}>{brand}</Text>
               </View>
+            ))}
+          </View>
+
+          {/* Center Brand Hero: Speed Car + Cursive Title */}
+          <View style={styles.centerHero}>
+            <View style={{ marginBottom: 6 }}>
+              <SignboardSpeedCar size={Math.min(width * 0.75, 290)} color="#FFFFFF" />
+            </View>
+
+            <Text style={styles.cursiveTitle}>Cool Car</Text>
+
+            {/* Bold Subtitle: CAR A/C REPAIRS */}
+            <View style={styles.capsPill}>
+              <Text style={styles.acSubtitle}>CAR A/C REPAIRS</Text>
+            </View>
+            <Text style={styles.mechSubtitle}>& MECHANICAL AUTO WORKSHOP</Text>
+
+            {/* Pune Contact Numbers */}
+            <View style={styles.phoneBadge}>
+              <Text style={styles.phoneText}>
+                9822045278, 9922452786
+              </Text>
             </View>
           </View>
-        </Animated.View>
 
-        <Animated.View style={{ opacity: textOpacity, alignItems: 'center', marginTop: 28 }}>
-          <Text style={styles.brandTitle}>GARAGE OS</Text>
-          <Text style={styles.brandSubtitle}>MULTI-ENTERPRISE EXPENSE TRACKER</Text>
-        </Animated.View>
-      </View>
-
-      {/* Bottom Tagline */}
-      <Animated.View style={[styles.bottomContainer, { opacity: textOpacity }]}>
-        <Text style={styles.tagline}>Track • Manage • Scale</Text>
+          {/* Bottom Row of Signboard: Marathi text (left) & Tagline (right) */}
+          <View style={styles.signboardFooter}>
+            <Text style={styles.marathiText}>कूल कार ए. सी. रिपेअर्स</Text>
+            <Text style={styles.taglineText}>'Our Perfection... Your Satisfaction'</Text>
+          </View>
+        </View>
       </Animated.View>
+
+      <View style={styles.cityPill}>
+        <Text style={styles.cityText}>PUNE, MAHARASHTRA</Text>
+      </View>
     </View>
   );
 }
@@ -77,59 +111,140 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121214',
+    backgroundColor: '#0F265C', // Deep Workshop Navy
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16,
   },
-  centerContent: {
+  signboardWrapper: {
+    width: '100%',
+    maxWidth: 420,
     alignItems: 'center',
   },
-  logoWrapper: {
+  signboardCard: {
+    width: '100%',
+    backgroundColor: '#153580', // Exact Signboard Royal Blue
+    borderRadius: 24,
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
     shadowRadius: 20,
-    elevation: 8,
+    elevation: 12,
   },
-  logoBadge: {
-    width: 96,
-    height: 96,
-    borderRadius: 32,
-    backgroundColor: '#1C212B',
+  brandsBar: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    gap: 6,
+    marginBottom: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
-  roofIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  brandChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
   },
-  carInside: {
-    position: 'absolute',
-    bottom: 2,
-  },
-  brandTitle: {
+  brandText: {
     color: '#FFFFFF',
-    fontSize: 28,
+    fontSize: 9,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 0.6,
   },
-  brandSubtitle: {
-    color: '#A0AEC0',
+  centerHero: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  cursiveTitle: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    fontStyle: 'italic',
+    letterSpacing: -0.5,
+    textAlign: 'center',
+    marginTop: -4,
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
+  capsPill: {
+    marginTop: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  acSubtitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  mechSubtitle: {
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 2.5,
-    marginTop: 6,
+    color: 'rgba(255, 255, 255, 0.9)',
+    letterSpacing: 1.2,
+    marginTop: 4,
+    textAlign: 'center',
   },
-  bottomContainer: {
-    position: 'absolute',
-    bottom: 48,
+  phoneBadge: {
+    marginTop: 12,
+    backgroundColor: '#0F265C',
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  tagline: {
-    color: '#718096',
-    fontSize: 13,
-    letterSpacing: 2,
+  phoneText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  signboardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 18,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  marathiText: {
+    fontSize: 12,
+    color: '#FFFFFF',
     fontWeight: '700',
+  },
+  taglineText: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontStyle: 'italic',
+    fontWeight: '600',
+  },
+  cityPill: {
+    marginTop: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  cityText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.65)',
+    letterSpacing: 1.5,
   },
 });

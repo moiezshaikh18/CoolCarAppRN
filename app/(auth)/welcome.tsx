@@ -1,6 +1,7 @@
 // ============================================================
-// Welcome Onboarding Screen — Screen 1 in media_1790116823022.png
-// Modern Luxury Architectural Style (Editorial Typography & Nested Pill CTA)
+// Welcome Screen — Cool Car Workshop
+// Clean Center-Aligned Luxury Layout (No Back Button)
+// Dedicated exclusively to Cool Car
 // ============================================================
 
 import React from 'react';
@@ -10,85 +11,81 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight, Wrench, ShieldCheck, Sparkles } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ChevronRight, Wrench, ShieldCheck, Sparkles, Snowflake } from 'lucide-react-native';
+import { SignboardSpeedCar } from '../../src/components/common/CarIllustrations';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
-      {/* Editorial Workshop Visual Backdrop with Architectural Depth */}
-      <LinearGradient
-        colors={['#1E2430', '#141822', '#0D1017']}
-        style={StyleSheet.absoluteFill}
-      />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Subtle Luxury Architectural Glow */}
+      {/* Decorative Top Glow */}
       <View style={styles.topGlow} />
 
-      {/* Top Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.brandRow}>
-          <View style={styles.brandIconBox}>
-            <Wrench size={16} color="#FFFFFF" strokeWidth={2.5} />
-          </View>
-          <Text style={styles.brandText}>GARAGE MASTER</Text>
+      {/* Center Content Section */}
+      <View style={[styles.centerWrapper, { paddingTop: insets.top + 20 }]}>
+        {/* Signboard Aerodynamic Speed Car */}
+        <View style={styles.illustrationBox}>
+          <SignboardSpeedCar size={width * 0.75} color="#FFFFFF" />
         </View>
 
-        <TouchableOpacity
-          onPress={() => router.replace('/(auth)/login')}
-          style={styles.skipButton}
-        >
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Brand Display Title */}
+        <Text style={styles.brandTitle}>Cool Car</Text>
 
-      {/* Main Display Typography (Matching Screen 1 "PERFECT PLACE") */}
-      <View style={styles.contentSection}>
-        <View style={styles.headlineBox}>
-          <Text style={styles.headlineTop}>PERFECT</Text>
-          <Text style={styles.headlineBottom}>GARAGE</Text>
+        <View style={styles.badgePill}>
+          <Snowflake size={14} color="#60A5FA" />
+          <Text style={styles.badgeText}>
+            CAR A/C REPAIRS & MECHANICAL WORKSHOP
+          </Text>
         </View>
 
-        {/* Center Architectural Workshop Graphic Card */}
-        <View style={styles.visualCard}>
-          <LinearGradient
-            colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
-            style={styles.visualInner}
-          >
-            <View style={styles.carSilhouetteBox}>
-              <Text style={{ fontSize: 54 }}>🏎️</Text>
-            </View>
-
-            <View style={styles.floatingSpecBadge}>
-              <ShieldCheck size={14} color="#10B981" />
-              <Text style={styles.specBadgeText}>Multi-Tenant Cloud Sync</Text>
-            </View>
-          </LinearGradient>
-        </View>
-
-        {/* Subtitle (Matching Screen 1 text layout) */}
-        <Text style={styles.subtitleText}>
-          Your Automotive Workshop Partner Anytime, Anywhere. Track, Manage & Grow.
+        <Text style={styles.marathiSub}>
+          कूल कार ए. सी. रिपेअर्स
         </Text>
+
+        <Text style={styles.sloganText}>
+          "Our Perfection... Your Satisfaction"
+        </Text>
+
+        {/* Feature Highlights Grid */}
+        <View style={styles.featuresRow}>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureEmoji}>❄️</Text>
+            <Text style={styles.featureLabel}>AC Service</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureEmoji}>🔧</Text>
+            <Text style={styles.featureLabel}>Mechanical</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureEmoji}>📋</Text>
+            <Text style={styles.featureLabel}>Job Sheets</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureEmoji}>🏦</Text>
+            <Text style={styles.featureLabel}>Bank Ledger</Text>
+          </View>
+        </View>
       </View>
 
-      {/* Bottom CTA: The Iconic Nested White Pill with Circular Arrow Button */}
-      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 20 }]}>
+      {/* Bottom Center CTA */}
+      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 24 }]}>
         <TouchableOpacity
-          onPress={() => router.push('/(auth)/login')}
-          activeOpacity={0.92}
-          style={styles.nestedPillButton}
+          onPress={() => router.replace('/(tabs)')}
+          activeOpacity={0.9}
+          style={styles.pillButton}
         >
-          <Text style={styles.pillButtonLabel}>Start Exploring</Text>
-          <View style={styles.circularArrowButton}>
-            <ChevronRight size={20} color="#FFFFFF" strokeWidth={2.5} />
+          <Text style={styles.pillButtonText}>Enter Cool Car Garage</Text>
+          <View style={styles.arrowCircle}>
+            <ChevronRight size={18} color="#0C1829" strokeWidth={2.8} />
           </View>
         </TouchableOpacity>
       </View>
@@ -99,152 +96,125 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
+    backgroundColor: '#0A1222', // Deep Obsidian Navy
+    alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 24,
   },
   topGlow: {
     position: 'absolute',
     top: -80,
-    left: width * 0.2,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(30, 64, 175, 0.3)',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  brandIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-  },
-  skipButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  skipText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  contentSection: {
+  centerWrapper: {
     flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
+    width: '100%',
   },
-  headlineBox: {
+  illustrationBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
   },
-  headlineTop: {
-    color: '#FFFFFF',
-    fontSize: 52,
+  brandTitle: {
+    fontSize: 44,
     fontWeight: '900',
-    letterSpacing: -1,
-    lineHeight: 56,
-  },
-  headlineBottom: {
     color: '#FFFFFF',
-    fontSize: 52,
-    fontWeight: '900',
-    letterSpacing: -1,
-    lineHeight: 56,
+    fontStyle: 'italic',
+    letterSpacing: -0.6,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 8,
   },
-  visualCard: {
-    height: 190,
-    borderRadius: 28,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    marginBottom: 24,
-  },
-  visualInner: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  carSilhouetteBox: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  floatingSpecBadge: {
-    position: 'absolute',
-    bottom: 16,
+  badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 12,
+    marginTop: 10,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(37, 99, 235, 0.25)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(96, 165, 250, 0.3)',
   },
-  specBadgeText: {
-    color: '#FFFFFF',
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#93C5FD',
+    letterSpacing: 0.8,
+  },
+  marathiSub: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.75)',
+    marginTop: 8,
+    fontWeight: '700',
+  },
+  sloganText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  featuresRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 32,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  featureItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  featureEmoji: {
+    fontSize: 20,
+  },
+  featureLabel: {
+    color: '#94A3B8',
     fontSize: 11,
     fontWeight: '700',
   },
-  subtitleText: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '500',
-    maxWidth: 320,
-  },
   bottomSection: {
     width: '100%',
+    alignItems: 'center',
   },
-  // The iconic white pill with nested circular black action button from Screen 1
-  nestedPillButton: {
+  pillButton: {
+    width: '100%',
     backgroundColor: '#FFFFFF',
-    height: 64,
-    borderRadius: 32,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingLeft: 28,
-    paddingRight: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  pillButtonLabel: {
-    color: '#121214',
+  pillButtonText: {
+    color: '#0C1829',
     fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.2,
+    fontWeight: '900',
+    paddingLeft: 8,
   },
-  circularArrowButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#121214',
+  arrowCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },

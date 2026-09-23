@@ -1,8 +1,8 @@
 // ============================================================
 // Create Job Sheet Screen — Cool Car Workshop
-// Specialized AC vs Mechanical Work, Previous Pending Balance,
-// Amount Paid Now with Bank Account Binding & 1-Tap Intake
-// Sky Blue (#6B9FE8) & Midnight Navy (#0C1829) Luxury Aesthetic
+// AC vs Mechanical Dropdown inside sheet, Quick-Add Dropdown,
+// Tap-to-Edit items, Model Year + Distinct Car Illustration,
+// Interactive Calendar Date Picker & Themed Alert Dialogs
 // ============================================================
 
 import React, { useState, useMemo, useRef } from 'react';
@@ -12,15 +12,17 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   Modal,
+  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
+  ChevronDown,
   Car,
   Plus,
   Trash2,
+  Edit2,
   Wrench,
   Package,
   UserCheck,
@@ -30,8 +32,9 @@ import {
   Phone,
   User,
   AlertCircle,
+  Calendar as CalendarIcon,
   Clock,
-  CheckCircle2,
+  Search,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -44,13 +47,10 @@ import { useEmployeeStore } from '../../src/store/employeeStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { WorkCategory } from '../../src/types/jobSheet.types';
 import { PaymentMode } from '../../src/types/payment.types';
-
-// Preset sample vehicles with previous pending balances for Cool Car
-const RECENT_SAMPLE_VEHICLES = [
-  { reg: 'MH02AB1234', model: 'Honda City ZX', customer: 'Rajesh Sharma', phone: '9820112345', previousPending: 0 },
-  { reg: 'DL04AB1234', model: 'Maruti Swift Dzire', customer: 'Priya Kapoor', phone: '9811223344', previousPending: 1200 },
-  { reg: 'HR26BC4321', model: 'Hyundai Creta SX', customer: 'Suresh Gupta', phone: '9899001122', previousPending: 2500 },
-];
+import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
+import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
+import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
+import { YEARS_LIST } from '../../src/utils/carDatabase';
 
 // Presets for Car AC Work
 const AC_PRESETS = [
@@ -78,19 +78,24 @@ const MECHANICAL_PRESETS = [
   { name: 'Brake Disc Rotors Pair', type: 'PART' as const, price: 2800 },
 ];
 
+// 1-Tap Quick Standard Services & Parts Chips (Cool Car Workshop Core)
+const STANDARD_SERVICES_AND_PARTS = [
+  { name: 'AC Gas Refill (R134a)', price: 1800, type: 'SERVICE' as const, emoji: '❄️' },
+  { name: 'Cooling Coil Service & Clean', price: 2500, type: 'SERVICE' as const, emoji: '❄️' },
+  { name: 'AC Compressor Service / Repair', price: 3500, type: 'SERVICE' as const, emoji: '❄️' },
+  { name: 'Cabin AC Filter OEM', price: 450, type: 'PART' as const, emoji: '❄️' },
+  { name: 'AC Condenser Wash', price: 800, type: 'SERVICE' as const, emoji: '❄️' },
+  { name: 'Front Brake Pads Replacement', price: 1500, type: 'SERVICE' as const, emoji: '🔧' },
+  { name: 'Engine Oil & Filter Service', price: 2200, type: 'SERVICE' as const, emoji: '🔧' },
+  { name: 'Coolant Flush & Clean', price: 950, type: 'SERVICE' as const, emoji: '🔧' },
+  { name: 'Full Workshop General Service', price: 3200, type: 'SERVICE' as const, emoji: '🔧' },
+];
+
 interface JobItem {
   id: string;
   name: string;
   type: 'SERVICE' | 'PART';
   price: number;
-}
-
-function generateNewJobId(): string {
-  return `JS-${Date.now()}`;
-}
-
-function generateNewJobNumber(): string {
-  return `CCG-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 export default function CreateJobSheetScreen() {
@@ -103,30 +108,40 @@ export default function CreateJobSheetScreen() {
   const { employees } = useEmployeeStore();
   const { accounts, creditAccount } = useBankAccountStore();
 
-  // Work Type: AC vs Mechanical vs Both
+  // Work Type: Dropdown inside Job Sheet
   const [workCategory, setWorkCategory] = useState<WorkCategory>('AC');
+  const [isWorkCategoryModalOpen, setIsWorkCategoryModalOpen] = useState(false);
 
-  // Primary Car & Customer Details
+  // Date & Log Time
+  const [jobDate, setJobDate] = useState(new Date().toISOString().split('T')[0]);
+  const [jobTime, setJobTime] = useState(() =>
+    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  );
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+  // Car Details
   const [carNumber, setCarNumber] = useState('');
   const [carModel, setCarModel] = useState('');
+  const [modelYear, setModelYear] = useState('2022');
+  const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
+
+  // Customer Details (Optional)
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [hasValidationError, setHasValidationError] = useState(false);
 
-  // Financials: Previous Pending, Discount, Amount Paid Now
+  // Financials
   const [previousPending, setPreviousPending] = useState('0');
   const [discount, setDiscount] = useState('0');
   const [amountPaidNow, setAmountPaidNow] = useState('0');
 
-  // Payment Mode & Bank Account
+  // Payment Mode & Bank Selection
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || 'bank-cash');
   const [selectedAccountName, setSelectedAccountName] = useState<string>(accounts[0]?.accountName || 'Cash Counter');
 
-  // Assigned mechanic
-  const [assignedEmployeeId, setAssignedEmployeeId] = useState<string>(
-    employees[0]?.id || ''
-  );
+  // Staff Assignment
+  const [assignedEmployeeId, setAssignedEmployeeId] = useState<string>(employees[0]?.id || '');
 
   // Job Items List
   const [items, setItems] = useState<JobItem[]>([
@@ -134,11 +149,33 @@ export default function CreateJobSheetScreen() {
     { id: '2', name: 'Cabin AC Filter OEM', type: 'PART', price: 450 },
   ]);
 
-  // Custom Item Modal state
-  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemPrice, setNewItemPrice] = useState('');
-  const [newItemType, setNewItemType] = useState<'SERVICE' | 'PART'>('SERVICE');
+  // Quick Add Services Dropdown Modal
+  const [isQuickAddModalOpen, setIsQuickAddModalOpen] = useState(false);
+  const [quickAddSearch, setQuickAddSearch] = useState('');
+
+  // Edit Item Modal (Tap to Edit)
+  const [editingItem, setEditingItem] = useState<JobItem | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editType, setEditType] = useState<'SERVICE' | 'PART'>('SERVICE');
+
+  // Custom Themed Alert
+  const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (title: string, message: string, type: 'error' | 'warning' | 'success' | 'info' = 'warning', buttons?: any[]) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      onClose: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+    });
+  };
 
   // Calculations
   const currentSubtotal = useMemo(() => items.reduce((sum, it) => sum + it.price, 0), [items]);
@@ -154,27 +191,18 @@ export default function CreateJobSheetScreen() {
     return employees.find((e) => e.id === assignedEmployeeId);
   }, [employees, assignedEmployeeId]);
 
-  // Autofill from 1-tap sample vehicle pills
-  const handleSelectRecentVehicle = (v: typeof RECENT_SAMPLE_VEHICLES[0]) => {
-    setCarNumber(v.reg);
-    setCarModel(v.model);
-    setCustomerName(v.customer);
-    setCustomerPhone(v.phone);
-    setPreviousPending(String(v.previousPending));
-    setHasValidationError(false);
-  };
-
-  // Presets based on selected work type
-  const activePresets = useMemo(() => {
-    if (workCategory === 'AC') return AC_PRESETS;
-    if (workCategory === 'MECHANICAL') return MECHANICAL_PRESETS;
-    return [...AC_PRESETS, ...MECHANICAL_PRESETS];
-  }, [workCategory]);
+  // Combined Active Presets
+  const allPresets = useMemo(() => {
+    const list = [...AC_PRESETS, ...MECHANICAL_PRESETS];
+    if (!quickAddSearch.trim()) return list;
+    const q = quickAddSearch.toLowerCase();
+    return list.filter((p) => p.name.toLowerCase().includes(q));
+  }, [quickAddSearch]);
 
   const handleAddPresetItem = (preset: { name: string; type: 'SERVICE' | 'PART'; price: number }) => {
     const exists = items.some((i) => i.name === preset.name);
     if (exists) {
-      Alert.alert('Already Added', `"${preset.name}" is already in this job sheet.`);
+      showAlert('Already Added', `"${preset.name}" is already in this job sheet.`);
       return;
     }
     setItems((prev) => [
@@ -186,31 +214,44 @@ export default function CreateJobSheetScreen() {
         price: preset.price,
       },
     ]);
+    setIsQuickAddModalOpen(false);
   };
 
-  const handleSaveCustomItem = () => {
-    if (!newItemName.trim()) {
-      Alert.alert('Name Required', 'Please enter service or part name.');
+  // Open Edit Modal for an item
+  const openEditModal = (item: JobItem) => {
+    setEditingItem(item);
+    setEditName(item.name);
+    setEditPrice(String(item.price));
+    setEditType(item.type);
+  };
+
+  const handleSaveEditedItem = () => {
+    if (!editingItem) return;
+    if (!editName.trim()) {
+      showAlert('Name Required', 'Please enter a valid item name.');
       return;
     }
-    const priceNum = parseFloat(newItemPrice);
+    const priceNum = parseFloat(editPrice);
     if (isNaN(priceNum) || priceNum <= 0) {
-      Alert.alert('Price Required', 'Please enter a valid price.');
+      showAlert('Price Required', 'Please enter a valid price.');
       return;
     }
 
-    setItems((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        name: newItemName.trim(),
-        type: newItemType,
-        price: priceNum,
-      },
-    ]);
-    setNewItemName('');
-    setNewItemPrice('');
-    setIsAddItemModalOpen(false);
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === editingItem.id
+          ? { ...it, name: editName.trim(), price: priceNum, type: editType }
+          : it
+      )
+    );
+    setEditingItem(null);
+  };
+
+  const handleDeleteItem = (id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    if (editingItem?.id === id) {
+      setEditingItem(null);
+    }
   };
 
   const handleCreateJobSheet = async () => {
@@ -219,26 +260,26 @@ export default function CreateJobSheetScreen() {
     if (!cleanReg) {
       setHasValidationError(true);
       scrollRef.current?.scrollTo({ y: 0, animated: true });
-      Alert.alert(
+      showAlert(
         'Car Number Required',
-        'Please enter the Car Number (e.g. MH02AB1234) at the top of the form, or tap one of the recent car pills.'
+        'Please enter the Vehicle / Car Registration Number (e.g. MH02AB1234). It serves as the unique garage ID.',
+        'warning'
       );
       return;
     }
 
     if (items.length === 0) {
-      Alert.alert('Add Items', 'Please add at least one service or spare part to this job sheet.');
+      showAlert('Add Items', 'Please add at least one service or spare part to this job sheet.', 'warning');
       return;
     }
 
     const entId = enterpriseId || 'enterprise-cool-car';
-    const newJobId = generateNewJobId();
-    const jobNum = generateNewJobNumber();
-    const finalModel = carModel.trim() || 'Car';
+    const newJobId = `JS-${Date.now()}`;
+    const jobNum = `CCG-${Math.floor(1000 + Math.random() * 9000)}`;
+    const finalModel = carModel.trim() ? `${carModel.trim()} (${modelYear})` : `Vehicle (${modelYear})`;
     const finalCustName = customerName.trim() || 'Walk-in Customer';
     const finalCustPhone = customerPhone.trim();
 
-    // If customer paid now, credit the selected bank account / cash drawer
     if (paidNowVal > 0 && selectedAccountId) {
       creditAccount(selectedAccountId, paidNowVal);
     }
@@ -255,7 +296,8 @@ export default function CreateJobSheetScreen() {
       vehicleMake: finalModel.split(' ')[0],
       vehicleModel: finalModel,
       workCategory,
-      date: new Date().toISOString(),
+      date: jobDate,
+      time: jobTime,
       status: 'OPEN' as const,
       assignedMechanicId: selectedMechanic?.id || '',
       assignedMechanicName: selectedMechanic ? `${selectedMechanic.name} (${selectedMechanic.role})` : 'Unassigned',
@@ -285,34 +327,30 @@ export default function CreateJobSheetScreen() {
       updatedAt: new Date().toISOString(),
     };
 
-    try {
-      const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('../../src/services/firebase/firebase.config');
-      await setDoc(doc(db, 'enterprises', entId, 'jobSheets', newJobId), newJob);
-    } catch (err) {
-      console.log('[CreateJobSheet] Firestore sync error/offline:', err);
-    }
-
     addJobSheet(newJob as any);
 
-    Alert.alert(
+    showAlert(
       'Job Sheet Created!',
-      `Job Sheet #${jobNum} created for ${finalModel} (${cleanReg})\nWork: ${workCategory}\nTotal Bill: ${currencySymbol}${totalBillDue}\nPaid Now: ${currencySymbol}${paidNowVal}\nBalance Due: ${currencySymbol}${remainingBalance}`,
-      [{ text: 'View All Job Sheets', onPress: () => router.replace('/job-sheets' as any) }]
+      `Job Sheet #${jobNum} created for ${finalModel} (${cleanReg}).\nTotal Bill: ₹${totalBillDue.toLocaleString()}.\nPaid Now: ₹${paidNowVal.toLocaleString()}.`,
+      'success',
+      [
+        {
+          text: 'View Job Sheets',
+          onPress: () => router.replace('/job-sheets'),
+        },
+      ]
     );
   };
 
   const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
   const sheetBg = isDark ? '#111622' : '#FFFFFF';
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
-  const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
-  const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
 
   return (
     <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      {/* Sky Blue Header */}
+      {/* Top Header */}
       <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <TouchableOpacity
             onPress={() => router.back()}
             style={{
@@ -329,7 +367,7 @@ export default function CreateJobSheetScreen() {
 
           <View style={{ alignItems: 'center' }}>
             <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
-              Daily Job Sheet
+              Create Daily Job Sheet
             </Text>
             <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12, fontWeight: '600' }}>
               Cool Car Workshop
@@ -344,84 +382,10 @@ export default function CreateJobSheetScreen() {
               borderRadius: 14,
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>
               {formatCurrency(totalBillDue, currencySymbol)}
             </Text>
           </View>
-        </View>
-
-        {/* WORK CATEGORY TOGGLE (Mechanical vs AC vs Both) */}
-        <View
-          style={{
-            flexDirection: 'row',
-            backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
-            borderRadius: 22,
-            padding: 4,
-            gap: 4,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => setWorkCategory('AC')}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: 18,
-              alignItems: 'center',
-              backgroundColor: workCategory === 'AC' ? '#FFFFFF' : 'transparent',
-            }}
-          >
-            <Text
-              style={{
-                color: workCategory === 'AC' ? '#0C1829' : '#FFFFFF',
-                fontSize: 12,
-                fontWeight: '800',
-              }}
-            >
-              ❄️ AC Work
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setWorkCategory('MECHANICAL')}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: 18,
-              alignItems: 'center',
-              backgroundColor: workCategory === 'MECHANICAL' ? '#FFFFFF' : 'transparent',
-            }}
-          >
-            <Text
-              style={{
-                color: workCategory === 'MECHANICAL' ? '#0C1829' : '#FFFFFF',
-                fontSize: 12,
-                fontWeight: '800',
-              }}
-            >
-              🔧 Mechanical
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setWorkCategory('BOTH')}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: 18,
-              alignItems: 'center',
-              backgroundColor: workCategory === 'BOTH' ? '#FFFFFF' : 'transparent',
-            }}
-          >
-            <Text
-              style={{
-                color: workCategory === 'BOTH' ? '#0C1829' : '#FFFFFF',
-                fontSize: 12,
-                fontWeight: '800',
-              }}
-            >
-              ⚙️ Both
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -432,24 +396,60 @@ export default function CreateJobSheetScreen() {
           backgroundColor: sheetBg,
           borderTopLeftRadius: 36,
           borderTopRightRadius: 36,
-          paddingTop: 22,
+          paddingTop: 20,
           paddingHorizontal: 20,
-          shadowColor: '#0C1829',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: isDark ? 0.4 : 0.06,
-          shadowRadius: 16,
-          elevation: 8,
         }}
       >
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 130 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* STEP 1: Car & Customer Information */}
+          {/* STEP 1: WORK CATEGORY DROPDOWN INSIDE JOB SHEET (No top tab buttons) */}
           <View
             style={{
-              marginBottom: 18,
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderRadius: 20,
+              padding: 14,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8', textTransform: 'uppercase', marginBottom: 6 }}>
+              Nature of Work (Job Category) *
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => setIsWorkCategoryModalOpen(true)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                borderWidth: 1,
+                borderColor: cardBorder,
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                {workCategory === 'AC'
+                  ? '❄️ Car AC Repair & Service'
+                  : workCategory === 'MECHANICAL'
+                  ? '🔧 Mechanical Repair & Service'
+                  : '⚙️ Complete AC & Mechanical Work'}
+              </Text>
+              <ChevronDown size={18} color="#6B9FE8" />
+            </TouchableOpacity>
+          </View>
+
+          {/* STEP 2: Car & Date Information */}
+          <View
+            style={{
+              marginBottom: 16,
               backgroundColor: isDark ? '#141926' : '#F8FAFD',
               padding: 16,
               borderRadius: 24,
@@ -472,56 +472,75 @@ export default function CreateJobSheetScreen() {
                   <Car size={16} color="#FFFFFF" />
                 </View>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                  Car & Customer Details
+                  Car & Intake Date
                 </Text>
               </View>
 
-              {hasValidationError && !carNumber.trim() && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <AlertCircle size={14} color="#EF4444" />
-                  <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '800' }}>Car No. Required</Text>
-                </View>
-              )}
+              {/* Live Distinct Car Silhouette Illustration */}
+              <DynamicCarIllustration modelName={carModel} size={52} showBadge={true} />
             </View>
 
-            {/* Quick 1-tap Sample / Recent Vehicle Chips */}
-            <View style={{ marginBottom: 12 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase' }}>
-                Tap to quick-fill car:
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                {RECENT_SAMPLE_VEHICLES.map((v, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    onPress={() => handleSelectRecentVehicle(v)}
-                    style={{
-                      backgroundColor: carNumber.replace(/\s+/g, '') === v.reg ? (isDark ? '#FFFFFF' : '#0C1829') : (isDark ? '#1C2538' : '#FFFFFF'),
-                      paddingVertical: 6,
-                      paddingHorizontal: 10,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: cardBorder,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: '800',
-                        color: carNumber.replace(/\s+/g, '') === v.reg ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#FFFFFF' : '#0C1829'),
-                      }}
-                    >
-                      {v.reg} ({v.model.split(' ')[0]}) {v.previousPending > 0 ? `• Due: ₹${v.previousPending}` : ''}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+            {/* Date & Log Time Row */}
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+              <View style={{ flex: 1.2 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+                  Job Intake Date
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setIsCalendarOpen(true)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                    borderRadius: 14,
+                    paddingHorizontal: 12,
+                    height: 44,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                    📅 {jobDate}
+                  </Text>
+                  <CalendarIcon size={16} color="#6B9FE8" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+                  Intake Time
+                </Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                    borderRadius: 14,
+                    paddingHorizontal: 10,
+                    height: 44,
+                    gap: 6,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <Clock size={16} color="#6B9FE8" />
+                  <TextInput
+                    value={jobTime}
+                    onChangeText={setJobTime}
+                    placeholder="11:30 AM"
+                    placeholderTextColor="#94A3B8"
+                    style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '800' }}
+                  />
+                </View>
+              </View>
             </View>
 
             {/* Car Number & Model */}
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
               <View style={{ flex: 1.2 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
-                  Car Number *
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+                  Car Number (Unique ID) *
                 </Text>
                 <TextInput
                   value={carNumber}
@@ -547,13 +566,13 @@ export default function CreateJobSheetScreen() {
               </View>
 
               <View style={{ flex: 1.4 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
-                  Car Model
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+                  Car Model & Make
                 </Text>
                 <TextInput
                   value={carModel}
                   onChangeText={setCarModel}
-                  placeholder="Honda City / Swift"
+                  placeholder="Honda City / Creta"
                   placeholderTextColor="#94A3B8"
                   style={{
                     backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
@@ -570,11 +589,60 @@ export default function CreateJobSheetScreen() {
               </View>
             </View>
 
-            {/* Customer Name & Mobile */}
+            {/* Model Year Picker with Scroller trigger */}
+            <View style={{ marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>
+                  Model Year ({modelYear})
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setIsYearPickerOpen(true)}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(107, 159, 232, 0.18)',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8' }}>
+                    + All Years (1950 - {YEARS_LIST[0]})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {YEARS_LIST.slice(0, 8).map((yr) => (
+                  <TouchableOpacity
+                    key={yr}
+                    onPress={() => setModelYear(String(yr))}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      backgroundColor: modelYear === String(yr) ? '#6B9FE8' : isDark ? '#1C2538' : '#FFFFFF',
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: modelYear === String(yr) ? '#FFFFFF' : isDark ? '#FFFFFF' : '#0C1829',
+                      }}
+                    >
+                      {yr}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Customer Details (Optional) */}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
-                  Customer Name
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+                  Customer Name (Optional)
                 </Text>
                 <TextInput
                   value={customerName}
@@ -585,8 +653,8 @@ export default function CreateJobSheetScreen() {
                     backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
                     borderRadius: 14,
                     paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    fontSize: 13,
+                    paddingVertical: 9,
+                    fontSize: 12,
                     fontWeight: '700',
                     color: isDark ? '#FFFFFF' : '#0C1829',
                     borderWidth: 1,
@@ -596,8 +664,8 @@ export default function CreateJobSheetScreen() {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
-                  Mobile Number
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+                  Mobile (Optional)
                 </Text>
                 <TextInput
                   value={customerPhone}
@@ -609,8 +677,8 @@ export default function CreateJobSheetScreen() {
                     backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
                     borderRadius: 14,
                     paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    fontSize: 13,
+                    paddingVertical: 9,
+                    fontSize: 12,
                     fontWeight: '700',
                     color: isDark ? '#FFFFFF' : '#0C1829',
                     borderWidth: 1,
@@ -621,22 +689,13 @@ export default function CreateJobSheetScreen() {
             </View>
           </View>
 
-          {/* STEP 2: Assign Mechanic / Staff */}
-          <View style={{ marginBottom: 18 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <UserCheck size={16} color="#6B9FE8" />
-                <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                  Assign Mechanic / Staff
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => router.push('/staff' as any)}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B9FE8' }}>
-                  Staff Directory
-                </Text>
-              </TouchableOpacity>
+          {/* STEP 3: Assign Staff */}
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Assigned Mechanic / Staff
+              </Text>
             </View>
-
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {employees.map((emp) => {
                 const isSelected = emp.id === assignedEmployeeId;
@@ -647,139 +706,130 @@ export default function CreateJobSheetScreen() {
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 8,
-                      paddingVertical: 9,
+                      gap: 6,
+                      paddingVertical: 8,
                       paddingHorizontal: 12,
-                      borderRadius: 16,
-                      backgroundColor: isSelected
-                        ? (isDark ? '#FFFFFF' : '#0C1829')
-                        : (isDark ? '#141926' : '#F4F7FC'),
+                      borderRadius: 14,
+                      backgroundColor: isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : isDark ? '#141926' : '#F4F7FC',
                       borderWidth: 1,
-                      borderColor: isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : cardBorder,
+                      borderColor: cardBorder,
                     }}
                   >
-                    <View
+                    <Text
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 11,
-                        backgroundColor: isSelected
-                          ? (isDark ? '#0C1829' : '#FFFFFF')
-                          : '#6B9FE8',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        fontSize: 12,
+                        fontWeight: '800',
+                        color: isSelected ? (isDark ? '#0C1829' : '#FFFFFF') : isDark ? '#FFFFFF' : '#0C1829',
                       }}
                     >
-                      {isSelected ? (
-                        <Check size={13} color={isDark ? '#FFFFFF' : '#0C1829'} strokeWidth={3} />
-                      ) : (
-                        <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
-                          {emp.name.charAt(0)}
-                        </Text>
-                      )}
-                    </View>
-                    <View>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: '800',
-                          color: isSelected
-                            ? (isDark ? '#0C1829' : '#FFFFFF')
-                            : (isDark ? '#FFFFFF' : '#0C1829'),
-                        }}
-                      >
-                        {emp.name}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 10,
-                          fontWeight: '600',
-                          color: isSelected
-                            ? (isDark ? 'rgba(12,24,41,0.7)' : 'rgba(255,255,255,0.7)')
-                            : '#64748B',
-                        }}
-                      >
-                        {emp.role}
-                      </Text>
-                    </View>
+                      {emp.name}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
           </View>
 
-          {/* STEP 3: Quick Add Presets (AC vs Mechanical) */}
-          <View style={{ marginBottom: 18 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-              <Sparkles size={16} color="#6B9FE8" />
-              <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                Quick Add {workCategory === 'AC' ? 'Car AC' : workCategory === 'MECHANICAL' ? 'Mechanical' : 'Workshop'} Items
-              </Text>
-            </View>
+          {/* STEP 4: BILLED ITEMS (QUICK DROPDOWN + TAP TO EDIT) */}
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <View>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  Billed Items ({items.length})
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                  Tap any item below to edit price or name
+                </Text>
+              </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {activePresets.map((item, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => handleAddPresetItem(item)}
-                  style={{
-                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <Plus size={13} color="#6B9FE8" strokeWidth={2.5} />
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                    {item.name}
-                  </Text>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8' }}>
-                    ₹{item.price}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* STEP 4: Job Items List */}
-          <View style={{ marginBottom: 18 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                Billed Services & Parts ({items.length})
-              </Text>
+              {/* Quick Add Dropdown Button */}
               <TouchableOpacity
-                onPress={() => setIsAddItemModalOpen(true)}
+                onPress={() => setIsQuickAddModalOpen(true)}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 4,
-                  backgroundColor: isDark ? '#141926' : '#F4F7FC',
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
+                  backgroundColor: '#6B9FE8',
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
                   borderRadius: 14,
                 }}
               >
-                <Plus size={13} color={isDark ? '#FFFFFF' : '#0C1829'} />
-                <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                  Custom Item
+                <Plus size={14} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                  + Quick Select
                 </Text>
               </TouchableOpacity>
             </View>
 
+            {/* 1-Tap Quick Standard Services & Parts Chips */}
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 6 }}>
+                ⚡ Standard Services & Parts (1-Tap Add):
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {STANDARD_SERVICES_AND_PARTS.map((std) => {
+                  const isAdded = items.some((i) => i.name === std.name);
+                  return (
+                    <TouchableOpacity
+                      key={std.name}
+                      onPress={() => {
+                        if (isAdded) {
+                          showAlert('Already Added', `"${std.name}" is already in your bill.`);
+                        } else {
+                          handleAddPresetItem({ name: std.name, type: std.type, price: std.price });
+                        }
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingVertical: 7,
+                        paddingHorizontal: 12,
+                        borderRadius: 14,
+                        backgroundColor: isAdded ? 'rgba(0, 200, 150, 0.15)' : isDark ? '#141926' : '#F1F5F9',
+                        borderWidth: 1,
+                        borderColor: isAdded ? '#00C896' : cardBorder,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12 }}>{std.emoji}</Text>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: isAdded ? '#00C896' : isDark ? '#FFFFFF' : '#0C1829',
+                        }}
+                      >
+                        {std.name}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '800',
+                          color: '#6B9FE8',
+                        }}
+                      >
+                        ₹{std.price.toLocaleString()}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Items List (Click to Edit) */}
             <View style={{ gap: 8 }}>
               {items.map((item) => (
-                <View
+                <TouchableOpacity
                   key={item.id}
+                  onPress={() => openEditModal(item)}
+                  activeOpacity={0.8}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: 12,
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
                     borderRadius: 18,
                     backgroundColor: isDark ? '#141926' : '#F8FAFD',
                     borderWidth: 1,
@@ -792,327 +842,539 @@ export default function CreateJobSheetScreen() {
                         width: 32,
                         height: 32,
                         borderRadius: 16,
-                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                        backgroundColor: isDark ? '#1C2538' : '#E2E8F0',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      {item.type === 'PART' ? <Package size={15} color="#FFFFFF" /> : <Wrench size={15} color="#FFFFFF" />}
+                      {item.type === 'PART' ? <Package size={14} color="#6B9FE8" /> : <Wrench size={14} color="#00C896" />}
                     </View>
+
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
                         {item.name}
                       </Text>
-                      <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '600' }}>
-                        {item.type === 'SERVICE' ? 'Service / Labor' : 'Spare Part'}
+                      <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700' }}>
+                        {item.type === 'PART' ? 'Spare Part' : 'Service Labor'} • Tap to edit
                       </Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                      {formatCurrency(item.price, currencySymbol)}
+                      ₹{item.price.toLocaleString()}
                     </Text>
-                    <TouchableOpacity onPress={() => setItems(items.filter((i) => i.id !== item.id))}>
-                      <Trash2 size={15} color="#EF4444" />
-                    </TouchableOpacity>
+
+                    <Edit2 size={14} color="#6B9FE8" />
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* STEP 5: Multi-Layer Bill Breakdown (Previous Due + Current Bill) */}
-          <GlassCard
-            variant={isDark ? 'navy' : 'sand'}
-            padding={16}
-            style={{ borderRadius: 24, marginBottom: 18, gap: 10 }}
+          {/* STEP 5: Financials & Previous Pending */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', textTransform: 'uppercase' }}>
-              Bill Breakdown & Settlement
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#6B9FE8', textTransform: 'uppercase', marginBottom: 12 }}>
+              Bill Breakdown & Pending Balance
             </Text>
 
-            {/* Current Job Services Subtotal */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>Current Work Total</Text>
-              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 14, fontWeight: '800' }}>
-                {formatCurrency(currentSubtotal, currencySymbol)}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '600' }}>Current Job Subtotal:</Text>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                ₹{currentSubtotal.toLocaleString()}
               </Text>
             </View>
 
-            {/* Previous Pending Due Input */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View>
-                <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>Previous Pending Balance</Text>
-                <Text style={{ color: '#EF4444', fontSize: 10, fontWeight: '700' }}>Old Due from Customer</Text>
-              </View>
+            {/* Previous Pending */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '700' }}>Previous Pending Balance:</Text>
               <TextInput
                 value={previousPending}
                 onChangeText={setPreviousPending}
                 keyboardType="numeric"
                 style={{
                   width: 90,
-                  textAlign: 'right',
-                  color: prevPendingVal > 0 ? '#EF4444' : (isDark ? '#FFFFFF' : '#0C1829'),
-                  fontSize: 14,
-                  fontWeight: '800',
-                  paddingVertical: 4,
-                  paddingHorizontal: 8,
                   backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
                   borderRadius: 10,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  fontSize: 13,
+                  fontWeight: '800',
+                  color: '#EF4444',
+                  textAlign: 'right',
                   borderWidth: 1,
                   borderColor: cardBorder,
                 }}
               />
             </View>
-
-            {/* Discount */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>Discount ({currencySymbol})</Text>
-              <TextInput
-                value={discount}
-                onChangeText={setDiscount}
-                keyboardType="numeric"
-                style={{
-                  width: 90,
-                  textAlign: 'right',
-                  color: '#34D399',
-                  fontSize: 14,
-                  fontWeight: '800',
-                  paddingVertical: 4,
-                  paddingHorizontal: 8,
-                  backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: cardBorder,
-                }}
-              />
-            </View>
-
-            <View style={{ height: 1, backgroundColor: cardBorder }} />
 
             {/* Total Bill Due */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '900' }}>
-                Total Bill Due
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: 8,
+                borderTopWidth: 1,
+                borderTopColor: cardBorder,
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Total Bill Payable:
               </Text>
-              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 22, fontWeight: '900' }}>
-                {formatCurrency(totalBillDue, currencySymbol)}
+              <Text style={{ fontSize: 18, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                ₹{totalBillDue.toLocaleString()}
               </Text>
             </View>
 
-            {/* Amount Paid Now Input */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-              <View>
-                <Text style={{ color: isDark ? '#34D399' : '#059669', fontSize: 14, fontWeight: '800' }}>
-                  Amount Paid Now ({currencySymbol})
-                </Text>
-                <Text style={{ color: '#64748B', fontSize: 10, fontWeight: '600' }}>
-                  Customer paid today
-                </Text>
-              </View>
+            {/* Amount Paid Now */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, color: '#00C896', fontWeight: '800' }}>Amount Paid Now:</Text>
               <TextInput
                 value={amountPaidNow}
                 onChangeText={setAmountPaidNow}
                 keyboardType="numeric"
                 style={{
-                  width: 100,
-                  textAlign: 'right',
-                  color: '#34D399',
-                  fontSize: 16,
-                  fontWeight: '900',
-                  paddingVertical: 6,
-                  paddingHorizontal: 10,
+                  width: 110,
                   backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
                   borderRadius: 12,
-                  borderWidth: 1.5,
-                  borderColor: '#34D399',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  fontSize: 15,
+                  fontWeight: '900',
+                  color: '#00C896',
+                  textAlign: 'right',
+                  borderWidth: 1,
+                  borderColor: cardBorder,
                 }}
               />
             </View>
 
-            {/* Remaining Balance Due */}
+            {/* Remaining Balance */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '700' }}>
-                Remaining Balance Due
+              <Text style={{ fontSize: 12, fontWeight: '700', color: remainingBalance > 0 ? '#EF4444' : '#00C896' }}>
+                {remainingBalance > 0 ? 'Remaining Balance Due:' : 'Status:'}
               </Text>
-              <Text
-                style={{
-                  color: remainingBalance > 0 ? '#EF4444' : '#34D399',
-                  fontSize: 16,
-                  fontWeight: '900',
-                }}
-              >
-                {remainingBalance > 0 ? formatCurrency(remainingBalance, currencySymbol) : 'Fully Cleared ✓'}
+              <Text style={{ fontSize: 14, fontWeight: '900', color: remainingBalance > 0 ? '#EF4444' : '#00C896' }}>
+                {remainingBalance > 0 ? `₹${remainingBalance.toLocaleString()}` : 'Fully Paid ✓'}
               </Text>
             </View>
-          </GlassCard>
+          </View>
 
-          {/* STEP 6: Payment Mode & Bank Account (Only if Amount Paid Now > 0) */}
-          {paidNowVal > 0 ? (
-            <BankPaymentSelector
-              paymentMode={paymentMode}
-              onPaymentModeChange={setPaymentMode}
-              selectedAccountId={selectedAccountId}
-              onAccountChange={(accId, accName) => {
-                setSelectedAccountId(accId);
-                setSelectedAccountName(accName);
-              }}
-              label="Deposit Payment Into Account"
-            />
-          ) : null}
+          {/* STEP 6: Bank & Payment Mode Selector */}
+          {paidNowVal > 0 && (
+            <View style={{ marginBottom: 16 }}>
+              <BankPaymentSelector
+                paymentMode={paymentMode}
+                onPaymentModeChange={setPaymentMode}
+                selectedAccountId={selectedAccountId}
+                onAccountChange={(id, name) => {
+                  setSelectedAccountId(id);
+                  setSelectedAccountName(name);
+                }}
+                label="Receive Payment Into"
+              />
+            </View>
+          )}
 
-          {/* Submit CTA Button */}
+          {/* SUBMIT BUTTON */}
           <TouchableOpacity
             onPress={handleCreateJobSheet}
             activeOpacity={0.88}
             style={{
-              backgroundColor: primaryBtnBg,
+              backgroundColor: isDark ? '#FFFFFF' : '#0C1829',
+              borderRadius: 24,
               paddingVertical: 18,
-              borderRadius: 30,
               alignItems: 'center',
               justifyContent: 'center',
-              marginTop: 10,
-              shadowColor: '#0C1829',
+              shadowColor: '#000',
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.2,
               shadowRadius: 10,
               elevation: 4,
             }}
           >
-            <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
-              Create Job Sheet ({workCategory})
+            <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
+              Create Job Sheet (₹{totalBillDue.toLocaleString()})
             </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
-      {/* Add Custom Item Modal */}
+      {/* MODAL 1: WORK CATEGORY PICKER */}
       <Modal
-        visible={isAddItemModalOpen}
+        visible={isWorkCategoryModalOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setIsAddItemModalOpen(false)}
+        onRequestClose={() => setIsWorkCategoryModalOpen(false)}
       >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            justifyContent: 'center',
-            paddingHorizontal: 24,
-          }}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setIsWorkCategoryModalOpen(false)}
+          style={styles.modalOverlay}
         >
-          <View
-            style={{
-              backgroundColor: isDark ? '#111622' : '#FFFFFF',
-              borderRadius: 28,
-              padding: 24,
-              gap: 16,
-              borderWidth: 1,
-              borderColor: cardBorder,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                Add Custom Item
+          <View style={[styles.pickerModal, { backgroundColor: isDark ? '#141926' : '#FFFFFF' }]}>
+            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#0C1829' }]}>
+              Select Work Category
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => {
+                setWorkCategory('AC');
+                setIsWorkCategoryModalOpen(false);
+              }}
+              style={styles.modalOption}
+            >
+              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'AC' ? '#6B9FE8' : isDark ? '#FFFFFF' : '#0C1829' }}>
+                ❄️ Car AC Repair & Service
               </Text>
-              <TouchableOpacity onPress={() => setIsAddItemModalOpen(false)}>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setWorkCategory('MECHANICAL');
+                setIsWorkCategoryModalOpen(false);
+              }}
+              style={styles.modalOption}
+            >
+              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'MECHANICAL' ? '#6B9FE8' : isDark ? '#FFFFFF' : '#0C1829' }}>
+                🔧 Mechanical Repair & Service
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setWorkCategory('BOTH');
+                setIsWorkCategoryModalOpen(false);
+              }}
+              style={styles.modalOption}
+            >
+              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'BOTH' ? '#6B9FE8' : isDark ? '#FFFFFF' : '#0C1829' }}>
+                ⚙️ Complete AC & Mechanical Work
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* MODAL 2: QUICK-ADD ITEMS DROPDOWN SEARCH */}
+      <Modal
+        visible={isQuickAddModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsQuickAddModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.sheetModal, { backgroundColor: isDark ? '#121A29' : '#FFFFFF' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Select Standard Service or Part
+              </Text>
+              <TouchableOpacity onPress={() => setIsQuickAddModalOpen(false)}>
                 <X size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            {/* Type selector */}
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TouchableOpacity
-                onPress={() => setNewItemType('SERVICE')}
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                  backgroundColor: newItemType === 'SERVICE' ? (isDark ? '#FFFFFF' : '#0C1829') : (isDark ? '#1C2538' : '#F1F5F9'),
-                }}
-              >
-                <Text
-                  style={{
-                    color: newItemType === 'SERVICE' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#FFFFFF' : '#0C1829'),
-                    fontWeight: '800',
-                    fontSize: 13,
-                  }}
-                >
-                  Labor / Service
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setNewItemType('PART')}
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                  backgroundColor: newItemType === 'PART' ? (isDark ? '#FFFFFF' : '#0C1829') : (isDark ? '#1C2538' : '#F1F5F9'),
-                }}
-              >
-                <Text
-                  style={{
-                    color: newItemType === 'PART' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#FFFFFF' : '#0C1829'),
-                    fontWeight: '800',
-                    fontSize: 13,
-                  }}
-                >
-                  Spare Part
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              value={newItemName}
-              onChangeText={setNewItemName}
-              placeholder="Item name (e.g. Brake Caliper Repair)"
-              placeholderTextColor="#94A3B8"
+            {/* Search */}
+            <View
               style={{
-                backgroundColor: isDark ? '#1C2538' : '#F8FAFD',
-                borderRadius: 16,
-                padding: 14,
-                fontSize: 14,
-                fontWeight: '700',
-                color: isDark ? '#FFFFFF' : '#0C1829',
-              }}
-            />
-
-            <TextInput
-              value={newItemPrice}
-              onChangeText={setNewItemPrice}
-              placeholder="Price (₹)"
-              placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-              style={{
-                backgroundColor: isDark ? '#1C2538' : '#F8FAFD',
-                borderRadius: 16,
-                padding: 14,
-                fontSize: 14,
-                fontWeight: '700',
-                color: isDark ? '#FFFFFF' : '#0C1829',
-              }}
-            />
-
-            <TouchableOpacity
-              onPress={handleSaveCustomItem}
-              style={{
-                backgroundColor: primaryBtnBg,
-                paddingVertical: 14,
-                borderRadius: 20,
+                flexDirection: 'row',
                 alignItems: 'center',
+                backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                borderRadius: 14,
+                paddingHorizontal: 12,
+                height: 42,
+                gap: 8,
+                marginBottom: 12,
               }}
             >
-              <Text style={{ color: primaryBtnText, fontSize: 15, fontWeight: '800' }}>
-                Add to Job Sheet
-              </Text>
-            </TouchableOpacity>
+              <Search size={16} color="#64748B" />
+              <TextInput
+                value={quickAddSearch}
+                onChangeText={setQuickAddSearch}
+                placeholder="Search AC gas, coil, brake pads, oil..."
+                placeholderTextColor="#94A3B8"
+                style={{ flex: 1, fontSize: 13, color: isDark ? '#FFFFFF' : '#0C1829' }}
+              />
+            </View>
+
+            <ScrollView style={{ maxHeight: 340 }}>
+              {allPresets.map((preset, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => handleAddPresetItem(preset)}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingVertical: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: cardBorder,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                      {preset.name}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                      {preset.type === 'PART' ? 'Spare Part' : 'Service Labor'}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#6B9FE8' }}>
+                    ₹{preset.price}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>
+
+      {/* MODAL 3: TAP-TO-EDIT ITEM MODAL */}
+      <Modal
+        visible={editingItem !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingItem(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.dialogModal, { backgroundColor: isDark ? '#121A29' : '#FFFFFF' }]}>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 12 }}>
+              Edit Billed Item
+            </Text>
+
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+              Item / Service Name
+            </Text>
+            <TextInput
+              value={editName}
+              onChangeText={setEditName}
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 13,
+                fontWeight: '700',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                marginBottom: 10,
+              }}
+            />
+
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+              Price (₹)
+            </Text>
+            <TextInput
+              value={editPrice}
+              onChangeText={setEditPrice}
+              keyboardType="numeric"
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 14,
+                fontWeight: '900',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                marginBottom: 16,
+              }}
+            />
+
+            {/* Actions: Save / Delete / Cancel */}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {editingItem && (
+                <TouchableOpacity
+                  onPress={() => handleDeleteItem(editingItem.id)}
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 14,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Trash2 size={16} color="#EF4444" />
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                onPress={() => setEditingItem(null)}
+                style={{
+                  flex: 1,
+                  backgroundColor: isDark ? '#1C2538' : '#E2E8F0',
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '800' }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleSaveEditedItem}
+                style={{
+                  flex: 1.5,
+                  backgroundColor: '#0C1829',
+                  paddingVertical: 12,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900' }}>
+                  Save Item
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* FULL MODEL YEAR SCROLLER MODAL (1950 to Current Year) */}
+      <Modal
+        visible={isYearPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsYearPickerOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsYearPickerOpen(false)}
+        >
+          <View
+            style={[
+              styles.sheetModal,
+              {
+                backgroundColor: isDark ? '#111622' : '#FFFFFF',
+                maxHeight: '75%',
+              },
+            ]}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 0 }]}>
+                Select Model Year
+              </Text>
+              <TouchableOpacity onPress={() => setIsYearPickerOpen(false)}>
+                <X size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={true} style={{ flexGrow: 0 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                {YEARS_LIST.map((yr) => {
+                  const isSelected = modelYear === String(yr);
+                  return (
+                    <TouchableOpacity
+                      key={yr}
+                      onPress={() => {
+                        setModelYear(String(yr));
+                        setIsYearPickerOpen(false);
+                      }}
+                      style={{
+                        width: '22%',
+                        paddingVertical: 10,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isSelected
+                          ? '#6B9FE8'
+                          : isDark
+                          ? '#1C2538'
+                          : '#F1F5F9',
+                        borderWidth: 1,
+                        borderColor: isSelected ? '#6B9FE8' : cardBorder,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '800',
+                          color: isSelected ? '#FFFFFF' : isDark ? '#FFFFFF' : '#0C1829',
+                        }}
+                      >
+                        {yr}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* CALENDAR PICKER MODAL */}
+      <CalendarPickerModal
+        visible={isCalendarOpen}
+        selectedDate={jobDate}
+        onSelectDate={setJobDate}
+        onClose={() => setIsCalendarOpen(false)}
+        title="Select Job Intake Date"
+      />
+
+      {/* THEMED CUSTOM ALERT (Replaces native OS alert) */}
+      <ThemedAlert {...alertConfig} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  pickerModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  dialogModal: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  sheetModal: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 26,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  modalOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.12)',
+  },
+});

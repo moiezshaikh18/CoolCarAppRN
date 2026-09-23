@@ -211,7 +211,7 @@ export default function VehicleDetailsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => router.push('/reminders')}
+              onPress={() => router.push('/job-sheets')}
               activeOpacity={0.8}
               style={{ alignItems: 'center', gap: 6 }}
             >
@@ -225,10 +225,10 @@ export default function VehicleDetailsScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <Clock size={20} color="#FFFFFF" strokeWidth={2.2} />
+                <FileText size={20} color="#FFFFFF" strokeWidth={2.2} />
               </View>
               <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                Reminder
+                Job Sheets
               </Text>
             </TouchableOpacity>
 

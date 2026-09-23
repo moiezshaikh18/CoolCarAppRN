@@ -29,6 +29,8 @@ import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useVehicleStore } from '../../src/store/vehicleStore';
 import { useCustomerStore } from '../../src/store/customerStore';
 import { FuelType, Vehicle } from '../../src/types/vehicle.types';
+import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
+import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 
 const POPULAR_MAKES = ['Maruti', 'Hyundai', 'Tata', 'Mahindra', 'Honda', 'Toyota', 'Kia'];
 const FUEL_TYPES: { label: string; value: FuelType }[] = [
@@ -68,6 +70,23 @@ export default function AddVehicleScreen() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (title: string, message: string, type: 'error' | 'warning' | 'success' | 'info' = 'warning', buttons?: any[]) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      onClose: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+    });
+  };
+
   const filteredCustomers = useMemo(() => {
     if (!customerSearch.trim()) return customers;
     const q = customerSearch.toLowerCase();
@@ -79,19 +98,15 @@ export default function AddVehicleScreen() {
   const handleSave = async () => {
     const cleanReg = regNumber.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     if (!cleanReg || cleanReg.length < 5) {
-      Alert.alert('Required', 'Please enter a valid Registration Number (e.g. MH02AB1234)');
+      showAlert('Vehicle Number Required', 'Please enter a valid Registration Number (e.g. MH02AB1234). This serves as the primary unique ID.', 'warning');
       return;
     }
     if (!make.trim()) {
-      Alert.alert('Required', 'Please specify or select vehicle Make (Brand)');
+      showAlert('Make Required', 'Please specify or select vehicle Make (Brand).', 'warning');
       return;
     }
     if (!model.trim()) {
-      Alert.alert('Required', 'Please enter vehicle Model (e.g. Swift, City)');
-      return;
-    }
-    if (!selectedCustomer) {
-      Alert.alert('Required', 'Please select or add a Customer for this vehicle');
+      showAlert('Model Required', 'Please enter vehicle Model (e.g. Swift, City, Creta).', 'warning');
       return;
     }
 
@@ -102,9 +117,9 @@ export default function AddVehicleScreen() {
     const vehicleObj: Vehicle = {
       id: newVehId,
       enterpriseId: entId,
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.name,
-      customerPhone: selectedCustomer.phone,
+      customerId: selectedCustomer?.id || `cust-walkin-${Date.now()}`,
+      customerName: selectedCustomer?.name || 'Walk-in / Workshop',
+      customerPhone: selectedCustomer?.phone || '',
       registrationNumber: cleanReg,
       make: make.trim(),
       model: model.trim(),
@@ -132,8 +147,8 @@ export default function AddVehicleScreen() {
     addVehicle(vehicleObj);
     setLoading(false);
 
-    Alert.alert('Success', `Vehicle ${cleanReg} registered successfully!`, [
-      { text: 'OK', onPress: () => router.back() },
+    showAlert('Vehicle Registered!', `Vehicle ${cleanReg} registered successfully as unique garage entry.`, 'success', [
+      { text: 'Done', onPress: () => router.back() },
     ]);
   };
 
@@ -671,6 +686,8 @@ export default function AddVehicleScreen() {
           </View>
         </View>
       </Modal>
+
+      <ThemedAlert {...alertConfig} />
     </View>
   );
 }

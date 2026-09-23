@@ -9,6 +9,14 @@ export type PaymentType = 'SALARY' | 'ADVANCE';
 
 export type OfficialDocType = 'AADHAAR' | 'PAN' | 'DRIVING_LICENSE' | 'VOTER_ID' | 'OTHER';
 
+export interface EmployeePrivileges {
+  canCreateJobSheets: boolean;
+  canRecordExpenses: boolean;
+  canManageChalans: boolean;
+  canViewBankBalances: boolean;
+  canViewReports: boolean;
+}
+
 export interface Employee {
   id: string;
   enterpriseId: string;
@@ -24,6 +32,7 @@ export interface Employee {
   officialDocNumber: string; // e.g. "1234 5678 9012" or "ABCDE1234F"
   currentAdvance: number; // total advance taken minus settled
   totalPaidSalary: number; // lifetime salary paid
+  privileges?: EmployeePrivileges;
   isActive: boolean;
   notes?: string;
   createdAt: string;

@@ -34,3 +34,4 @@ export interface PurchaseChalan {
   createdAt: string;
   updatedAt: string;
 }
+
