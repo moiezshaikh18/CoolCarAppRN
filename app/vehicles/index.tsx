@@ -28,66 +28,6 @@ import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useVehicleStore } from '../../src/store/vehicleStore';
 import { Vehicle } from '../../src/types/vehicle.types';
 
-const DEFAULT_VEHICLES: Vehicle[] = [
-  {
-    id: 'veh-001',
-    enterpriseId: 'enterprise-dev-001',
-    customerId: 'cust-001',
-    customerName: 'Rajesh Sharma',
-    customerPhone: '+919820112345',
-    registrationNumber: 'MH 02 AB 1234',
-    make: 'Honda',
-    model: 'City',
-    modelYear: 2021,
-    fuelType: 'PETROL',
-    transmission: 'AUTOMATIC',
-    color: 'White',
-    odometerKm: 34500,
-    totalJobs: 3,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'veh-002',
-    enterpriseId: 'enterprise-dev-001',
-    customerId: 'cust-002',
-    customerName: 'Amit Patel',
-    customerPhone: '+919811154321',
-    registrationNumber: 'MH 01 CD 5678',
-    make: 'Hyundai',
-    model: 'Creta',
-    modelYear: 2022,
-    fuelType: 'DIESEL',
-    transmission: 'MANUAL',
-    color: 'Black',
-    odometerKm: 28000,
-    totalJobs: 2,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'veh-003',
-    enterpriseId: 'enterprise-dev-001',
-    customerId: 'cust-003',
-    customerName: 'Priya Verma',
-    customerPhone: '+919765432109',
-    registrationNumber: 'MH 03 EF 9012',
-    make: 'Maruti Suzuki',
-    model: 'Swift',
-    modelYear: 2020,
-    fuelType: 'PETROL',
-    transmission: 'MANUAL',
-    color: 'Red',
-    odometerKm: 42100,
-    totalJobs: 1,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
 export default function VehiclesListScreen() {
   const { theme, isDark } = useTheme();
   const { enterpriseId } = useEnterprise();
@@ -97,7 +37,7 @@ export default function VehiclesListScreen() {
   const [search, setSearch] = useState('');
   const [selectedFuel, setSelectedFuel] = useState<string>('ALL');
   const [refreshing, setRefreshing] = useState(false);
-  const [vehicles, setLocalVehicles] = useState<Vehicle[]>(DEFAULT_VEHICLES);
+  const [vehicles, setLocalVehicles] = useState<Vehicle[]>([]);
 
   // Sync with Firestore
   useEffect(() => {
@@ -114,6 +54,9 @@ export default function VehiclesListScreen() {
             const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Vehicle));
             setLocalVehicles(list);
             setVehicles(list);
+          } else {
+            setLocalVehicles([]);
+            setVehicles([]);
           }
         });
       } catch (err) {

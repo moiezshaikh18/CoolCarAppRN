@@ -47,18 +47,6 @@ interface ExpenseEntry {
   iconName: string;
 }
 
-const DEFAULT_JOBS: JobSheetEntry[] = [
-  { id: '1', jobNumber: 'CCG-0001', vehicleModel: 'Honda City ZX', customerName: 'Rajesh Sharma', amount: 8500, status: 'Paid' },
-  { id: '2', jobNumber: 'CCG-0002', vehicleModel: 'Hyundai Creta SX', customerName: 'Amit Patel', amount: 4200, status: 'Partially Paid' },
-  { id: '3', jobNumber: 'CCG-0003', vehicleModel: 'Maruti Brezza ZDi', customerName: 'Priya Kapoor', amount: 14200, status: 'Paid' },
-];
-
-const DEFAULT_EXPENSES: ExpenseEntry[] = [
-  { id: '1', category: 'Mobil 1 Fully Synthetic 4L', amount: 4500, iconName: 'Fuel' },
-  { id: '2', category: 'Workshop Electricity Bill', amount: 3200, iconName: 'Zap' },
-  { id: '3', category: 'Technician Lunch & Tea', amount: 450, iconName: 'Coffee' },
-];
-
 export default function EntriesScreen() {
   const { theme, isDark } = useTheme();
   const { enterprise, currencySymbol } = useEnterprise();
@@ -67,8 +55,8 @@ export default function EntriesScreen() {
   const [activeTab, setActiveTab] = useState<'jobSheets' | 'expenses'>('jobSheets');
 
   const [currentDate] = useState('Today');
-  const [jobs, setJobs] = useState<JobSheetEntry[]>(DEFAULT_JOBS);
-  const [expenses, setExpenses] = useState<ExpenseEntry[]>(DEFAULT_EXPENSES);
+  const [jobs, setJobs] = useState<JobSheetEntry[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
   const realExpenses = useExpenseStore((s) => s.expenses);
 
   // Live Firestore Sync
@@ -100,6 +88,8 @@ export default function EntriesScreen() {
               };
             });
             setJobs(list);
+          } else {
+            setJobs([]);
           }
         });
 
@@ -117,6 +107,8 @@ export default function EntriesScreen() {
               };
             });
             setExpenses(list);
+          } else {
+            setExpenses([]);
           }
         });
       } catch (err) {

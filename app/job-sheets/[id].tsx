@@ -42,7 +42,7 @@ import { usePaymentStore } from '../../src/store/paymentStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
-import { JobStatus } from '../../src/types/jobSheet.types';
+import { JobSheet, JobStatus } from '../../src/types/jobSheet.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 import { generateAndShareJobCardPdf } from '../../src/utils/jobCardPdf';
@@ -78,52 +78,48 @@ export default function JobSheetDetailsScreen() {
   // PDF generation loading state
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
-  const job = useMemo(() => {
+  const [dbJob, setDbJob] = useState<JobSheet | null>(null);
+
+  useEffect(() => {
+    if (!params.id) return;
     const found = jobSheets.find((j) => j.id === params.id || j.jobNumber === params.id);
-    if (found) return found;
-    return {
-      id: params.id ?? 'JS-2026-001',
-      jobNumber: 'CCG-1024',
-      date: 'Today, 11:30 AM',
-      time: '11:30 AM',
-      status: 'IN_PROGRESS' as JobStatus,
-      paymentStatus: 'PARTIALLY_PAID' as const,
-      customerName: 'Rajesh Sharma',
-      customerPhone: '+91 98201 12345',
-      vehicleNumber: 'MH02AB1234',
-      vehicleMake: 'Honda',
-      vehicleModel: 'City ZX i-VTEC',
-      workCategory: 'AC' as const,
-      assignedMechanicName: 'Irfan Khan (Head AC Mechanic)',
-      subtotal: 5150,
-      discount: 250,
-      previousPendingAmount: 0,
-      finalAmount: 4900,
-      totalPaid: 3000,
-      pendingAmount: 1900,
-      paymentMode: 'UPI' as const,
-      bankAccountName: 'HDFC Current A/c (Primary)',
-      items: [
-        { id: '1', name: 'AC Gas Refill (R134a)', type: 'SERVICE' as const, quantity: 1, unitPrice: 1800, amount: 1800 },
-        { id: '2', name: 'Cooling Coil Service & Clean', type: 'SERVICE' as const, quantity: 1, unitPrice: 2500, amount: 2500 },
-        { id: '3', name: 'Cabin AC Filter OEM', type: 'PART' as const, quantity: 1, unitPrice: 450, amount: 450 },
-        { id: '4', name: 'AC Compressor Oil (PAG 46)', type: 'PART' as const, quantity: 1, unitPrice: 350, amount: 350 },
-      ],
+    if (found) {
+      setDbJob(found);
+      return;
+    }
+    const fetchFromDb = async () => {
+      try {
+        const entId = enterpriseId || 'enterprise-dev-001';
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+        const snap = await getDoc(doc(db, 'enterprises', entId, 'jobSheets', params.id as string));
+        if (snap.exists()) {
+          setDbJob({ id: snap.id, ...snap.data() } as JobSheet);
+        }
+      } catch (err) {
+        console.log('[JobDetail] fetch error:', err);
+      }
     };
-  }, [params.id, jobSheets]);
+    fetchFromDb();
+  }, [params.id, jobSheets, enterpriseId]);
+
+  const job = useMemo(() => {
+    return jobSheets.find((j) => j.id === params.id || j.jobNumber === params.id) || dbJob;
+  }, [params.id, jobSheets, dbJob]);
 
   // ── Generate Cool Car Job Card PDF ──────────────────────────
   const handleDownloadPdf = async () => {
+    if (!job) return;
     setIsPdfGenerating(true);
     try {
       // Separate services (work done) from parts
-      const services = (job.items || [])
-        .filter((it) => it.type === 'SERVICE')
-        .map((it) => it.name);
+      const services = ((job as any)?.items || [])
+        .filter((it: any) => it.type === 'SERVICE')
+        .map((it: any) => it.name);
 
-      const parts = (job.items || [])
-        .filter((it) => it.type === 'PART')
-        .map((it) => ({
+      const parts = ((job as any)?.items || [])
+        .filter((it: any) => it.type === 'PART')
+        .map((it: any) => ({
           name: it.name,
           qty: it.quantity,
           price: it.unitPrice,
@@ -162,6 +158,7 @@ export default function JobSheetDetailsScreen() {
 
   // Open Payment modal with pre-filled pending amount
   const handleOpenPayment = () => {
+    if (!job) return;
     const defaultAmt = job.pendingAmount > 0 ? String(job.pendingAmount) : String(job.finalAmount);
     setPaymentAmountStr(defaultAmt);
     setPaymentMode('CASH');
@@ -186,6 +183,7 @@ export default function JobSheetDetailsScreen() {
 
   // Mark Work as Completed directly without payment (e.g. car ready for delivery)
   const handleMarkWorkDone = () => {
+    if (!job) return;
     updateJobSheet(job.id, {
       status: 'COMPLETED',
     });
@@ -196,6 +194,7 @@ export default function JobSheetDetailsScreen() {
   };
 
   const handleConfirmPayment = () => {
+    if (!job) return;
     if (paymentType === 'SINGLE') {
       const amt = parseFloat(paymentAmountStr);
       if (isNaN(amt) || amt <= 0) {
@@ -337,12 +336,32 @@ export default function JobSheetDetailsScreen() {
     }
   };
 
-  const isDone = (job.pendingAmount === 0 && job.finalAmount > 0) || job.status === 'COMPLETED';
-
   const canvasBg = isDark ? '#0A0D14' : '#153580';
   const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
   const cardBg = isDark ? '#141824' : '#FFFFFF';
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.08)';
+
+  if (!job) {
+    return (
+      <View style={{ flex: 1, backgroundColor: sheetBg, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 8 }}>
+          Job Sheet Not Found
+        </Text>
+        <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20 }}>
+          The requested job sheet could not be located.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20, backgroundColor: '#153580' }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const isDone = (job.pendingAmount === 0 && job.finalAmount > 0) || job.status === 'COMPLETED';
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
@@ -621,7 +640,7 @@ export default function JobSheetDetailsScreen() {
             </View>
           ) : (
             <View style={{ gap: 8 }}>
-              {job.items.map((item) => (
+              {(job.items || []).map((item: any) => (
                 <View
                   key={item.id}
                   style={{

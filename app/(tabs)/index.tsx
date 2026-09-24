@@ -6,7 +6,7 @@
 // Pure Black & White Dark Mode (#000000 & #FFFFFF)
 // ============================================================
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -54,67 +54,62 @@ import { useHideOnScroll } from '../../src/store/tabBarStore';
 
 export default function DashboardScreen() {
   const { isDark, toggleMode } = useTheme();
-  const { currencySymbol } = useEnterprise();
+  const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { onScroll: onHideNavScroll } = useHideOnScroll();
 
   // Stores
-
-  const { employees } = useEmployeeStore();
+  const { employees, setEmployees } = useEmployeeStore();
   const { accounts } = useBankAccountStore();
-  const { expenses } = useExpenseStore();
-  const { chalans } = useChalanStore();
-  const { jobSheets: storeJobSheets } = useJobSheetStore();
+  const { expenses, setExpenses } = useExpenseStore();
+  const { chalans, addChalan } = useChalanStore();
+  const { jobSheets: storeJobSheets, setJobSheets } = useJobSheetStore();
 
   const [activeTab, setActiveTab] = useState<'jobs' | 'expenses' | 'chalans'>('jobs');
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sample seed job sheets merged with store
-  const defaultJobSheets = [
-    {
-      id: 'JS-2026-001',
-      jobNumber: 'CC-0412',
-      customerName: 'Rajesh Sharma',
-      vehicleModel: 'Honda City ZX',
-      vehicleRegNumber: 'MH02AB1234',
-      workCategory: 'AC',
-      amount: 14500,
-      paidAmount: 14500,
-      pendingAmount: 0,
-      serviceDesc: 'Full AC Compressor Replacement & Cooling Coil Service',
-      date: 'Today',
-      time: '11:30 AM',
-    },
-    {
-      id: 'JS-2026-002',
-      jobNumber: 'CC-0413',
-      customerName: 'Amit Patel',
-      vehicleModel: 'Hyundai Creta SX',
-      vehicleRegNumber: 'DL04CD5678',
-      workCategory: 'BOTH',
-      amount: 8200,
-      paidAmount: 4000,
-      pendingAmount: 4200,
-      serviceDesc: 'AC Gas R134a Refill + Front Brake Pads & Suspension',
-      date: 'Today',
-      time: '01:15 PM',
-    },
-    {
-      id: 'JS-2026-003',
-      jobNumber: 'CC-0414',
-      customerName: 'Priya Kapoor',
-      vehicleModel: 'Maruti Brezza ZDi',
-      vehicleRegNumber: 'MH04EF9012',
-      workCategory: 'MECHANICAL',
-      amount: 5400,
-      paidAmount: 5400,
-      pendingAmount: 0,
-      serviceDesc: 'Clutch Overhaul & Engine Mobil 1 5W-30 Oil Service',
-      date: 'Yesterday',
-      time: '04:45 PM',
-    },
-  ];
+  // Live Firestore Sync for Dashboard
+  useEffect(() => {
+    let unsubJobs: (() => void) | undefined;
+    let unsubExp: (() => void) | undefined;
+
+    const syncDashboard = async () => {
+      try {
+        const entId = enterpriseId || 'enterprise-dev-001';
+        const { collection, onSnapshot, query, orderBy } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+
+        // Sync Job Sheets
+        const jobsRef = collection(db, 'enterprises', entId, 'jobSheets');
+        unsubJobs = onSnapshot(query(jobsRef, orderBy('createdAt', 'desc')), (snap) => {
+          const list: any[] = [];
+          snap.forEach((doc) => {
+            list.push({ id: doc.id, ...(doc.data() as any) });
+          });
+          setJobSheets(list);
+        });
+
+        // Sync Expenses
+        const expRef = collection(db, 'enterprises', entId, 'expenses');
+        unsubExp = onSnapshot(query(expRef, orderBy('createdAt', 'desc')), (snap) => {
+          const list: any[] = [];
+          snap.forEach((doc) => {
+            list.push({ id: doc.id, ...(doc.data() as any) });
+          });
+          setExpenses(list);
+        });
+      } catch (err) {
+        console.log('[Dashboard] Firestore listener error:', err);
+      }
+    };
+
+    syncDashboard();
+    return () => {
+      unsubJobs?.();
+      unsubExp?.();
+    };
+  }, [enterpriseId]);
 
   const allJobSheets = useMemo(() => {
     if (storeJobSheets && storeJobSheets.length > 0) {
@@ -123,17 +118,17 @@ export default function DashboardScreen() {
         jobNumber: s.jobNumber,
         customerName: s.customerName || 'Walk-in Customer',
         vehicleModel: s.vehicleModel || 'Car',
-        vehicleRegNumber: s.vehicleNumber || 'MH12XX0000',
+        vehicleRegNumber: s.vehicleNumber || 'Vehicle',
         workCategory: s.workCategory,
-        amount: s.finalAmount,
-        paidAmount: s.totalPaid,
-        pendingAmount: s.pendingAmount,
+        amount: s.finalAmount || 0,
+        paidAmount: s.totalPaid || 0,
+        pendingAmount: s.pendingAmount || 0,
         serviceDesc: s.notes || 'Workshop Service Order',
         date: typeof s.date === 'string' ? s.date : 'Today',
         time: s.time || '10:00 AM',
       }));
     }
-    return defaultJobSheets;
+    return [];
   }, [storeJobSheets]);
 
   // Derived Metrics
@@ -148,20 +143,20 @@ export default function DashboardScreen() {
   );
 
   const todayExpensesTotal = useMemo(
-    () => expenses.reduce((sum, exp) => sum + exp.amount, 0),
+    () => expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0),
     [expenses]
   );
 
   const todayCollections = useMemo(
-    () => allJobSheets.reduce((sum, j) => sum + j.paidAmount, 0),
+    () => allJobSheets.reduce((sum, j) => sum + (Number(j.paidAmount) || 0), 0),
     [allJobSheets]
   );
 
   // Month-To-Date Aggregates (Pure Mahine Ka Till)
-  const monthRevenue = 142800 + todayCollections;
-  const monthExpenses = 48200 + todayExpensesTotal;
+  const monthRevenue = todayCollections;
+  const monthExpenses = todayExpensesTotal;
   const monthNetProfit = monthRevenue - monthExpenses;
-  const monthCarsServiced = 28 + allJobSheets.length;
+  const monthCarsServiced = allJobSheets.length;
 
   // Filtered Job Sheets by Vehicle Registration Number / Name / Model
   const filteredJobSheets = useMemo(() => {

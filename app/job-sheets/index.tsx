@@ -64,9 +64,7 @@ export default function JobSheetsScreen() {
             snapshot.forEach((doc) => {
               list.push({ id: doc.id, ...(doc.data() as any) });
             });
-            if (list.length > 0) {
-              setJobSheets(list);
-            }
+            setJobSheets(list);
           },
           (err) => {
             console.log('[JobSheets] Firestore listener offline/error:', err);

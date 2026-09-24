@@ -44,27 +44,7 @@ export default function VehicleDetailsScreen() {
   const [activeTab, setActiveTab] = useState<'specs' | 'history'>('specs');
 
   const vehicle = useMemo(() => {
-    const found = vehicles.find((v) => v.id === params.id || v.registrationNumber === params.id);
-    if (found) return found;
-    return {
-      id: 'v1',
-      make: 'Honda',
-      model: 'City ZX i-VTEC',
-      registrationNumber: 'MH02AB1234',
-      customerName: 'Rajesh Sharma',
-      customerPhone: '+91 98201 12345',
-      fuelType: 'Petrol',
-      modelYear: 2022,
-      lastServiceDate: '15 May 2025',
-      nextServiceDate: '15 Nov 2025',
-      totalSpent: 42500,
-      totalVisits: 6,
-      history: [
-        { id: 'h1', date: '15 May 2025', job: 'Major 40,000 KM Service & Brake Overhaul', amount: 8500, status: 'Paid' },
-        { id: 'h2', date: '10 Jan 2025', job: 'Suspension Bushing & Alignment', amount: 6200, status: 'Paid' },
-        { id: 'h3', date: '04 Oct 2024', job: 'AC Cooling Coil & Blower Replacement', amount: 12400, status: 'Paid' },
-      ],
-    };
+    return vehicles.find((v) => v.id === params.id || v.registrationNumber === params.id) || null;
   }, [params.id, vehicles]);
 
   const canvasBg = isDark ? '#070A0F' : '#153580';
@@ -72,6 +52,26 @@ export default function VehicleDetailsScreen() {
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
   const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
   const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
+
+  if (!vehicle) {
+    return (
+      <View style={{ flex: 1, backgroundColor: sheetBg, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 8 }}>
+          Vehicle Not Found
+        </Text>
+        <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20 }}>
+          The requested vehicle could not be found in your garage records.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20, backgroundColor: '#153580' }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>

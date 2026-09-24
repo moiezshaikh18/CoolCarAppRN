@@ -44,25 +44,7 @@ export default function CustomerDetailsScreen() {
   const [activeTab, setActiveTab] = useState<'overview' | 'fleet'>('overview');
 
   const customer = useMemo(() => {
-    const found = customers.find((c) => c.id === params.id);
-    if (found) return found;
-    return {
-      id: params.id ?? 'cust-1',
-      name: 'Ramesh Kumar',
-      phone: '+91 98765 43210',
-      email: 'ramesh.kumar@gmail.com',
-      address: 'Shop 4, Workshop Lane, Andheri West',
-      totalJobs: 12,
-      totalSpent: 45600,
-      totalPaid: 43300,
-      pendingAmount: 2300,
-      lastVisit: '10 May 2025',
-      isActive: true,
-      vehicles: [
-        { id: 'v1', reg: 'MH02AB1234', model: 'Honda City ZX', year: '2022' },
-        { id: 'v2', reg: 'MH01CD5678', model: 'Hyundai Creta SX', year: '2021' },
-      ],
-    };
+    return customers.find((c) => c.id === params.id) || null;
   }, [params.id, customers]);
 
   const canvasBg = isDark ? '#070A0F' : '#153580';
@@ -70,6 +52,26 @@ export default function CustomerDetailsScreen() {
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
   const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
   const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
+
+  if (!customer) {
+    return (
+      <View style={{ flex: 1, backgroundColor: sheetBg, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 8 }}>
+          Customer Not Found
+        </Text>
+        <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20 }}>
+          The requested customer could not be found in your directory.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20, backgroundColor: '#153580' }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>

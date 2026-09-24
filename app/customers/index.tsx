@@ -19,20 +19,13 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useCustomerStore } from '../../src/store/customerStore';
 
-const DEFAULT_CUSTOMERS = [
-  { id: 'c1', name: 'Ramesh Kumar', phone: '+91 98765 43210', totalJobs: 3, pendingAmount: 0 },
-  { id: 'c2', name: 'Ajay Singh', phone: '+91 98201 12345', totalJobs: 2, pendingAmount: 1500 },
-  { id: 'c3', name: 'Neha Sharma', phone: '+91 98111 54321', totalJobs: 4, pendingAmount: 0 },
-  { id: 'c4', name: 'Vikram Patel', phone: '+91 97654 32109', totalJobs: 1, pendingAmount: 2400 },
-];
-
 export default function CustomerListScreen() {
   const { theme, isDark } = useTheme();
   const { enterpriseId } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { customers, setCustomers } = useCustomerStore();
   const [search, setSearch] = useState('');
-  const [localCustomers, setLocalCustomers] = useState(DEFAULT_CUSTOMERS);
+  const [localCustomers, setLocalCustomers] = useState<any[]>([]);
 
   // Live Firestore Listener
   useEffect(() => {
@@ -49,6 +42,9 @@ export default function CustomerListScreen() {
             const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
             setLocalCustomers(list);
             setCustomers(list);
+          } else {
+            setLocalCustomers([]);
+            setCustomers([]);
           }
         });
       } catch (err) {
@@ -60,9 +56,9 @@ export default function CustomerListScreen() {
     return () => unsubscribe?.();
   }, [enterpriseId]);
 
-  const displayList = localCustomers.length > 0 ? localCustomers : DEFAULT_CUSTOMERS;
+  const displayList = localCustomers;
   const filtered = displayList.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search))
+    (c: any) => c.name?.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search))
   );
 
   const skyBg = isDark ? '#070A0F' : '#153580';
@@ -156,7 +152,7 @@ export default function CustomerListScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, paddingTop: 16 }}
         >
           <View style={{ gap: 12 }}>
-            {filtered.map((item) => {
+            {filtered.map((item: any) => {
               const hasPending = (item.pendingAmount || 0) > 0;
               return (
                 <TouchableOpacity

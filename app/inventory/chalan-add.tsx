@@ -93,8 +93,8 @@ export default function AddPurchaseChalanScreen() {
       partName: '',
       quantity: '1',
       unitPrice: '',
-      assignedVehicleNumber: 'MH02AB1234',
-      assignedVehicleModel: 'Honda City ZX',
+      assignedVehicleNumber: '',
+      assignedVehicleModel: '',
     },
   ]);
 
