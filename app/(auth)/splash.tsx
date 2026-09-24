@@ -109,7 +109,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F265C', // Deep Workshop Navy
+    backgroundColor: '#181A20', // Solid Slate matching reference design
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,

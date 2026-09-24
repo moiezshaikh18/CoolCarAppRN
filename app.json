@@ -7,6 +7,11 @@
     "icon": "./assets/icon.png",
     "scheme": "coolcar",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/cool_car_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#181A20"
+    },
 
     "ios": {
       "supportsTablet": false,
@@ -15,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundColor": "#0D0B1F"
+        "backgroundColor": "#181A20"
       },
       "package": "com.coolcargarage.app",
       "googleServicesFile": "./google-services.json",

@@ -50,10 +50,7 @@ import { router } from 'expo-router';
 import { useHideOnScroll } from '../../src/store/tabBarStore';
 
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// Card width calculated to perfectly fit with 18px horizontal padding on both sides
-const CARD_WIDTH = SCREEN_WIDTH - 36;
-const CARD_SPACING = 12;
+
 
 export default function DashboardScreen() {
   const { isDark, toggleMode } = useTheme();
@@ -70,7 +67,6 @@ export default function DashboardScreen() {
   const { jobSheets: storeJobSheets } = useJobSheetStore();
 
   const [activeTab, setActiveTab] = useState<'jobs' | 'expenses' | 'chalans'>('jobs');
-  const [slideIndex, setSlideIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -187,14 +183,6 @@ export default function DashboardScreen() {
     }, 600);
   };
 
-  const handleHeroScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const x = e.nativeEvent.contentOffset.x;
-    const index = Math.round(x / (CARD_WIDTH + CARD_SPACING));
-    if (index !== slideIndex && (index === 0 || index === 1)) {
-      setSlideIndex(index);
-    }
-  };
-
   // Color Palette
   // Light Mode: Mechanic Uniform Slate Charcoal (#2B3544) & Royal Blue (#153580)
   // Dark Mode: Slate Charcoal (#181A20) & Cards (#242834) matching reference design
@@ -268,311 +256,185 @@ export default function DashboardScreen() {
 
         {/* TOP HERO SECTION: Canvas background */}
         <View style={{ backgroundColor: canvasBg, paddingBottom: 24, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
-          {/* SLIDING HERO CAROUSEL: CARD 1 (AAJ) vs CARD 2 (MAHINA) */}
-          {/* Solves "2 card cut raha hai" using exact snapToInterval and paddingHorizontal */}
-          <View style={{ marginBottom: 14 }}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={CARD_WIDTH + CARD_SPACING}
-              snapToAlignment="start"
-              decelerationRate="fast"
-              onScroll={handleHeroScroll}
-              scrollEventThrottle={16}
-              contentContainerStyle={{
-                paddingHorizontal: 18,
-                gap: CARD_SPACING,
+          {/* SINGLE MAIN HERO CARD (Properly rounded 28px, Big Amount Font, Unified Workshop Pulse) */}
+          <View style={{ paddingHorizontal: 18, marginBottom: 16 }}>
+            <GlassCard
+              variant="navy"
+              padding={22}
+              style={{
+                borderRadius: 28,
+                borderWidth: 1.5,
+                borderColor: 'rgba(255, 255, 255, 0.16)',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                elevation: 8,
               }}
             >
-              {/* SLIDE 1: TODAY'S OVERVIEW (AAJ KA HISAB) */}
-              <GlassCard
-                variant="navy"
-                padding={20}
+              {/* Header: Live Pulse & Month Status Badge */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00C896' }} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+                    {"Today's Workshop Pulse"}
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    backgroundColor: 'rgba(96, 165, 250, 0.22)',
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: '#60A5FA', fontSize: 10, fontWeight: '900' }}>
+                    {monthCarsServiced} CARS THIS MONTH
+                  </Text>
+                </View>
+              </View>
+
+              {/* Big Font Main Amount (fontSize: 38) */}
+              <View style={{ marginVertical: 12 }}>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                  {"Today's Collected Inflow"}
+                </Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 38, fontWeight: '900', letterSpacing: -1, marginTop: 2 }}>
+                  +{formatCurrency(todayCollections, currencySymbol)}
+                </Text>
+              </View>
+
+              {/* Multi-Stat Metrics Bar: Today's Outflow & Month Net Profit */}
+              <View
                 style={{
-                  width: CARD_WIDTH,
-                  borderRadius: 26,
-                  borderWidth: 1.5,
-                  borderColor: 'rgba(255, 255, 255, 0.16)',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 16,
+                  marginBottom: 12,
                 }}
               >
-                {/* Header */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00C896' }} />
-                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                      {"Today's Overview"}
-                    </Text>
-
-                  </View>
-                  <View
-                    style={{
-                      backgroundColor: 'rgba(0, 200, 150, 0.2)',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 8,
-                    }}
-                  >
-                    <Text style={{ color: '#00C896', fontSize: 10, fontWeight: '900' }}>
-                      LIVE LEDGER
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Figure */}
-                <View style={{ marginVertical: 10 }}>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, fontWeight: '700' }}>
-                    {"Today's Collected Inflow"}
+                <View>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
+                    {"Today's Outflow"}
                   </Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.8 }}>
-                    +{formatCurrency(todayCollections, currencySymbol)}
+                  <Text style={{ color: '#EF4444', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
+                    -{formatCurrency(todayExpensesTotal, currencySymbol)}
                   </Text>
                 </View>
 
-                {/* Outflow & Liquid Row */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: 14,
-                    marginBottom: 10,
-                  }}
-                >
-                  <View>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
-                      {"Today's Outflow"}
-                    </Text>
-                    <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: '900' }}>
-                      -{formatCurrency(todayExpensesTotal, currencySymbol)}
-                    </Text>
-                  </View>
-
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
-                      Customer Due (Udhari)
-                    </Text>
-                    <Text style={{ color: '#FCA5A5', fontSize: 14, fontWeight: '900' }}>
-                      {formatCurrency(totalCustomerPendingDue, currencySymbol)}
-                    </Text>
-                  </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
+                    {"Month Net Profit"}
+                  </Text>
+                  <Text style={{ color: '#00C896', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
+                    +{formatCurrency(monthNetProfit, currencySymbol)}
+                  </Text>
                 </View>
+              </View>
 
-                {/* Quick Action Capsules */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    paddingTop: 10,
-                    borderTopWidth: 1,
-                    borderTopColor: 'rgba(255, 255, 255, 0.12)',
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => router.push('/job-sheets/create')}
-                    activeOpacity={0.8}
-                    style={{ alignItems: 'center', gap: 4 }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: '#60A5FA',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Plus size={18} color="#FFFFFF" strokeWidth={2.8} />
-                    </View>
-                    <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
-                      + Job Sheet
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => router.push('/expenses/add')}
-                    activeOpacity={0.8}
-                    style={{ alignItems: 'center', gap: 4 }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: 'rgba(255, 255, 255, 0.16)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <ArrowUpRight size={18} color="#FFFFFF" strokeWidth={2.2} />
-                    </View>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
-                      + Expense
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => router.push('/inventory/chalan-add')}
-                    activeOpacity={0.8}
-                    style={{ alignItems: 'center', gap: 4 }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: 'rgba(255, 255, 255, 0.16)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Car size={18} color="#FFFFFF" strokeWidth={2.2} />
-                    </View>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
-                      + Chalan
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => router.push('/staff/pay' as any)}
-                    activeOpacity={0.8}
-                    style={{ alignItems: 'center', gap: 4 }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: 'rgba(255, 255, 255, 0.16)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Users size={18} color="#FFFFFF" strokeWidth={2.2} />
-                    </View>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
-                      Pay Staff
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </GlassCard>
-
-              {/* SLIDE 2: FULL MONTH TILL DATE (PURE MAHINE KA TILL) */}
-              <GlassCard
-                variant="navy"
-                padding={20}
+              {/* Quick Action Capsules */}
+              <View
                 style={{
-                  width: CARD_WIDTH,
-                  borderRadius: 26,
-                  borderWidth: 1.5,
-                  borderColor: 'rgba(255, 255, 255, 0.16)',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  paddingTop: 10,
+                  borderTopWidth: 1,
+                  borderTopColor: 'rgba(255, 255, 255, 0.12)',
                 }}
               >
-                {/* Header */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Calendar size={14} color="#60A5FA" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                      Monthly Summary
-                    </Text>
-
-                  </View>
-                  <View
-                    style={{
-                      backgroundColor: 'rgba(96, 165, 250, 0.22)',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 8,
-                    }}
-                  >
-                    <Text style={{ color: '#60A5FA', fontSize: 10, fontWeight: '900' }}>
-                      {monthCarsServiced} CARS SERVICED
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Figure */}
-                <View style={{ marginVertical: 10 }}>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, fontWeight: '700' }}>
-                    Total Month Revenue Billed
-                  </Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.8 }}>
-                    {formatCurrency(monthRevenue, currencySymbol)}
-                  </Text>
-                </View>
-
-                {/* Outflow & Profit Row */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: 14,
-                    marginBottom: 10,
-                  }}
-                >
-                  <View>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
-                      Month Expenses & Parts
-                    </Text>
-                    <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: '900' }}>
-                      -{formatCurrency(monthExpenses, currencySymbol)}
-                    </Text>
-                  </View>
-
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
-                      Net Workshop Profit
-                    </Text>
-                    <Text style={{ color: '#00C896', fontSize: 14, fontWeight: '900' }}>
-                      +{formatCurrency(monthNetProfit, currencySymbol)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* View Full Reports CTA */}
                 <TouchableOpacity
-                  onPress={() => router.push('/reports')}
-                  activeOpacity={0.85}
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    paddingVertical: 11,
-                    borderRadius: 14,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: 4,
-                  }}
+                  onPress={() => router.push('/job-sheets/create')}
+                  activeOpacity={0.8}
+                  style={{ alignItems: 'center', gap: 4 }}
                 >
-                  <Text style={{ color: '#153580', fontSize: 12, fontWeight: '900' }}>
-                    View Full Monthly Financial Report →
+                  <View
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      backgroundColor: '#60A5FA',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Plus size={20} color="#FFFFFF" strokeWidth={2.8} />
+                  </View>
+                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                    + Job Sheet
                   </Text>
                 </TouchableOpacity>
-              </GlassCard>
-            </ScrollView>
 
-            {/* Pagination Indicator Dots */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 }}>
-              <View
-                style={{
-                  width: slideIndex === 0 ? 18 : 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: slideIndex === 0 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.35)',
-                }}
-              />
-              <View
-                style={{
-                  width: slideIndex === 1 ? 18 : 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: slideIndex === 1 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.35)',
-                }}
-              />
-            </View>
+                <TouchableOpacity
+                  onPress={() => router.push('/expenses/add')}
+                  activeOpacity={0.8}
+                  style={{ alignItems: 'center', gap: 4 }}
+                >
+                  <View
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <ArrowUpRight size={19} color="#FFFFFF" strokeWidth={2.2} />
+                  </View>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
+                    + Expense
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push('/inventory/chalan-add')}
+                  activeOpacity={0.8}
+                  style={{ alignItems: 'center', gap: 4 }}
+                >
+                  <View
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Car size={19} color="#FFFFFF" strokeWidth={2.2} />
+                  </View>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
+                    + Chalan
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push('/staff/pay' as any)}
+                  activeOpacity={0.8}
+                  style={{ alignItems: 'center', gap: 4 }}
+                >
+                  <View
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 21,
+                      backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Users size={19} color="#FFFFFF" strokeWidth={2.2} />
+                  </View>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
+                    Pay Staff
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </GlassCard>
           </View>
 
           {/* 4 CORE WORKSHOP MODULES */}
@@ -591,8 +453,8 @@ export default function DashboardScreen() {
                   style={{
                     flex: 1,
                     backgroundColor: isDark ? '#242834' : '#FFFFFF',
-                    borderRadius: 20,
-                    padding: 14,
+                    borderRadius: 24,
+                    padding: 16,
                     borderWidth: 1,
                     borderColor: cardBorder,
                   }}
@@ -630,8 +492,8 @@ export default function DashboardScreen() {
                   style={{
                     flex: 1,
                     backgroundColor: isDark ? '#242834' : '#FFFFFF',
-                    borderRadius: 20,
-                    padding: 14,
+                    borderRadius: 24,
+                    padding: 16,
                     borderWidth: 1,
                     borderColor: cardBorder,
                   }}
@@ -673,8 +535,8 @@ export default function DashboardScreen() {
                   style={{
                     flex: 1,
                     backgroundColor: isDark ? '#242834' : '#FFFFFF',
-                    borderRadius: 20,
-                    padding: 14,
+                    borderRadius: 24,
+                    padding: 16,
                     borderWidth: 1,
                     borderColor: cardBorder,
                   }}
@@ -712,8 +574,8 @@ export default function DashboardScreen() {
                   style={{
                     flex: 1,
                     backgroundColor: isDark ? '#242834' : '#FFFFFF',
-                    borderRadius: 20,
-                    padding: 14,
+                    borderRadius: 24,
+                    padding: 16,
                     borderWidth: 1,
                     borderColor: cardBorder,
                   }}
