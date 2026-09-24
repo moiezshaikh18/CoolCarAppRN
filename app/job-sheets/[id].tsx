@@ -15,6 +15,7 @@ import {
   Modal,
   Alert,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +33,7 @@ import {
   X,
   ArrowDown,
   Layers,
+  FileDown,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -43,6 +45,7 @@ import { formatCurrency } from '../../src/utils/currency';
 import { JobStatus } from '../../src/types/jobSheet.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
+import { generateAndShareJobCardPdf } from '../../src/utils/jobCardPdf';
 
 export default function JobSheetDetailsScreen() {
   const { isDark } = useTheme();
@@ -71,6 +74,9 @@ export default function JobSheetDetailsScreen() {
   const [splitUpiBankId, setSplitUpiBankId] = useState<string>('');
   const [splitSwipeStr, setSplitSwipeStr] = useState('');
   const [splitSwipeBankId, setSplitSwipeBankId] = useState<string>('');
+
+  // PDF generation loading state
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
   const job = useMemo(() => {
     const found = jobSheets.find((j) => j.id === params.id || j.jobNumber === params.id);
@@ -105,6 +111,53 @@ export default function JobSheetDetailsScreen() {
       ],
     };
   }, [params.id, jobSheets]);
+
+  // ── Generate Cool Car Job Card PDF ──────────────────────────
+  const handleDownloadPdf = async () => {
+    setIsPdfGenerating(true);
+    try {
+      // Separate services (work done) from parts
+      const services = (job.items || [])
+        .filter((it) => it.type === 'SERVICE')
+        .map((it) => it.name);
+
+      const parts = (job.items || [])
+        .filter((it) => it.type === 'PART')
+        .map((it) => ({
+          name: it.name,
+          qty: it.quantity,
+          price: it.unitPrice,
+        }));
+
+      await generateAndShareJobCardPdf({
+        jobNumber: job.jobNumber || job.id,
+        date: typeof job.date === 'string' ? job.date : new Date(job.date).toLocaleDateString('en-IN'),
+        time: job.time,
+        customerName: job.customerName,
+        customerPhone: job.customerPhone,
+        vehicleNumber: job.vehicleNumber,
+        vehicleMake: job.vehicleMake,
+        vehicleModel: job.vehicleModel,
+        workCategory: job.workCategory,
+        assignedMechanicName: job.assignedMechanicName,
+        demandedWork: services.length > 0 ? services : undefined,
+        workDone: services,
+        partsInUse: parts,
+        notes: (job as any).notes,
+        subtotal: job.subtotal,
+        discount: job.discount,
+        finalAmount: job.finalAmount,
+        totalPaid: job.totalPaid,
+        pendingAmount: job.pendingAmount,
+        paymentStatus: job.paymentStatus,
+        currencySymbol,
+      });
+    } catch (err) {
+      Alert.alert('PDF Error', 'Could not generate the Job Card PDF. Please try again.');
+    } finally {
+      setIsPdfGenerating(false);
+    }
+  };
 
   // Open Payment modal with pre-filled pending amount
   const handleOpenPayment = () => {
@@ -330,7 +383,8 @@ export default function JobSheetDetailsScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={() => Alert.alert('Share Job Sheet', `Job Sheet #${job.jobNumber} copied to clipboard.`)}
+            onPress={handleDownloadPdf}
+            disabled={isPdfGenerating}
             style={{
               width: 44,
               height: 44,
@@ -340,7 +394,11 @@ export default function JobSheetDetailsScreen() {
               justifyContent: 'center',
             }}
           >
-            <Share2 size={18} color="#FFFFFF" />
+            {isPdfGenerating ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <FileDown size={18} color="#FFFFFF" />
+            )}
           </TouchableOpacity>
         </View>
 
