@@ -153,7 +153,8 @@ export default function JobSheetDetailsScreen() {
         currencySymbol,
       });
     } catch (err) {
-      Alert.alert('PDF Error', 'Could not generate the Job Card PDF. Please try again.');
+      console.error('[JobCardPDF] Error generating PDF:', err);
+      Alert.alert('PDF Error', `Could not generate Job Card PDF.\nDetails: ${String(err)}`);
     } finally {
       setIsPdfGenerating(false);
     }

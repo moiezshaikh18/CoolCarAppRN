@@ -89,25 +89,65 @@ function twoColRows(items: string[]): string {
 }
 
 function escHtml(s: string): string {
-  return s
+  if (!s) return '';
+  return String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
 
-function routineRow(num: number, label: string, value: string | undefined, right = false): string {
-  return `<tr${right ? ' class="right-col"' : ''}>
+function routineRow(num: number, label: string, value: string | undefined): string {
+  return `<tr>
     <td class="rnum">${num}</td>
     <td class="rlabel">${label}</td>
     <td class="rval">${escHtml(value || '')}</td>
   </tr>`;
 }
 
+// Safe number formatter (no Intl dependency)
+function fmtNum(n: number | undefined, cs: string): string {
+  if (n === undefined || n === null) return '-';
+  // Simple Indian comma formatting
+  const abs = Math.abs(Math.round(n));
+  const str = String(abs);
+  let result = '';
+  if (str.length <= 3) {
+    result = str;
+  } else {
+    const last3 = str.slice(-3);
+    const rest = str.slice(0, str.length - 3);
+    const restFormatted = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    result = restFormatted + ',' + last3;
+  }
+  return (n < 0 ? '-' : '') + cs + result;
+}
+
+// Safe date formatter
+function safeFormatDate(d: string | Date | undefined): string {
+  if (!d) return new Date().toLocaleDateString('en-GB');
+  if (typeof d === 'string') {
+    // If already a human-readable string, return as-is
+    if (d.includes('Today') || d.includes('/') || d.includes('-') || isNaN(Date.parse(d))) {
+      return d.substring(0, 30);
+    }
+    try {
+      return new Date(d).toLocaleDateString('en-GB');
+    } catch {
+      return d.substring(0, 20);
+    }
+  }
+  try {
+    return d.toLocaleDateString('en-GB');
+  } catch {
+    return String(d).substring(0, 20);
+  }
+}
+
 // ── Main Export ─────────────────────────────────────────────
 export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<void> {
-  const cs = data.currencySymbol || '₹';
-  const fmt = (n?: number) => (n !== undefined ? `${cs}${n.toLocaleString('en-IN')}` : '—');
+  const cs = data.currencySymbol || 'Rs.';
+  const fmt = (n?: number) => fmtNum(n, cs);
 
   // Demanded Work — convert items to strings
   const demandedItems = pad(data.demandedWork ?? [], 10);
@@ -115,19 +155,17 @@ export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<
   // Work Done — extract item names
   const workDoneItems = pad(data.workDone ?? [], 10);
 
-  // Parts In Use — stringify
+  // Parts In Use — stringify (using 'x' instead of unicode ×)
   const partsItems = pad(
     (data.partsInUse ?? []).map((p) =>
-      p.qty ? `${p.name} (×${p.qty})` : p.name
+      p.qty ? `${p.name} (x${p.qty})` : p.name
     ),
     10
   );
 
   const rc = data.routineCheckup ?? {};
 
-  const dateStr = data.date
-    ? String(data.date).replace('T', ' ').substring(0, 16)
-    : new Date().toLocaleDateString('en-IN');
+  const dateStr = safeFormatDate(data.date);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -557,16 +595,23 @@ export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<
 </body>
 </html>`;
 
-  // Print → PDF URI
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  try {
+    // Print HTML to PDF file
+    const result = await Print.printToFileAsync({ html, base64: false });
+    const pdfUri = result.uri;
 
-  // Share / Download
-  const canShare = await Sharing.isAvailableAsync();
-  if (canShare) {
-    await Sharing.shareAsync(uri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Job Card ${data.jobNumber} — Cool Car`,
-      UTI: 'com.adobe.pdf',
-    });
+    // Share / Download via native sheet
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(pdfUri, {
+        mimeType: 'application/pdf',
+        UTI: 'com.adobe.pdf',
+      });
+    } else {
+      // Fallback: Just print it
+      await Print.printAsync({ uri: pdfUri });
+    }
+  } catch (printErr) {
+    throw printErr;
   }
 }
