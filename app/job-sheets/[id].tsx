@@ -1,7 +1,8 @@
 // ============================================================
 // Job Sheet Details Screen — Cool Car AC Repair Workshop
-// Simple English labels, Mechanic Assignment, Balance Due & Status Management
-// Signboard Royal Blue (#153580) & Midnight Navy (#0C1829) Luxury Aesthetic
+// Zero-Bleed Sky Blue Header & Clean Lower Sheet
+// Status Logic: In Progress until paid -> then Done
+// Payment CTA with Amount Modification & Bank Account Selector
 // ============================================================
 
 import React, { useMemo, useState } from 'react';
@@ -10,40 +11,55 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Linking,
+  TextInput,
+  Modal,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   Share2,
-  Phone,
-  Car,
-  ArrowDown,
-  Repeat,
-  CheckCircle2,
   Clock,
   Wrench,
   Package,
-  UserCheck,
-  Calendar,
+  CheckCircle2,
+  CreditCard,
+  QrCode,
+  Banknote,
+  Building2,
+  X,
+  ArrowDown,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
+import { usePaymentStore } from '../../src/store/paymentStore';
+import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { JobStatus } from '../../src/types/jobSheet.types';
+import { PaymentMode } from '../../src/types/payment.types';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 
 export default function JobSheetDetailsScreen() {
-  const { theme, isDark } = useTheme();
-  const { currencySymbol } = useEnterprise();
+  const { isDark } = useTheme();
+  const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string }>();
   const { jobSheets, updateJobSheet } = useJobSheetStore();
+  const { addPayment } = usePaymentStore();
+  const accounts = useBankAccountStore((s) => s.accounts);
+  const activeAccounts = useMemo(() => accounts.filter((a) => a.isActive), [accounts]);
+
   const [activeTab, setActiveTab] = useState<'overview' | 'items'>('overview');
+
+  // Payment Modal State
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentAmountStr, setPaymentAmountStr] = useState('');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
+  const [selectedBankId, setSelectedBankId] = useState<string>('');
 
   const job = useMemo(() => {
     const found = jobSheets.find((j) => j.id === params.id || j.jobNumber === params.id);
@@ -79,312 +95,236 @@ export default function JobSheetDetailsScreen() {
     };
   }, [params.id, jobSheets]);
 
-  const [currentStatus, setCurrentStatus] = useState<JobStatus>(job.status);
-
-  const handleToggleStatus = () => {
-    const nextStatus: JobStatus =
-      currentStatus === 'OPEN'
-        ? 'IN_PROGRESS'
-        : currentStatus === 'IN_PROGRESS'
-        ? 'COMPLETED'
-        : 'OPEN';
-
-    setCurrentStatus(nextStatus);
-    updateJobSheet(job.id, { status: nextStatus });
-    Alert.alert('Status Updated', `Job Sheet #${job.jobNumber} marked as "${nextStatus.replace('_', ' ')}".`);
-  };
-
-  const getStatusBadge = (status: JobStatus) => {
-    switch (status) {
-      case 'OPEN':
-        return { bg: 'rgba(251, 191, 36, 0.25)', text: '#FBBF24', label: 'Open' };
-      case 'IN_PROGRESS':
-        return { bg: 'rgba(96, 165, 250, 0.25)', text: '#60A5FA', label: 'In Progress' };
-      case 'COMPLETED':
-        return { bg: 'rgba(52, 211, 153, 0.25)', text: '#34D399', label: 'Completed' };
-      case 'CANCELLED':
-        return { bg: 'rgba(248, 113, 113, 0.25)', text: '#F87171', label: 'Cancelled' };
-      default:
-        return { bg: 'rgba(148, 163, 184, 0.25)', text: '#94A3B8', label: status };
+  // Open Payment modal with pre-filled pending amount
+  const handleOpenPayment = () => {
+    setPaymentAmountStr(job.pendingAmount > 0 ? String(job.pendingAmount) : String(job.finalAmount));
+    setPaymentMode('CASH');
+    if (activeAccounts.length > 0) {
+      setSelectedBankId(activeAccounts[0].id);
     }
+    setIsPaymentModalOpen(true);
   };
 
-  const statusStyle = getStatusBadge(currentStatus);
+  const handleConfirmPayment = () => {
+    const amt = parseFloat(paymentAmountStr);
+    if (isNaN(amt) || amt <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid payment amount.');
+      return;
+    }
 
-  const canvasBg = isDark ? '#070A0F' : '#153580';
-  const sheetBg = isDark ? '#111622' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
-  const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
-  const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
+    const selectedAcc = activeAccounts.find((a) => a.id === selectedBankId);
+    const newTotalPaid = (job.totalPaid || 0) + amt;
+    const newPending = Math.max(0, job.finalAmount - newTotalPaid);
+    const isFullyPaid = newPending === 0;
+
+    // 1. Record in Payment Store
+    addPayment({
+      id: `pay-${Date.now()}`,
+      enterpriseId: enterpriseId || 'enterprise-dev-001',
+      jobSheetId: job.id,
+      customerId: (job as any).customerId || 'cust-walkin',
+      vehicleId: (job as any).vehicleId || 'veh-generic',
+      amount: amt,
+      paymentMode,
+      paymentAccountId: (paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') ? selectedBankId : undefined,
+      paymentAccountName: (paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') ? selectedAcc?.bankName : 'Cash Counter Register',
+      date: new Date().toISOString(),
+      referenceNumber: `${paymentMode === 'UPI' ? 'UPI' : paymentMode === 'CARD_SWIPE' ? 'POS' : 'CSH'}-${Date.now().toString().slice(-4)}`,
+      voided: false,
+      createdBy: 'user-manager',
+      createdAt: new Date().toISOString(),
+    });
+
+    // 2. Update Job Sheet: If fully paid -> COMPLETED ("Done"), else IN_PROGRESS
+    updateJobSheet(job.id, {
+      totalPaid: newTotalPaid,
+      pendingAmount: newPending,
+      status: isFullyPaid ? 'COMPLETED' : 'IN_PROGRESS',
+      paymentStatus: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID',
+    });
+
+    setIsPaymentModalOpen(false);
+    Alert.alert(
+      'Payment Recorded',
+      `Collected ${formatCurrency(amt, currencySymbol)} via ${paymentMode === 'CARD_SWIPE' ? 'Swipe' : paymentMode}.\nJob Sheet Status: ${isFullyPaid ? 'Done' : 'In Progress'}`
+    );
+  };
+
+  const isDone = (job.pendingAmount === 0 && job.finalAmount > 0) || job.status === 'COMPLETED';
+
+  const canvasBg = isDark ? '#0A0D14' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+
+      {/* Royal Blue Top Header */}
+      <View
+        style={{
+          backgroundColor: canvasBg,
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 20,
+          paddingBottom: 24,
+          alignItems: 'center',
+        }}
       >
-        {/* Sky Blue Header */}
-        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
-          {/* Top Bar with Back & Share */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ChevronLeft size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                {job.jobNumber}
-              </Text>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, fontWeight: '600' }}>
-                Cool Car AC Repair
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => Alert.alert('Share Job Sheet', `Job Sheet #${job.jobNumber} details copied to clipboard.`)}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Share2 size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Central Car Badge */}
-          {/* Distinct Car Silhouette & Badge */}
-          <View style={{ marginBottom: 10 }}>
-            <DynamicCarIllustration modelName={job.vehicleModel} size={70} showBadge={true} />
-          </View>
-
-          {/* Vehicle Model & Registration */}
-          <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '900', letterSpacing: -0.3 }}>
-            {job.vehicleModel}
-          </Text>
-          <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 14, fontWeight: '800', marginTop: 2 }}>
-            {job.vehicleNumber} • <Text style={{ fontWeight: '600' }}>{job.customerName}</Text>
-          </Text>
-
-          {/* Intake Date & Logged Time (Direct User Request) */}
-          <View
+        {/* Top Bar */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
             style={{
-              flexDirection: 'row',
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255, 255, 255, 0.22)',
               alignItems: 'center',
-              gap: 6,
-              marginTop: 6,
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 12,
+              justifyContent: 'center',
             }}
           >
-            <Clock size={13} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
-              Logged: {job.time || '11:30 AM'} • {typeof job.date === 'string' ? job.date : 'Today'}
+            <ChevronLeft size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              {job.jobNumber}
+            </Text>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, fontWeight: '600' }}>
+              Cool Car AC Repair
             </Text>
           </View>
 
-          {/* Prominent Amount */}
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 12, marginBottom: 8 }}>
-            <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -1 }}>
-              {formatCurrency(job.finalAmount, currencySymbol)}
-            </Text>
-          </View>
-
-          {/* Status & Payment & Work Category Pills */}
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-            {/* Work Category Pill */}
-            <View
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-                borderRadius: 16,
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>
-                {job.workCategory === 'AC' ? '❄️ AC Work' : job.workCategory === 'MECHANICAL' ? '🔧 Mechanical' : '⚙️ Both'}
-              </Text>
-            </View>
-
-            {/* Status Pill */}
-            <View
-              style={{
-                backgroundColor: statusStyle.bg,
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-                borderRadius: 16,
-              }}
-            >
-              <Text style={{ color: statusStyle.text, fontSize: 12, fontWeight: '800' }}>
-                {statusStyle.label}
-              </Text>
-            </View>
-
-            {/* Payment Balance Pill */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 5,
-                backgroundColor: job.pendingAmount === 0 ? 'rgba(52, 211, 153, 0.25)' : 'rgba(239, 68, 68, 0.25)',
-                paddingHorizontal: 12,
-                paddingVertical: 5,
-                borderRadius: 16,
-              }}
-            >
-              {job.pendingAmount === 0 ? (
-                <CheckCircle2 size={13} color="#34D399" />
-              ) : (
-                <Clock size={13} color="#EF4444" />
-              )}
-              <Text
-                style={{
-                  color: job.pendingAmount === 0 ? '#34D399' : '#EF4444',
-                  fontSize: 12,
-                  fontWeight: '800',
-                }}
-              >
-                {job.pendingAmount === 0 ? 'Fully Paid' : `Balance Due: ${formatCurrency(job.pendingAmount, currencySymbol)}`}
-              </Text>
-            </View>
-          </View>
-
-          {/* 4 Circular Action Buttons (Payment, Status, Call, WhatsApp) */}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 20, width: '100%' }}>
-            {/* Payment */}
-            <TouchableOpacity
-              onPress={() => router.push('/payments')}
-              activeOpacity={0.8}
-              style={{ alignItems: 'center', gap: 6 }}
-            >
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <ArrowDown size={20} color="#FFFFFF" strokeWidth={2.2} />
-              </View>
-              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                Collect
-              </Text>
-            </TouchableOpacity>
-
-            {/* Toggle Status */}
-            <TouchableOpacity
-              onPress={handleToggleStatus}
-              activeOpacity={0.8}
-              style={{ alignItems: 'center', gap: 6 }}
-            >
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Repeat size={20} color="#FFFFFF" strokeWidth={2.2} />
-              </View>
-              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                Next Status
-              </Text>
-            </TouchableOpacity>
-
-            {/* Call */}
-            <TouchableOpacity
-              onPress={() => Linking.openURL(`tel:${job.customerPhone}`)}
-              activeOpacity={0.8}
-              style={{ alignItems: 'center', gap: 6 }}
-            >
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Phone size={19} color="#FFFFFF" strokeWidth={2.2} />
-              </View>
-              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                Call
-              </Text>
-            </TouchableOpacity>
-
-            {/* Share / Invoice */}
-            <TouchableOpacity
-              onPress={() => Alert.alert('Bill Generated', `Invoice for Job #${job.jobNumber} ready to print or WhatsApp.`)}
-              activeOpacity={0.8}
-              style={{ alignItems: 'center', gap: 6 }}
-            >
-              <View
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: 'rgba(255, 255, 255, 0.22)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Share2 size={19} color="#FFFFFF" strokeWidth={2.2} />
-              </View>
-              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                Share Bill
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => Alert.alert('Share Job Sheet', `Job Sheet #${job.jobNumber} copied to clipboard.`)}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255, 255, 255, 0.22)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Share2 size={18} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
-        {/* Crisp Lower Sheet */}
+        {/* Dynamic Car Silhouette */}
+        <View style={{ marginBottom: 8 }}>
+          <DynamicCarIllustration modelName={job.vehicleModel} size={64} showBadge={true} />
+        </View>
+
+        <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>
+          {job.vehicleModel}
+        </Text>
+        <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 13, fontWeight: '800', marginTop: 2 }}>
+          {job.vehicleNumber} • <Text style={{ fontWeight: '600' }}>{job.customerName}</Text>
+        </Text>
+
         <View
           style={{
-            backgroundColor: sheetBg,
-            borderTopLeftRadius: 36,
-            borderTopRightRadius: 36,
-            paddingTop: 24,
-            paddingHorizontal: 20,
-            paddingBottom: 24,
-            minHeight: 500,
-            shadowColor: '#0C1829',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: isDark ? 0.4 : 0.06,
-            shadowRadius: 16,
-            elevation: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            marginTop: 6,
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 12,
           }}
         >
+          <Clock size={13} color="#FFFFFF" />
+          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+            Logged: {job.time || '11:30 AM'} • {typeof job.date === 'string' ? job.date : 'Today'}
+          </Text>
+        </View>
+
+        {/* Bill Total */}
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 10, marginBottom: 8 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.5 }}>
+            {formatCurrency(job.finalAmount, currencySymbol)}
+          </Text>
+        </View>
+
+        {/* Status Pill & Payment Pill */}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <View
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.22)',
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: 16,
+            }}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+              {job.workCategory === 'AC' ? '❄️ AC Work' : job.workCategory === 'MECHANICAL' ? '🔧 Mechanical' : '⚙️ Both'}
+            </Text>
+          </View>
+
+          {/* User Requested: In Progress until paid, then Done */}
+          <View
+            style={{
+              backgroundColor: isDone ? 'rgba(16, 185, 129, 0.25)' : 'rgba(96, 165, 250, 0.25)',
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            {isDone && <CheckCircle2 size={12} color="#10B981" />}
+            <Text style={{ color: isDone ? '#10B981' : '#93C5FD', fontSize: 11, fontWeight: '800' }}>
+              {isDone ? 'Done' : 'In Progress'}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              backgroundColor: job.pendingAmount === 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: 16,
+            }}
+          >
+            <Text
+              style={{
+                color: job.pendingAmount === 0 ? '#10B981' : '#FCA5A5',
+                fontSize: 11,
+                fontWeight: '800',
+              }}
+            >
+              {job.pendingAmount === 0 ? 'Fully Paid' : `Due: ${formatCurrency(job.pendingAmount, currencySymbol)}`}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Main Content Sheet with ZERO Blue Bleed */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          overflow: 'hidden',
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 40 }}
+        >
           {/* Segmented Switcher */}
-          <View style={{ flexDirection: 'row', gap: 24, alignItems: 'center', marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center', marginBottom: 16 }}>
             <TouchableOpacity onPress={() => setActiveTab('overview')} activeOpacity={0.7}>
               <Text
                 style={{
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: activeTab === 'overview' ? '900' : '600',
-                  color: activeTab === 'overview' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
+                  color: activeTab === 'overview' ? (isDark ? '#FFFFFF' : '#0F172A') : '#94A3B8',
                 }}
               >
                 Overview
@@ -394,9 +334,9 @@ export default function JobSheetDetailsScreen() {
             <TouchableOpacity onPress={() => setActiveTab('items')} activeOpacity={0.7}>
               <Text
                 style={{
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: activeTab === 'items' ? '900' : '600',
-                  color: activeTab === 'items' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
+                  color: activeTab === 'items' ? (isDark ? '#FFFFFF' : '#0F172A') : '#94A3B8',
                 }}
               >
                 Services & Parts ({job.items.length})
@@ -405,146 +345,90 @@ export default function JobSheetDetailsScreen() {
           </View>
 
           {activeTab === 'overview' ? (
-            <View style={{ gap: 14 }}>
-              {/* Assigned Staff / Mechanic Card */}
+            <View style={{ gap: 12 }}>
+              {/* Assigned Staff Card */}
               <GlassCard
                 variant={isDark ? 'navy' : 'sand'}
-                padding={16}
-                style={{
-                  borderRadius: 22,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
+                padding={14}
+                style={{ borderRadius: 20 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View
                     style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                      backgroundColor: isDark ? '#60A5FA' : '#153580',
+                      width: 38,
+                      height: 38,
+                      borderRadius: 19,
+                      backgroundColor: '#153580',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <UserCheck size={20} color="#FFFFFF" />
+                    <Wrench size={16} color="#FFFFFF" />
                   </View>
-                  <View>
-                    <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-                      Assigned Mechanic
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 14, fontWeight: '800' }}>
+                      {job.assignedMechanicName || 'Head AC Mechanic'}
                     </Text>
-                    <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800', marginTop: 2 }}>
-                      {job.assignedMechanicName || 'Irfan Khan (Head AC Mechanic)'}
+                    <Text style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: 11, fontWeight: '600' }}>
+                      Cool Car Assigned Mechanic
                     </Text>
                   </View>
                 </View>
-
-                <TouchableOpacity
-                  onPress={() => router.push('/staff' as any)}
-                  style={{
-                    backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 14,
-                  }}
-                >
-                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 12, fontWeight: '800' }}>
-                    Staff Details
-                  </Text>
-                </TouchableOpacity>
               </GlassCard>
 
-              {/* 4-Box Spec Metric Grid */}
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
-                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Current Work</Text>
-                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
-                    {formatCurrency(job.subtotal, currencySymbol)}
-                  </Text>
-                </GlassCard>
-
-                <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
-                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Previous Due</Text>
-                  <Text style={{ color: (job.previousPendingAmount || 0) > 0 ? '#EF4444' : '#34D399', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
-                    {formatCurrency(job.previousPendingAmount || 0, currencySymbol)}
-                  </Text>
-                </GlassCard>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
-                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Paid So Far</Text>
-                  <Text style={{ color: '#34D399', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
-                    {formatCurrency(job.totalPaid, currencySymbol)}
-                  </Text>
-                </GlassCard>
-
-                <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
-                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Balance Due</Text>
-                  <Text style={{ color: job.pendingAmount > 0 ? '#EF4444' : '#34D399', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
-                    {formatCurrency(job.pendingAmount, currencySymbol)}
-                  </Text>
-                </GlassCard>
-              </View>
-
-              {/* Payment Mode & Bank Account Info Card */}
-              {job.paymentMode && (
-                <GlassCard
-                  variant={isDark ? 'navy' : 'sand'}
-                  padding={14}
-                  style={{ borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-                >
-                  <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700' }}>
-                    Payment Mode & Account:
-                  </Text>
-                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '800' }}>
-                    {job.paymentMode} {job.bankAccountName ? `• ${job.bankAccountName}` : ''}
-                  </Text>
-                </GlassCard>
-              )}
-
-              {/* Customer Contact Card */}
-              <GlassCard
-                variant={isDark ? 'navy' : 'sand'}
-                padding={18}
+              {/* Settlement Summary Card */}
+              <View
                 style={{
-                  borderRadius: 24,
-                  marginTop: 6,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  backgroundColor: cardBg,
+                  borderRadius: 20,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: cardBorder,
+                  gap: 10,
                 }}
               >
-                <View>
-                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-                    Customer Details
-                  </Text>
-                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '800', marginTop: 2 }}>
-                    {job.customerName}
-                  </Text>
-                  <Text style={{ color: '#64748B', fontSize: 13, marginTop: 1 }}>
-                    {job.customerPhone}
+                <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B' }}>
+                  Billing Breakdown
+                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: 13 }}>Items Subtotal</Text>
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 13, fontWeight: '700' }}>
+                    {formatCurrency(job.subtotal, currencySymbol)}
                   </Text>
                 </View>
-
-                <TouchableOpacity
-                  onPress={() => Linking.openURL(`tel:${job.customerPhone}`)}
-                  style={{
-                    backgroundColor: primaryBtnBg,
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    borderRadius: 20,
-                  }}
-                >
-                  <Text style={{ color: primaryBtnText, fontSize: 13, fontWeight: '800' }}>
-                    Call Customer
+                {job.discount > 0 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#10B981', fontSize: 13 }}>Discount</Text>
+                    <Text style={{ color: '#10B981', fontSize: 13, fontWeight: '700' }}>
+                      -{formatCurrency(job.discount, currencySymbol)}
+                    </Text>
+                  </View>
+                )}
+                <View style={{ height: 1, backgroundColor: cardBorder, marginVertical: 2 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 15, fontWeight: '800' }}>Total Bill</Text>
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 15, fontWeight: '900' }}>
+                    {formatCurrency(job.finalAmount, currencySymbol)}
                   </Text>
-                </TouchableOpacity>
-              </GlassCard>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: '#10B981', fontSize: 13, fontWeight: '700' }}>Total Paid</Text>
+                  <Text style={{ color: '#10B981', fontSize: 13, fontWeight: '800' }}>
+                    {formatCurrency(job.totalPaid, currencySymbol)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: job.pendingAmount > 0 ? '#EF4444' : '#10B981', fontSize: 13, fontWeight: '700' }}>
+                    Balance Due
+                  </Text>
+                  <Text style={{ color: job.pendingAmount > 0 ? '#EF4444' : '#10B981', fontSize: 13, fontWeight: '800' }}>
+                    {formatCurrency(job.pendingAmount, currencySymbol)}
+                  </Text>
+                </View>
+              </View>
             </View>
           ) : (
-            <View style={{ gap: 10 }}>
+            <View style={{ gap: 8 }}>
               {job.items.map((item) => (
                 <View
                   key={item.id}
@@ -552,37 +436,37 @@ export default function JobSheetDetailsScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    borderRadius: 22,
-                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 18,
+                    backgroundColor: cardBg,
                     borderWidth: 1,
                     borderColor: cardBorder,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
                     <View
                       style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                        width: 34,
+                        height: 34,
+                        borderRadius: 17,
+                        backgroundColor: '#153580',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      {item.type === 'PART' ? <Package size={16} color="#FFFFFF" /> : <Wrench size={16} color="#FFFFFF" />}
+                      {item.type === 'PART' ? <Package size={15} color="#FFFFFF" /> : <Wrench size={15} color="#FFFFFF" />}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 14, fontWeight: '800' }}>
+                      <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 13, fontWeight: '800' }}>
                         {item.name}
                       </Text>
-                      <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-                        {item.type === 'SERVICE' ? 'Service / Labor' : 'Spare Part'} • Qty: {item.quantity} × {formatCurrency(item.unitPrice, currencySymbol)}
+                      <Text style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: 11, fontWeight: '600', marginTop: 1 }}>
+                        {item.type === 'SERVICE' ? 'Service / Labor' : 'Spare Part'} • Qty: {item.quantity}
                       </Text>
                     </View>
                   </View>
-                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '900' }}>
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 14, fontWeight: '900' }}>
                     {formatCurrency(item.amount, currencySymbol)}
                   </Text>
                 </View>
@@ -590,30 +474,200 @@ export default function JobSheetDetailsScreen() {
             </View>
           )}
 
-          {/* Settle / Record Payment CTA */}
+          {/* User Requested: "Payment" button with Amount Modify & Bank Selection */}
           <TouchableOpacity
-            onPress={() => router.push('/payments')}
+            onPress={handleOpenPayment}
             activeOpacity={0.88}
             style={{
-              backgroundColor: primaryBtnBg,
-              paddingVertical: 18,
-              borderRadius: 30,
+              backgroundColor: '#153580',
+              paddingVertical: 16,
+              borderRadius: 24,
+              flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              marginTop: 24,
-              shadowColor: '#0C1829',
+              gap: 8,
+              marginTop: 20,
+              shadowColor: '#153580',
               shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.2,
+              shadowOpacity: 0.3,
               shadowRadius: 10,
               elevation: 4,
             }}
           >
-            <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
-              {job.pendingAmount > 0 ? `Collect Balance (${formatCurrency(job.pendingAmount, currencySymbol)})` : 'Print Invoice'}
+            <ArrowDown size={18} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              Payment {job.pendingAmount > 0 ? `(${formatCurrency(job.pendingAmount, currencySymbol)})` : ''}
             </Text>
           </TouchableOpacity>
+        </ScrollView>
+      </View>
+
+      {/* Payment Collection Modal with Amount Modify & Bank Selection */}
+      <Modal
+        visible={isPaymentModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsPaymentModalOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              padding: 20,
+              paddingBottom: insets.bottom + 20,
+              gap: 16,
+            }}
+          >
+            {/* Modal Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                  Record Payment
+                </Text>
+                <Text style={{ fontSize: 12, color: isDark ? '#94A3B8' : '#64748B', marginTop: 2 }}>
+                  Job #{job.jobNumber} • {job.vehicleNumber}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsPaymentModalOpen(false)}
+                style={{ padding: 6, borderRadius: 12, backgroundColor: isDark ? '#1C2538' : '#F1F5F9' }}
+              >
+                <X size={18} color={isDark ? '#94A3B8' : '#64748B'} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Editable Amount Input */}
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 6 }}>
+                Payment Amount (Modify if partial payment)
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                  borderRadius: 16,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderWidth: 1,
+                  borderColor: cardBorder,
+                }}
+              >
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#153580', marginRight: 8 }}>
+                  ₹
+                </Text>
+                <TextInput
+                  value={paymentAmountStr}
+                  onChangeText={setPaymentAmountStr}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    flex: 1,
+                    fontSize: 22,
+                    fontWeight: '900',
+                    color: isDark ? '#FFFFFF' : '#0F172A',
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Payment Mode Selector Tabs with Authentic Logos */}
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 8 }}>
+                Payment Method
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {[
+                  { mode: 'CASH' as PaymentMode, label: 'Cash', icon: Banknote },
+                  { mode: 'UPI' as PaymentMode, label: 'UPI', icon: QrCode },
+                  { mode: 'CARD_SWIPE' as PaymentMode, label: 'Swipe', icon: CreditCard },
+                ].map((item) => {
+                  const isSelected = paymentMode === item.mode;
+                  const ModeIcon = item.icon;
+                  return (
+                    <TouchableOpacity
+                      key={item.mode}
+                      onPress={() => setPaymentMode(item.mode)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: 16,
+                        backgroundColor: isSelected ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
+                        alignItems: 'center',
+                        gap: 4,
+                        borderWidth: 1,
+                        borderColor: isSelected ? '#153580' : cardBorder,
+                      }}
+                    >
+                      <ModeIcon size={16} color={isSelected ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B')} />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Target Bank Account (Shown when UPI or Swipe is selected) */}
+            {(paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') && (
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 8 }}>
+                  Deposit Into Bank Account:
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {activeAccounts.map((acc) => {
+                    const isSelected = selectedBankId === acc.id;
+                    return (
+                      <TouchableOpacity
+                        key={acc.id}
+                        onPress={() => setSelectedBankId(acc.id)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 14,
+                          backgroundColor: isSelected ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
+                          borderWidth: 1,
+                          borderColor: isSelected ? '#153580' : cardBorder,
+                        }}
+                      >
+                        <Building2 size={13} color={isSelected ? '#FFFFFF' : '#64748B'} />
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
+                          {acc.bankName} {acc.accountNumber ? `(${acc.accountNumber.slice(-4)})` : ''}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Confirm Payment CTA */}
+            <TouchableOpacity
+              onPress={handleConfirmPayment}
+              activeOpacity={0.88}
+              style={{
+                backgroundColor: '#10B981',
+                paddingVertical: 15,
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 6,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
+                Confirm & Mark Job Done
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </ScrollView>
+      </Modal>
     </View>
   );
 }

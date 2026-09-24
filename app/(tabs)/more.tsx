@@ -180,12 +180,12 @@ export default function MoreScreen() {
         <View
           style={{
             backgroundColor: sheetBg,
+            marginTop: -14,
             borderTopLeftRadius: 36,
             borderTopRightRadius: 36,
             paddingTop: 24,
             paddingHorizontal: 20,
-            paddingBottom: 24,
-            minHeight: 600,
+            paddingBottom: 40,
             shadowColor: '#0C1829',
             shadowOffset: { width: 0, height: -4 },
             shadowOpacity: isDark ? 0.4 : 0.06,

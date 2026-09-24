@@ -43,15 +43,16 @@ export default function AboutScreen() {
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 20,
+          paddingBottom: 24,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
@@ -75,18 +76,19 @@ export default function AboutScreen() {
             About System
           </Text>
           <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
-            Garage Expense Tracker specs
+            Cool Car Workshop OS
           </Text>
         </View>
       </View>
 
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Signature Lower Content Sheet */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
+          marginTop: -16,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           overflow: 'hidden',
         }}
       >
@@ -122,11 +124,11 @@ export default function AboutScreen() {
             >
               <Wrench size={30} color="#FFFFFF" />
             </View>
-            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>
-              Garage Expense Tracker
+            <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '900', letterSpacing: -0.3 }}>
+              Cool Car
             </Text>
             <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4, fontWeight: '500' }}>
-              Multi-Enterprise Workshop OS
+              Car A/C Repairs & Mechanical Workshop OS
             </Text>
           </View>
 

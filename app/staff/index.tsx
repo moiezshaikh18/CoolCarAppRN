@@ -63,15 +63,16 @@ export default function StaffListScreen() {
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingBottom: 20,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -181,13 +182,14 @@ export default function StaffListScreen() {
         </View>
       </View>
 
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Signature Lower Content Sheet */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           overflow: 'hidden',
         }}
       >

@@ -82,16 +82,17 @@ export default function CreateProfileScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: skyBg }}
+      style={{ flex: 1, backgroundColor: sheetBg }}
     >
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 24,
+          paddingBottom: 28,
         }}
       >
         <TouchableOpacity
@@ -117,13 +118,14 @@ export default function CreateProfileScreen() {
         </Text>
       </View>
 
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Signature Lower Content Sheet */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
+          marginTop: -16,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           overflow: 'hidden',
         }}
       >

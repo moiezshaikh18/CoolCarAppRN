@@ -12,6 +12,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -103,9 +104,19 @@ export default function AddBankAccountScreen() {
   const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+
       {/* Sky Blue Header */}
-      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
+      <View
+        style={{
+          backgroundColor: canvasBg,
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 20,
+          paddingBottom: 24,
+          alignItems: 'center',
+        }}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -113,7 +124,7 @@ export default function AddBankAccountScreen() {
               paddingHorizontal: 14,
               paddingVertical: 8,
               borderRadius: 20,
-              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+              backgroundColor: 'rgba(255, 255, 255, 0.22)',
             }}
           >
             <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Cancel</Text>
@@ -129,43 +140,40 @@ export default function AddBankAccountScreen() {
         {/* Central Bank Badge */}
         <View
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            backgroundColor: isDark ? '#1C2538' : '#0C1829',
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: '#0C1829',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 10,
           }}
         >
-          <Building size={30} color="#FFFFFF" />
+          <Building size={26} color="#FFFFFF" />
         </View>
 
         <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>
-          Workshop Liquidity
+          Workshop Bank Account
         </Text>
         <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, marginTop: 2 }}>
-          Configure settlement gateway & cash drawer
+          Link accounts to track UPI and card swipe collections
         </Text>
       </View>
 
-      {/* Crisp White Lower Sheet */}
+      {/* Main Content Sheet with ZERO Blue Bleed */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
-          paddingTop: 24,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          overflow: 'hidden',
+          paddingTop: 20,
           paddingHorizontal: 20,
-          shadowColor: '#0C1829',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: isDark ? 0.4 : 0.06,
-          shadowRadius: 16,
-          elevation: 8,
         }}
       >
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           {/* Account Type Chips */}
           <View style={{ marginBottom: 18 }}>
             <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
@@ -297,30 +305,6 @@ export default function AddBankAccountScreen() {
             </>
           )}
 
-          {/* Initial Opening Balance */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
-              Opening Balance ({currencySymbol})
-            </Text>
-            <TextInput
-              value={openingBalance}
-              onChangeText={setOpeningBalance}
-              placeholder="0.00"
-              placeholderTextColor="#94A3B8"
-              keyboardType="decimal-pad"
-              style={{
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                borderWidth: 1,
-                borderColor: cardBorder,
-                color: isDark ? '#FFFFFF' : '#0C1829',
-                fontSize: 15,
-                fontWeight: '700',
-              }}
-            />
-          </View>
 
           {/* Solid Midnight Navy CTA Button */}
           <TouchableOpacity

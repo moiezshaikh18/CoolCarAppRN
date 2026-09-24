@@ -157,6 +157,11 @@ export default function CreateJobSheetScreen() {
   const [presetCategory, setPresetCategory] = useState<'ALL' | 'AC' | 'MECHANICAL' | 'PARTS'>('ALL');
   const [quickAddSearch, setQuickAddSearch] = useState('');
 
+  // Custom Item Modal
+  const [isAddCustomModalOpen, setIsAddCustomModalOpen] = useState(false);
+  const [customItemName, setCustomItemName] = useState('');
+  const [customItemPrice, setCustomItemPrice] = useState('');
+  const [customItemType, setCustomItemType] = useState<'SERVICE' | 'PART'>('SERVICE');
 
   // Edit Item Modal (Tap to Edit)
   const [editingItem, setEditingItem] = useState<JobItem | null>(null);
@@ -272,6 +277,30 @@ export default function CreateJobSheetScreen() {
     setEditingItem(null);
   };
 
+  const handleAddCustomItem = () => {
+    if (!customItemName.trim()) {
+      showAlert('Name Required', 'Please enter a valid item name.');
+      return;
+    }
+    const priceNum = parseFloat(customItemPrice);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      showAlert('Price Required', 'Please enter a valid price.');
+      return;
+    }
+    setItems((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString() + Math.random().toString().slice(2, 6),
+        name: customItemName.trim(),
+        type: customItemType,
+        price: priceNum,
+      },
+    ]);
+    setCustomItemName('');
+    setCustomItemPrice('');
+    setIsAddCustomModalOpen(false);
+  };
+
   const handleDeleteItem = (id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (editingItem?.id === id) {
@@ -323,7 +352,7 @@ export default function CreateJobSheetScreen() {
       workCategory,
       date: jobDate,
       time: jobTime,
-      status: 'OPEN' as const,
+      status: (remainingBalance === 0 ? 'COMPLETED' : 'IN_PROGRESS') as any,
       assignedMechanicId: selectedMechanic?.id || '',
       assignedMechanicName: selectedMechanic ? `${selectedMechanic.name} (${selectedMechanic.role})` : 'Unassigned',
       items: items.map((it) => ({
@@ -759,30 +788,54 @@ export default function CreateJobSheetScreen() {
                 </Text>
               </View>
 
-              {/* Standard Services & Parts Popup Button */}
-              <TouchableOpacity
-                onPress={() => setIsQuickAddModalOpen(true)}
-                activeOpacity={0.85}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  backgroundColor: isDark ? '#FFFFFF' : '#153580',
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 14,
-                  shadowColor: '#153580',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 2,
-                }}
-              >
-                <Plus size={15} color={isDark ? '#0C1829' : '#FFFFFF'} strokeWidth={2.8} />
-                <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 12, fontWeight: '800' }}>
-                  + Standard Items
-                </Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {/* Custom Item Button */}
+                <TouchableOpacity
+                  onPress={() => setIsAddCustomModalOpen(true)}
+                  activeOpacity={0.85}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    backgroundColor: isDark ? '#1C2538' : '#EFF6FF',
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(21, 53, 128, 0.2)',
+                  }}
+                >
+                  <Plus size={14} color={isDark ? '#93C5FD' : '#153580'} strokeWidth={2.5} />
+                  <Text style={{ color: isDark ? '#93C5FD' : '#153580', fontSize: 11, fontWeight: '800' }}>
+                    + Custom
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Standard Services & Parts Popup Button */}
+                <TouchableOpacity
+                  onPress={() => setIsQuickAddModalOpen(true)}
+                  activeOpacity={0.85}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    backgroundColor: isDark ? '#FFFFFF' : '#153580',
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    borderRadius: 12,
+                    shadowColor: '#153580',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
+                    elevation: 2,
+                  }}
+                >
+                  <Plus size={14} color={isDark ? '#0C1829' : '#FFFFFF'} strokeWidth={2.8} />
+                  <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                    + Standard
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
 
@@ -1243,6 +1296,135 @@ export default function CreateJobSheetScreen() {
                 Done ({items.length} {items.length === 1 ? 'Item' : 'Items'} in Job Sheet)
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL 2.5: ADD CUSTOM ITEM MODAL */}
+      <Modal
+        visible={isAddCustomModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsAddCustomModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.dialogModal, { backgroundColor: isDark ? '#121A29' : '#FFFFFF' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Add Custom Item
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsAddCustomModalOpen(false)}
+                style={{ padding: 4, borderRadius: 8, backgroundColor: isDark ? '#1C2538' : '#F1F5F9' }}
+              >
+                <X size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Type Selector (Service vs Part) */}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <TouchableOpacity
+                onPress={() => setCustomItemType('SERVICE')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  backgroundColor: customItemType === 'SERVICE' ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '800', color: customItemType === 'SERVICE' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B') }}>
+                  🔧 Service / Labor
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setCustomItemType('PART')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  backgroundColor: customItemType === 'PART' ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '800', color: customItemType === 'PART' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B') }}>
+                  📦 Spare Part
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+              Item or Service Name
+            </Text>
+            <TextInput
+              value={customItemName}
+              onChangeText={setCustomItemName}
+              placeholder="e.g. Front Bumper Repair, AC Sensor"
+              placeholderTextColor="#94A3B8"
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 13,
+                fontWeight: '700',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                marginBottom: 10,
+              }}
+            />
+
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+              Price (₹)
+            </Text>
+            <TextInput
+              value={customItemPrice}
+              onChangeText={setCustomItemPrice}
+              placeholder="0"
+              placeholderTextColor="#94A3B8"
+              keyboardType="numeric"
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 14,
+                fontWeight: '900',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                marginBottom: 16,
+              }}
+            />
+
+            {/* Actions: Add / Cancel */}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => setIsAddCustomModalOpen(false)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B' }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleAddCustomItem}
+                style={{
+                  flex: 1.5,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  backgroundColor: '#153580',
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFFFFF' }}>
+                  Add Item
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

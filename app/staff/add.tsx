@@ -111,11 +111,18 @@ export default function AddStaffScreen() {
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Header */}
-      <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 16 }}>
+      <View
+        style={{
+          backgroundColor: skyBg,
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 22,
+        }}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -141,18 +148,20 @@ export default function AddStaffScreen() {
         </View>
       </View>
 
-      {/* Form Sheet */}
+      {/* Form Sheet with ZERO Blue Bleed */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           paddingTop: 20,
           paddingHorizontal: 20,
+          overflow: 'hidden',
         }}
       >
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           {/* Card 1: Basic Info */}
           <View
             style={{

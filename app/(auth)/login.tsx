@@ -81,15 +81,16 @@ export default function LoginScreen() {
   const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Royal Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 20,
           paddingHorizontal: 20,
-          paddingBottom: 24,
+          paddingBottom: 28,
         }}
       >
         <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>
@@ -100,14 +101,14 @@ export default function LoginScreen() {
         </Text>
       </View>
 
-
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Signature Lower Content Sheet */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
+          marginTop: -16,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           overflow: 'hidden',
         }}
       >

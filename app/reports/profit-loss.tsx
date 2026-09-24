@@ -38,15 +38,16 @@ export default function ProfitLossScreen() {
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingBottom: 22,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -124,6 +125,7 @@ export default function ProfitLossScreen() {
         style={{
           flex: 1,
           backgroundColor: sheetBg,
+          marginTop: -14,
           borderTopLeftRadius: 36,
           borderTopRightRadius: 36,
           overflow: 'hidden',

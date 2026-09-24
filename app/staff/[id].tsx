@@ -35,6 +35,7 @@ import { useEmployeeStore } from '../../src/store/employeeStore';
 import { formatCurrency } from '../../src/utils/currency';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
 import { EmployeePrivileges } from '../../src/types/employee.types';
+import PayStaffScreen from './pay';
 
 export default function StaffDetailScreen() {
   const { theme, isDark } = useTheme();
@@ -42,12 +43,9 @@ export default function StaffDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // If accidentally routed to [id] with id="pay", redirect to dedicated pay screen
-  React.useEffect(() => {
-    if (id === 'pay') {
-      router.replace('/staff/pay' as any);
-    }
-  }, [id]);
+  if (id === 'pay') {
+    return <PayStaffScreen />;
+  }
 
   const { getEmployeeById, getPaymentsByEmployeeId, markEmployeeAsLeft, updateEmployee } = useEmployeeStore();
   const staff = id && id !== 'pay' ? getEmployeeById(id) : undefined;
@@ -133,15 +131,16 @@ export default function StaffDetailScreen() {
 
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 20,
+          paddingBottom: 24,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -231,6 +230,7 @@ export default function StaffDetailScreen() {
         style={{
           flex: 1,
           backgroundColor: sheetBg,
+          marginTop: -14,
           borderTopLeftRadius: 36,
           borderTopRightRadius: 36,
           overflow: 'hidden',

@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Garage Expense Tracker",
+    "name": "Cool Car",
     "slug": "cool-car-garage-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "garagetracker",
-    "userInterfaceStyle": "dark",
+    "scheme": "coolcar",
+    "userInterfaceStyle": "light",
 
     "ios": {
       "supportsTablet": false,

@@ -282,11 +282,11 @@ export default function AddPurchaseChalanScreen() {
   const textMuted = '#64748B';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <StatusBar barStyle="light-content" />
 
       {/* Signboard Royal Blue Header */}
-      <View style={{ backgroundColor: headerBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+      <View style={{ backgroundColor: headerBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 22 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -320,6 +320,10 @@ export default function AddPurchaseChalanScreen() {
         style={{
           flex: 1,
           backgroundColor: sheetBg,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          overflow: 'hidden',
           paddingTop: 16,
         }}
       >

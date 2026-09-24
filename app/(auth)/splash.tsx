@@ -10,13 +10,13 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   Animated,
   StyleSheet,
   StatusBar,
   Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
-import { SignboardSpeedCar } from '../../src/components/common/CarIllustrations';
 
 const { width } = Dimensions.get('window');
 
@@ -71,18 +71,16 @@ export default function SplashScreen() {
             ))}
           </View>
 
-          {/* Center Brand Hero: Speed Car + Cursive Title */}
+          {/* Center Brand Hero: Official Cool Car Logo */}
           <View style={styles.centerHero}>
-            <View style={{ marginBottom: 6 }}>
-              <SignboardSpeedCar size={Math.min(width * 0.75, 290)} color="#FFFFFF" />
+            <View style={styles.logoCard}>
+              <Image
+                source={require('../../assets/cool_car_logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
 
-            <Text style={styles.cursiveTitle}>Cool Car</Text>
-
-            {/* Bold Subtitle: CAR A/C REPAIRS */}
-            <View style={styles.capsPill}>
-              <Text style={styles.acSubtitle}>CAR A/C REPAIRS</Text>
-            </View>
             <Text style={styles.mechSubtitle}>& MECHANICAL AUTO WORKSHOP</Text>
 
             {/* Pune Contact Numbers */}
@@ -164,31 +162,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
   },
-  cursiveTitle: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    fontStyle: 'italic',
-    letterSpacing: -0.5,
-    textAlign: 'center',
-    marginTop: -4,
-    textShadowColor: 'rgba(0, 0, 0, 0.45)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
-  },
-  capsPill: {
-    marginTop: 6,
+  logoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: 8,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  acSubtitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 2,
-    textAlign: 'center',
+  logoImage: {
+    width: Math.min(width * 0.72, 280),
+    height: Math.min(width * 0.72, 280) * (384 / 1024),
   },
   mechSubtitle: {
     fontSize: 11,

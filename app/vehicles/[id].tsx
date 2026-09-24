@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,13 +74,11 @@ export default function VehicleDetailsScreen() {
   const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
-      >
-        {/* Sky Blue Header */}
-        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+
+      {/* Sky Blue Header */}
+      <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
           {/* Top Bar with Back & Share */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
             <TouchableOpacity
@@ -256,22 +255,20 @@ export default function VehicleDetailsScreen() {
           </View>
         </View>
 
-        {/* Crisp White Lower Sheet */}
-        <View
-          style={{
-            backgroundColor: sheetBg,
-            borderTopLeftRadius: 36,
-            borderTopRightRadius: 36,
-            paddingTop: 24,
-            paddingHorizontal: 20,
-            paddingBottom: 24,
-            minHeight: 500,
-            shadowColor: '#0C1829',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: isDark ? 0.4 : 0.06,
-            shadowRadius: 16,
-            elevation: 8,
-          }}
+      {/* Lower Content Sheet with ZERO Blue Bleed */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          overflow: 'hidden',
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 }}
         >
           {/* Segmented Switcher */}
           <View style={{ flexDirection: 'row', gap: 24, alignItems: 'center', marginBottom: 20 }}>
@@ -429,8 +426,8 @@ export default function VehicleDetailsScreen() {
               Create Job Sheet for this Vehicle
             </Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 }

@@ -3,9 +3,9 @@
 // ============================================================
 
 export const APP_CONFIG = {
-  name: 'Garage Expense Tracker',
+  name: 'Cool Car',
   version: '1.0.0',
-  supportEmail: 'support@garagetracker.app',
+  supportEmail: 'support@coolcar.in',
   defaultCountryCode: '+91',
   otpLength: 6,
   otpResendSeconds: 60,

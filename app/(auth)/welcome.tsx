@@ -1,13 +1,14 @@
 // ============================================================
 // Welcome Screen — Cool Car Workshop
 // Clean Center-Aligned Luxury Layout (No Back Button)
-// Dedicated exclusively to Cool Car
+// Featuring Official Cool Car Logo
 // ============================================================
 
 import React from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
@@ -15,69 +16,103 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight, Wrench, ShieldCheck, Sparkles, Snowflake } from 'lucide-react-native';
-import { SignboardSpeedCar } from '../../src/components/common/CarIllustrations';
+import { ChevronRight, Snowflake } from 'lucide-react-native';
+import { useTheme } from '../../src/hooks/useTheme';
 
 const { width } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+
+  const canvasBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const textPrimary = isDark ? '#F1F5F9' : '#0F172A';
+  const textSecondary = isDark ? '#94A3B8' : '#64748B';
+  const brandBlue = isDark ? '#3B82F6' : '#153580';
+  const borderCol = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <View style={[styles.container, { backgroundColor: canvasBg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={canvasBg} />
 
-      {/* Decorative Top Glow */}
-      <View style={styles.topGlow} />
+      {/* Decorative Glow */}
+      <View
+        style={[
+          styles.topGlow,
+          {
+            backgroundColor: isDark
+              ? 'rgba(30, 64, 175, 0.25)'
+              : 'rgba(21, 53, 128, 0.08)',
+          },
+        ]}
+      />
 
       {/* Center Content Section */}
-      <View style={[styles.centerWrapper, { paddingTop: insets.top + 20 }]}>
-        {/* Signboard Aerodynamic Speed Car */}
-        <View style={styles.illustrationBox}>
-          <SignboardSpeedCar size={width * 0.75} color="#FFFFFF" />
+      <View style={[styles.centerWrapper, { paddingTop: insets.top + 24 }]}>
+        {/* Official Cool Car Logo Container */}
+        <View
+          style={[
+            styles.logoContainer,
+            {
+              backgroundColor: '#FFFFFF',
+              borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(21, 53, 128, 0.12)',
+            },
+          ]}
+        >
+          <Image
+            source={require('../../assets/cool_car_logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
 
-        {/* Brand Display Title */}
-        <Text style={styles.brandTitle}>Cool Car</Text>
-
-        <View style={styles.badgePill}>
-          <Snowflake size={14} color="#60A5FA" />
-          <Text style={styles.badgeText}>
+        <View style={[styles.badgePill, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(21, 53, 128, 0.08)' }]}>
+          <Snowflake size={14} color={brandBlue} />
+          <Text style={[styles.badgeText, { color: brandBlue }]}>
             CAR A/C REPAIRS & MECHANICAL WORKSHOP
           </Text>
         </View>
 
-        <Text style={styles.marathiSub}>
+        <Text style={[styles.marathiSub, { color: textSecondary }]}>
           कूल कार ए. सी. रिपेअर्स
         </Text>
 
-        <Text style={styles.sloganText}>
-          {'"Our Perfection... Your Satisfaction"'}
+        <Text style={[styles.sloganText, { color: textSecondary }]}>
+          {"'Our Perfection... Your Satisfaction'"}
         </Text>
 
         {/* Feature Highlights Grid */}
-        <View style={styles.featuresRow}>
+        <View
+          style={[
+            styles.featuresRow,
+            {
+              backgroundColor: cardBg,
+              borderColor: borderCol,
+            },
+          ]}
+        >
           <View style={styles.featureItem}>
             <Text style={styles.featureEmoji}>❄️</Text>
-            <Text style={styles.featureLabel}>AC Service</Text>
+            <Text style={[styles.featureLabel, { color: textSecondary }]}>AC Service</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureEmoji}>🔧</Text>
-            <Text style={styles.featureLabel}>Mechanical</Text>
+            <Text style={[styles.featureLabel, { color: textSecondary }]}>Mechanical</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureEmoji}>📋</Text>
-            <Text style={styles.featureLabel}>Job Sheets</Text>
+            <Text style={[styles.featureLabel, { color: textSecondary }]}>Job Sheets</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureEmoji}>🏦</Text>
-            <Text style={styles.featureLabel}>Bank Ledger</Text>
+            <Text style={[styles.featureLabel, { color: textSecondary }]}>Bank Ledger</Text>
           </View>
         </View>
       </View>
 
       {/* Bottom Center CTA */}
-      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 24 }]}>
+      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 28 }]}>
         <TouchableOpacity
           onPress={() => router.push('/(auth)/login')}
           activeOpacity={0.9}
@@ -89,7 +124,6 @@ export default function WelcomeScreen() {
           </View>
         </TouchableOpacity>
       </View>
-
     </View>
   );
 }
@@ -97,7 +131,6 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A1222', // Deep Obsidian Navy
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
@@ -108,7 +141,6 @@ const styles = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: 'rgba(30, 64, 175, 0.3)',
   },
   centerWrapper: {
     flex: 1,
@@ -116,51 +148,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
   },
-  illustrationBox: {
+  logoContainer: {
+    width: '100%',
+    maxWidth: 340,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 5,
+    marginBottom: 16,
   },
-  brandTitle: {
-    fontSize: 44,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    fontStyle: 'italic',
-    letterSpacing: -0.6,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 8,
+  logoImage: {
+    width: Math.min(width * 0.74, 290),
+    height: Math.min(width * 0.74, 290) * (384 / 1024),
   },
   badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 10,
+    marginTop: 6,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: 'rgba(37, 99, 235, 0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.3)',
   },
   badgeText: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#93C5FD',
     letterSpacing: 0.8,
   },
   marathiSub: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.75)',
-    marginTop: 8,
+    fontSize: 14,
+    marginTop: 10,
     fontWeight: '700',
   },
   sloganText: {
-    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 13,
     fontStyle: 'italic',
-    marginTop: 12,
+    marginTop: 6,
     textAlign: 'center',
   },
   featuresRow: {
@@ -168,11 +198,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     width: '100%',
     marginTop: 32,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   featureItem: {
     alignItems: 'center',
@@ -182,7 +215,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   featureLabel: {
-    color: '#94A3B8',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -192,7 +224,7 @@ const styles = StyleSheet.create({
   },
   pillButton: {
     width: '100%',
-    backgroundColor: '#153580',
+    backgroundColor: '#153580', // Royal Blue
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 30,
@@ -204,8 +236,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 6,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   pillButtonText: {
     color: '#FFFFFF',
@@ -218,9 +248,8 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-
 });

@@ -73,16 +73,16 @@ export default function SignUpScreen() {
   const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Royal Blue Top Header */}
-
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 24,
+          paddingBottom: 28,
         }}
       >
         <TouchableOpacity
@@ -108,13 +108,14 @@ export default function SignUpScreen() {
         </Text>
       </View>
 
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Signature Lower Content Sheet */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
+          marginTop: -16,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           overflow: 'hidden',
         }}
       >

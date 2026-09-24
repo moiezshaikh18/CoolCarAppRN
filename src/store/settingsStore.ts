@@ -30,7 +30,7 @@ interface SettingsStore {
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
-      prefersDarkMode: true,
+      prefersDarkMode: false,
       language: 'en',
       notificationsEnabled: true,
       biometricEnabled: false,
@@ -45,7 +45,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setOnboardingCompleted: (onboardingCompleted) => set({ onboardingCompleted }),
       reset: () =>
         set({
-          prefersDarkMode: true,
+          prefersDarkMode: false,
           language: 'en',
           notificationsEnabled: true,
           biometricEnabled: false,

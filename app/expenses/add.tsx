@@ -36,6 +36,7 @@ import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/Theme
 import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
 
 const COMMON_EXPENSE_REASONS = [
+  'Staff Salary / Advance',
   'Tea & Snacks for Staff',
   'Workshop Electricity Bill',
   'Shop Rent',
@@ -167,9 +168,9 @@ export default function AddExpenseScreen() {
   const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       {/* Royal Blue Top Header */}
-      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+      <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <TouchableOpacity
@@ -204,6 +205,7 @@ export default function AddExpenseScreen() {
         style={{
           flex: 1,
           backgroundColor: sheetBg,
+          marginTop: -14,
           borderTopLeftRadius: 36,
           borderTopRightRadius: 36,
           paddingTop: 22,
@@ -235,7 +237,6 @@ export default function AddExpenseScreen() {
                 placeholder="0.00"
                 placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
-                autoFocus
                 style={{
                   flex: 1,
                   fontSize: 28,

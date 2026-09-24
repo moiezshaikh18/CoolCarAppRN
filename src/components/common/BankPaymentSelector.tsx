@@ -23,7 +23,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { useBankAccountStore, selectActiveAccounts } from '../../store/bankAccountStore';
+import { useBankAccountStore } from '../../store/bankAccountStore';
 import { PaymentMode } from '../../types/payment.types';
 import { router } from 'expo-router';
 import { formatCurrency } from '../../utils/currency';
@@ -44,16 +44,24 @@ export function BankPaymentSelector({
   label = 'Payment Mode & Bank Account',
 }: BankPaymentSelectorProps) {
   const { isDark } = useTheme();
-  const rawAccounts = useBankAccountStore(selectActiveAccounts);
-  const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
+  const rawAccounts = useBankAccountStore((s) => s.accounts);
+  const accounts = React.useMemo(() => (Array.isArray(rawAccounts) ? rawAccounts.filter((a) => a?.isActive) : []), [rawAccounts]);
   const [modalVisible, setModalVisible] = useState(false);
 
   // Filter bank accounts (exclude pure cash account for UPI/Card)
-  const bankOnlyAccounts = accounts.filter((a) => a?.accountType !== 'CASH_IN_HAND');
-  const cashAccount = accounts.find((a) => a?.accountType === 'CASH_IN_HAND');
+  const bankOnlyAccounts = React.useMemo(
+    () => accounts.filter((a) => a?.accountType !== 'CASH_IN_HAND'),
+    [accounts]
+  );
+  const cashAccount = React.useMemo(
+    () => accounts.find((a) => a?.accountType === 'CASH_IN_HAND'),
+    [accounts]
+  );
 
-  const selectedAccount = accounts.find((a) => a?.id === selectedAccountId);
-
+  const selectedAccount = React.useMemo(
+    () => accounts.find((a) => a?.id === selectedAccountId),
+    [accounts, selectedAccountId]
+  );
 
   const handleSelectMode = (mode: PaymentMode) => {
     onPaymentModeChange(mode);
@@ -95,6 +103,7 @@ export function BankPaymentSelector({
         {/* Cash */}
         <TouchableOpacity
           onPress={() => handleSelectMode('CASH')}
+          activeOpacity={0.85}
           style={{
             flex: 1,
             flexDirection: 'row',
@@ -106,10 +115,18 @@ export function BankPaymentSelector({
             backgroundColor: paymentMode === 'CASH' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
           }}
         >
-          <Banknote
-            size={16}
-            color={paymentMode === 'CASH' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#94A3B8' : '#64748B')}
-          />
+          <View
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 11,
+              backgroundColor: paymentMode === 'CASH' ? '#10B981' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Banknote size={13} color="#FFFFFF" />
+          </View>
           <Text
             style={{
               fontSize: 13,
@@ -124,6 +141,7 @@ export function BankPaymentSelector({
         {/* UPI */}
         <TouchableOpacity
           onPress={() => handleSelectMode('UPI')}
+          activeOpacity={0.85}
           style={{
             flex: 1,
             flexDirection: 'row',
@@ -135,10 +153,18 @@ export function BankPaymentSelector({
             backgroundColor: paymentMode === 'UPI' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
           }}
         >
-          <QrCode
-            size={16}
-            color={paymentMode === 'UPI' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#94A3B8' : '#64748B')}
-          />
+          <View
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 11,
+              backgroundColor: paymentMode === 'UPI' ? (isDark ? '#60A5FA' : '#153580') : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <QrCode size={13} color="#FFFFFF" />
+          </View>
           <Text
             style={{
               fontSize: 13,
@@ -153,6 +179,7 @@ export function BankPaymentSelector({
         {/* Card Swipe */}
         <TouchableOpacity
           onPress={() => handleSelectMode('CARD_SWIPE')}
+          activeOpacity={0.85}
           style={{
             flex: 1,
             flexDirection: 'row',
@@ -164,10 +191,18 @@ export function BankPaymentSelector({
             backgroundColor: paymentMode === 'CARD_SWIPE' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
           }}
         >
-          <CreditCard
-            size={16}
-            color={paymentMode === 'CARD_SWIPE' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#94A3B8' : '#64748B')}
-          />
+          <View
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 11,
+              backgroundColor: paymentMode === 'CARD_SWIPE' ? '#8B5CF6' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <CreditCard size={13} color="#FFFFFF" />
+          </View>
           <Text
             style={{
               fontSize: 13,
@@ -199,7 +234,7 @@ export function BankPaymentSelector({
               width: 32,
               height: 32,
               borderRadius: 16,
-              backgroundColor: '#34D399',
+              backgroundColor: '#10B981',
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -208,51 +243,98 @@ export function BankPaymentSelector({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-              Cash in Hand / Cash Counter
+              Cash Counter Register
             </Text>
-            <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>
-              Balance: {formatCurrency(cashAccount?.currentBalance || 0)}
+            <Text style={{ fontSize: 11, color: '#10B981', fontWeight: '700', marginTop: 1 }}>
+              ✓ Direct Cash Inflow
             </Text>
           </View>
         </View>
       ) : (
-        <TouchableOpacity
-          onPress={() => setModalVisible(true)}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 12,
-            borderRadius: 16,
-            backgroundColor: isDark ? '#1C2538' : '#F8FAFD',
-            borderWidth: 1,
-            borderColor: cardBorder,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-            <View
+        <View style={{ gap: 8 }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
+            {paymentMode === 'UPI' ? 'Select Receiving UPI Account *' : 'Select Card Swipe Machine Account *'}
+          </Text>
+
+          {/* Quick Bank Chips directly visible underneath */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {bankOnlyAccounts.map((acc) => {
+              const isSelected = acc.id === selectedAccountId;
+              return (
+                <TouchableOpacity
+                  key={acc.id}
+                  onPress={() => onAccountChange(acc.id, acc.accountName)}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    borderRadius: 14,
+                    backgroundColor: isSelected
+                      ? '#153580'
+                      : (isDark ? '#1C2538' : '#FFFFFF'),
+                    borderWidth: 1,
+                    borderColor: isSelected ? '#153580' : cardBorder,
+                  }}
+                >
+                  <Building size={14} color={isSelected ? '#FFFFFF' : (isDark ? '#60A5FA' : '#153580')} />
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '800',
+                      color: isSelected ? '#FFFFFF' : (isDark ? '#FFFFFF' : '#0C1829'),
+                    }}
+                  >
+                    {acc.bankName} {acc.accountNumberMasked || acc.accountName.split(' ')[0]}
+                  </Text>
+                  {isSelected && <Check size={12} color="#FFFFFF" />}
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity
+              onPress={() => setModalVisible(true)}
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: paymentMode === 'UPI' ? (isDark ? '#60A5FA' : '#153580') : '#8B5CF6',
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: 4,
+                paddingHorizontal: 10,
+                paddingVertical: 9,
+                borderRadius: 14,
+                backgroundColor: isDark ? '#141926' : '#F1F5F9',
+                borderWidth: 1,
+                borderColor: cardBorder,
               }}
             >
-              {paymentMode === 'UPI' ? <QrCode size={16} color="#FFFFFF" /> : <CreditCard size={16} color="#FFFFFF" />}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>
-                {paymentMode === 'UPI' ? 'UPI Bank Account' : 'Card Swipe Machine A/c'}
-              </Text>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', marginTop: 1 }}>
-                {selectedAccount?.accountName || 'Select Bank Account'}
-              </Text>
-            </View>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>More...</Text>
+              <ChevronDown size={12} color="#64748B" />
+            </TouchableOpacity>
+          </ScrollView>
+
+          {/* Selected Account Confirmation Pill */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 12,
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
+          >
+            <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+              Linked Account:
+            </Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580' }}>
+              {selectedAccount?.accountName || 'No Account Selected'}
+            </Text>
           </View>
-          <ChevronDown size={18} color="#64748B" />
-        </TouchableOpacity>
+        </View>
       )}
 
       {/* Modal to choose from Unlimited Bank Accounts */}

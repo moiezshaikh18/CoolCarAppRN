@@ -110,15 +110,16 @@ export default function EnterpriseBrandingScreen() {
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 20,
+          paddingBottom: 24,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
@@ -152,6 +153,7 @@ export default function EnterpriseBrandingScreen() {
         style={{
           flex: 1,
           backgroundColor: sheetBg,
+          marginTop: -14,
           borderTopLeftRadius: 36,
           borderTopRightRadius: 36,
           overflow: 'hidden',

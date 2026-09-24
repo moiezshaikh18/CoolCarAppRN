@@ -625,7 +625,7 @@ export default function DashboardScreen() {
 
                 {/* Module 2: Daily Expenses */}
                 <TouchableOpacity
-                  onPress={() => router.push('/entries')}
+                  onPress={() => router.push('/expenses/add')}
                   activeOpacity={0.88}
                   style={{
                     flex: 1,

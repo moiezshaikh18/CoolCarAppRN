@@ -1,6 +1,7 @@
 // ============================================================
-// Payments Screen — Sky Blue & Midnight Navy Luxury Layout
-// Directly matching media_1790189780212.png & media_1790189816628.png
+// Payments Screen — Collections & Receipts Ledger
+// Sky Blue Header with Zero-Bleed Lower Sheet
+// Tracks Cash, UPI, and Swipe (POS) with per-bank selection
 // ============================================================
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -9,29 +10,32 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   Receipt,
-  ArrowDownLeft,
-  Smartphone,
+  QrCode,
   CreditCard,
-  Wallet,
+  Banknote,
+  Building2,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { usePaymentStore } from '../../src/store/paymentStore';
+import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { formatCurrency } from '../../src/utils/currency';
 import { Payment, PaymentMode } from '../../src/types/payment.types';
 
-const MODE_TABS: { label: string; value: PaymentMode | 'ALL' }[] = [
-  { label: 'All Receipts', value: 'ALL' },
-  { label: 'UPI', value: 'UPI' },
-  { label: 'Card Swipe', value: 'CARD_SWIPE' },
-  { label: 'Cash Counter', value: 'CASH' },
+const MODE_TABS: { label: string; value: PaymentMode | 'ALL'; icon: any }[] = [
+  { label: 'All Receipts', value: 'ALL', icon: Receipt },
+  { label: 'Cash', value: 'CASH', icon: Banknote },
+  { label: 'UPI', value: 'UPI', icon: QrCode },
+  { label: 'Swipe', value: 'CARD_SWIPE', icon: CreditCard },
 ];
 
 const DEFAULT_PAYMENTS: Payment[] = [
@@ -85,11 +89,15 @@ const DEFAULT_PAYMENTS: Payment[] = [
 ];
 
 export default function PaymentsScreen() {
-  const { theme, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { payments, setPayments } = usePaymentStore();
+  const accounts = useBankAccountStore((s) => s.accounts);
+  const activeAccounts = useMemo(() => accounts.filter((a) => a.isActive), [accounts]);
+
   const [selectedMode, setSelectedMode] = useState<PaymentMode | 'ALL'>('ALL');
+  const [selectedAccountId, setSelectedAccountId] = useState<string | 'ALL'>('ALL');
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -118,150 +126,200 @@ export default function PaymentsScreen() {
                   paymentMode: data.paymentMode,
                   paymentAccountId: data.paymentAccountId,
                   paymentAccountName: data.paymentAccountName,
-                  date: data.date,
+                  date: data.date?.toDate?.() ? data.date.toDate().toISOString() : data.date,
                   referenceNumber: data.referenceNumber,
-                  voided: Boolean(data.voided),
+                  notes: data.notes,
+                  voided: data.voided || false,
                   createdBy: data.createdBy,
-                  createdAt: data.createdAt,
+                  createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
                 };
               });
               setPayments(fetched);
             }
           },
-          (err) => console.log('[Payments] sync error:', err)
+          () => {
+            // fallback silently
+          }
         );
-      } catch (err) {
-        console.log('[Payments] setup error:', err);
+      } catch {
+        // offline or local
       }
     }
 
     subscribePayments();
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    return () => unsubscribe && unsubscribe();
   }, [enterpriseId, setPayments]);
 
   const allPayments = payments.length > 0 ? payments : DEFAULT_PAYMENTS;
 
   const filteredPayments = useMemo(() => {
-    if (selectedMode === 'ALL') return allPayments;
-    return allPayments.filter((p) => p.paymentMode === selectedMode);
-  }, [allPayments, selectedMode]);
+    return allPayments.filter((p) => {
+      if (selectedMode !== 'ALL' && p.paymentMode !== selectedMode) return false;
+      if (selectedAccountId !== 'ALL' && p.paymentAccountId !== selectedAccountId) return false;
+      return true;
+    });
+  }, [allPayments, selectedMode, selectedAccountId]);
 
-  const totalCollected = allPayments.reduce((acc, p) => acc + (p.voided ? 0 : p.amount), 0);
+  const totalCollected = useMemo(() => {
+    return filteredPayments.reduce((acc, p) => acc + (p.voided ? 0 : p.amount), 0);
+  }, [filteredPayments]);
+
+  // Breakdown statistics for current month
+  const monthlyStats = useMemo(() => {
+    let cash = 0;
+    let upi = 0;
+    let swipe = 0;
+    allPayments.forEach((p) => {
+      if (p.voided) return;
+      if (p.paymentMode === 'CASH') cash += p.amount;
+      else if (p.paymentMode === 'UPI') upi += p.amount;
+      else if (p.paymentMode === 'CARD_SWIPE') swipe += p.amount;
+    });
+    return { cash, upi, swipe, grandTotal: cash + upi + swipe };
+  }, [allPayments]);
 
   const getModeIcon = (mode: PaymentMode) => {
     switch (mode) {
       case 'UPI':
-        return Smartphone;
+        return QrCode;
       case 'CARD_SWIPE':
         return CreditCard;
       default:
-        return Wallet;
+        return Banknote;
     }
   };
 
-  const canvasBg = isDark ? '#070A0F' : '#153580';
-  const sheetBg = isDark ? '#111622' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const canvasBg = isDark ? '#0A0D14' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+
+      {/* Royal Blue Top Header */}
+      <View
+        style={{
+          backgroundColor: canvasBg,
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 20,
+          paddingBottom: 24,
+        }}
       >
-        {/* Sky Blue Header */}
-        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ChevronLeft size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
-              Receipts Ledger
-            </Text>
-
-            <View style={{ width: 44 }} />
-          </View>
-
-          {/* Featured Midnight Navy Card */}
-          <GlassCard
-            variant="navy"
-            padding={22}
-            style={{ borderRadius: 30, marginBottom: 6 }}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255, 255, 255, 0.22)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 13, fontWeight: '600' }}>
-              Total Collections Settled
-            </Text>
-            <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -1, marginTop: 8 }}>
-              {formatCurrency(totalCollected, currencySymbol)}
-            </Text>
+            <ChevronLeft size={22} color="#FFFFFF" />
+          </TouchableOpacity>
 
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)' }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                  {allPayments.length} Total Settlements
-                </Text>
-              </View>
-              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(0, 200, 150, 0.2)' }}>
-                <Text style={{ color: '#00C896', fontSize: 11, fontWeight: '800' }}>
-                  Verified Cashflow
-                </Text>
-              </View>
-            </View>
-          </GlassCard>
+          <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+            Receipts Ledger
+          </Text>
+
+          <View style={{ width: 44 }} />
         </View>
 
-        {/* Crisp White Lower Sheet */}
-        <View
-          style={{
-            backgroundColor: sheetBg,
-            borderTopLeftRadius: 36,
-            borderTopRightRadius: 36,
-            paddingTop: 24,
-            paddingHorizontal: 20,
-            paddingBottom: 24,
-            minHeight: 500,
-            shadowColor: '#0C1829',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: isDark ? 0.4 : 0.06,
-            shadowRadius: 16,
-            elevation: 8,
-          }}
+        {/* Featured Card */}
+        <GlassCard
+          variant="navy"
+          padding={18}
+          style={{ borderRadius: 24 }}
         >
-          {/* Filter Pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 20 }}>
+          <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: '600' }}>
+            {selectedMode === 'ALL'
+              ? 'This Month Total Receipts'
+              : `${selectedMode === 'CARD_SWIPE' ? 'Card Swipe' : selectedMode} Collections`}
+          </Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.5, marginTop: 4 }}>
+            {formatCurrency(totalCollected, currencySymbol)}
+          </Text>
+
+          {/* Quick 3-Way Mode Split Badges */}
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+            <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Banknote size={12} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                Cash: {formatCurrency(monthlyStats.cash, currencySymbol)}
+              </Text>
+            </View>
+            <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(59, 130, 246, 0.3)', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <QrCode size={12} color="#93C5FD" />
+              <Text style={{ color: '#93C5FD', fontSize: 11, fontWeight: '700' }}>
+                UPI: {formatCurrency(monthlyStats.upi, currencySymbol)}
+              </Text>
+            </View>
+            <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(168, 85, 247, 0.3)', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <CreditCard size={12} color="#E9D5FF" />
+              <Text style={{ color: '#E9D5FF', fontSize: 11, fontWeight: '700' }}>
+                Swipe: {formatCurrency(monthlyStats.swipe, currencySymbol)}
+              </Text>
+            </View>
+          </View>
+        </GlassCard>
+      </View>
+
+      {/* Main Content Sheet with ZERO Blue Bleed */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          overflow: 'hidden',
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 40 }}
+        >
+          {/* Primary Mode Tabs with Authentic Icons */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
             {MODE_TABS.map((t) => {
               const isSelected = selectedMode === t.value;
+              const TabIcon = t.icon;
               return (
                 <TouchableOpacity
                   key={t.value}
-                  onPress={() => setSelectedMode(t.value)}
+                  onPress={() => {
+                    setSelectedMode(t.value);
+                    setSelectedAccountId('ALL');
+                  }}
+                  activeOpacity={0.8}
                   style={{
-                    paddingHorizontal: 16,
+                    flex: 1,
                     paddingVertical: 10,
-                    borderRadius: 20,
-                    backgroundColor: isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : (isDark ? '#141926' : '#F8FAFD'),
+                    borderRadius: 16,
+                    backgroundColor: isSelected
+                      ? '#153580'
+                      : cardBg,
                     borderWidth: 1,
-                    borderColor: isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : cardBorder,
+                    borderColor: isSelected ? '#153580' : cardBorder,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    shadowColor: '#000',
+                    shadowOpacity: isSelected ? 0.15 : 0.02,
+                    shadowRadius: 6,
+                    elevation: isSelected ? 3 : 1,
                   }}
                 >
+                  <TabIcon size={16} color={isSelected ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B')} />
                   <Text
                     style={{
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: '800',
-                      color: isSelected ? (isDark ? '#0C1829' : '#FFFFFF') : '#64748B',
+                      color: isSelected ? '#FFFFFF' : (isDark ? '#F1F5F9' : '#0F172A'),
                     }}
                   >
                     {t.label}
@@ -269,64 +327,126 @@ export default function PaymentsScreen() {
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </View>
 
-          {/* List of Receipts */}
-          <View style={{ gap: 12 }}>
-            {filteredPayments.map((p) => {
-              const Icon = getModeIcon(p.paymentMode);
-              return (
-                <View
-                  key={p.id}
+          {/* Underneath Bank Account Selector for UPI & Swipe */}
+          {(selectedMode === 'UPI' || selectedMode === 'CARD_SWIPE') && (
+            <View style={{ marginBottom: 14, padding: 12, borderRadius: 16, backgroundColor: cardBg, borderWidth: 1, borderColor: cardBorder }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Building2 size={14} color={isDark ? '#94A3B8' : '#64748B'} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? '#94A3B8' : '#64748B' }}>
+                  Filter by Bank Account:
+                </Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setSelectedAccountId('ALL')}
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    borderRadius: 22,
-                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                    borderWidth: 1,
-                    borderColor: cardBorder,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                    backgroundColor: selectedAccountId === 'ALL' ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
-                    <View
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: selectedAccountId === 'ALL' ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
+                    All Accounts
+                  </Text>
+                </TouchableOpacity>
+                {activeAccounts.map((acc) => {
+                  const isAccSelected = selectedAccountId === acc.id;
+                  return (
+                    <TouchableOpacity
+                      key={acc.id}
+                      onPress={() => setSelectedAccountId(acc.id)}
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 22,
-                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 12,
+                        backgroundColor: isAccSelected ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
                       }}
                     >
-                      <Icon size={18} color="#FFFFFF" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                        {p.paymentAccountName || p.paymentMode}
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: isAccSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
+                        {acc.bankName} {acc.accountNumber ? `(${acc.accountNumber.slice(-4)})` : ''}
                       </Text>
-                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
-                        Ref: {p.referenceNumber || p.id} • {p.paymentMode}
-                      </Text>
-                    </View>
-                  </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
-                  <View style={{ alignItems: 'flex-end', marginLeft: 10 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#00C896' }}>
-                      +{formatCurrency(p.amount, currencySymbol)}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
-                      Verified
-                    </Text>
+          {/* List of Receipts */}
+          <View style={{ gap: 10 }}>
+            {filteredPayments.length === 0 ? (
+              <View style={{ padding: 28, alignItems: 'center', backgroundColor: cardBg, borderRadius: 20, borderWidth: 1, borderColor: cardBorder }}>
+                <Receipt size={32} color={isDark ? '#475569' : '#94A3B8'} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#94A3B8' : '#64748B', marginTop: 10 }}>
+                  No receipts found for this filter
+                </Text>
+              </View>
+            ) : (
+              filteredPayments.map((p) => {
+                const Icon = getModeIcon(p.paymentMode);
+                return (
+                  <View
+                    key={p.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      borderRadius: 20,
+                      backgroundColor: cardBg,
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                      shadowColor: '#000',
+                      shadowOpacity: 0.03,
+                      shadowRadius: 6,
+                      elevation: 1,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <View
+                        style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: 21,
+                          backgroundColor: isDark ? '#1C2538' : '#EFF6FF',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Icon size={18} color="#153580" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                          {p.paymentAccountName || (p.paymentMode === 'CARD_SWIPE' ? 'Card Swipe POS' : p.paymentMode)}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: isDark ? '#94A3B8' : '#64748B', fontWeight: '600', marginTop: 2 }}>
+                          Ref: {p.referenceNumber || p.id} • {p.paymentMode === 'CARD_SWIPE' ? 'Swipe' : p.paymentMode}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ alignItems: 'flex-end', marginLeft: 10 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981' }}>
+                        +{formatCurrency(p.amount, currencySymbol)}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                        <CheckCircle2 size={11} color="#10B981" />
+                        <Text style={{ fontSize: 10, color: '#10B981', fontWeight: '700' }}>
+                          Settled
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              );
-            })}
+                );
+              })
+            )}
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 }

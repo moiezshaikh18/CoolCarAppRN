@@ -310,15 +310,16 @@ export default function JobSheetsScreen() {
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
 
   return (
-    <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 16,
+          paddingBottom: 22,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -425,14 +426,14 @@ export default function JobSheetsScreen() {
         />
       </View>
 
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Signature Lower Content Sheet with ZERO Blue Bleed */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
-          paddingTop: 16,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           overflow: 'hidden',
         }}
       >
@@ -440,7 +441,7 @@ export default function JobSheetsScreen() {
           data={filteredJobs}
           keyExtractor={(item) => item.id}
           renderItem={renderJobCard}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110, paddingTop: 4 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, paddingTop: 16 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 }}>

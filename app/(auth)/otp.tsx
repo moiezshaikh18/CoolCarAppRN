@@ -151,19 +151,19 @@ export default function OTPScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: skyBg }}
+      style={{ flex: 1, backgroundColor: sheetBg }}
     >
       <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
       {/* Royal Blue Top Header */}
       <View
         style={{
+          backgroundColor: skyBg,
           paddingTop: 50,
           paddingHorizontal: 20,
-          paddingBottom: 24,
+          paddingBottom: 28,
         }}
       >
-
         <TouchableOpacity
           onPress={() => router.back()}
           style={{
@@ -187,13 +187,14 @@ export default function OTPScreen() {
         </Text>
       </View>
 
-      {/* Signature Mega-Curved Lower Content Sheet */}
+      {/* Signature Lower Content Sheet */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
+          marginTop: -16,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           overflow: 'hidden',
           paddingHorizontal: 20,
           paddingTop: 30,
