@@ -10,7 +10,7 @@ import { EnterpriseTheme } from '../theme.types';
 export const defaultTheme: EnterpriseTheme = {
   // Brand
   primary: '#FFFFFF',
-  secondary: '#6B9FE8',
+  secondary: '#153580',
   accent: '#00C896',
 
   // Backgrounds — True dark black with deep navy surfaces
@@ -28,7 +28,7 @@ export const defaultTheme: EnterpriseTheme = {
   error: '#EF4444',
   success: '#00C896',
   warning: '#F59E0B',
-  info: '#6B9FE8',
+  info: '#60A5FA',
 
   // Borders
   border: 'rgba(255, 255, 255, 0.1)',
@@ -60,11 +60,11 @@ export const defaultTheme: EnterpriseTheme = {
 export const defaultLightTheme: EnterpriseTheme = {
   ...defaultTheme,
   primary: '#0C1829',
-  secondary: '#6B9FE8',
+  secondary: '#153580',
   accent: '#00C896',
 
   // Backgrounds — Sky Blue canvas backdrop with pure white sheets & cards
-  background: '#6B9FE8',
+  background: '#F4F6F9',
   surface: '#FFFFFF',
   surfaceAlt: '#F4F7FC',
 
@@ -91,7 +91,7 @@ export const defaultLightTheme: EnterpriseTheme = {
   glassSurface: '#FFFFFF',
 
   // Gradients
-  gradientStart: '#6B9FE8',
+  gradientStart: '#153580',
   gradientEnd: '#5B93E1',
 
   // Shape

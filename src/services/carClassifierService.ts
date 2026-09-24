@@ -321,3 +321,4 @@ export function classifyCarSync(modelName: string): CarBodyType {
 
   return norm.length <= 5 ? 'hatchback' : 'sedan';
 }
+

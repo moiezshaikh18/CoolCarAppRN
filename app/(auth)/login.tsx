@@ -74,46 +74,32 @@ export default function LoginScreen() {
     });
   };
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
-  const cardBg = isDark ? '#101927' : '#FFFFFF';
-  const inputBg = isDark ? '#141926' : '#F8FAFC';
-  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const skyBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const inputBg = isDark ? '#1C2538' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
 
   return (
     <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
-      {/* Symmetrical Sky Blue Top Header */}
+      {/* Royal Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 10,
+          paddingTop: insets.top + 20,
           paddingHorizontal: 20,
           paddingBottom: 24,
         }}
       >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: 'rgba(255,255,255,0.22)',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 16,
-          }}
-        >
-          <ArrowLeft size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-
         <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>
           Welcome Back
         </Text>
-        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4, fontWeight: '500' }}>
+        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4, fontWeight: '600' }}>
           Sign in to manage your workshop operations
         </Text>
       </View>
+
 
       {/* Signature Mega-Curved Lower Content Sheet */}
       <View
@@ -207,28 +193,29 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Midnight Navy Sign In Button */}
+            {/* Royal Blue Sign In Button */}
             <TouchableOpacity
               onPress={handleLogin}
               activeOpacity={0.88}
               style={{
-                backgroundColor: '#0C1829',
+                backgroundColor: isDark ? '#FFFFFF' : '#153580',
                 paddingVertical: 18,
                 borderRadius: 34,
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginTop: 6,
-                shadowColor: '#000',
+                shadowColor: '#153580',
                 shadowOpacity: 0.35,
                 shadowRadius: 10,
                 shadowOffset: { width: 0, height: 4 },
                 elevation: 6,
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
                 Sign In
               </Text>
             </TouchableOpacity>
+
           </View>
 
           {/* Divider */}
@@ -264,7 +251,7 @@ export default function LoginScreen() {
           {/* Sign Up Link */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
             <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: '500' }}>
-              Don't have a garage account?
+              {"Don't have a garage account?"}
             </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
               <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontSize: 14, fontWeight: '800' }}>

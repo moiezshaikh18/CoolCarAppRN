@@ -36,11 +36,14 @@ import { useExpenseStore } from '../../src/store/expenseStore';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { useChalanStore } from '../../src/store/chalanStore';
 import { router } from 'expo-router';
+import { useHideOnScroll } from '../../src/store/tabBarStore';
 
 export default function ReportsScreen() {
   const { theme, isDark } = useTheme();
   const { currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
+  const { onScroll: onHideNavScroll } = useHideOnScroll();
+
 
   const { expenses } = useExpenseStore();
   const { jobSheets } = useJobSheetStore();
@@ -109,16 +112,17 @@ export default function ReportsScreen() {
   const totalOutflow = totalExpenseOutflow + totalChalanPaid;
   const netSurplus = totalCollected - totalOutflow;
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#111622' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const canvasBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <StatusBar barStyle="light-content" />
 
-      {/* Top Header */}
-      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 16 }}>
+      {/* Royal Blue Top Header */}
+      <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 16 }}>
+
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <View>
             <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
@@ -219,7 +223,13 @@ export default function ReportsScreen() {
           paddingHorizontal: 20,
         }}
       >
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          onScroll={onHideNavScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: 120 }}
+        >
+
           {/* CUSTOM DATE-WISE BETWEEN PICKER ("From Date -> To Date") */}
           <View
             style={{
@@ -231,7 +241,7 @@ export default function ReportsScreen() {
               borderColor: cardBorder,
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8', textTransform: 'uppercase', marginBottom: 8 }}>
+            <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580', textTransform: 'uppercase', marginBottom: 8 }}>
               Between Dates Filter
             </Text>
 
@@ -261,7 +271,7 @@ export default function ReportsScreen() {
                     {fromDate}
                   </Text>
                 </View>
-                <Calendar size={15} color="#6B9FE8" />
+                <Calendar size={15} color={isDark ? '#60A5FA' : '#153580'} />
               </TouchableOpacity>
 
               <ArrowRight size={16} color="#64748B" />
@@ -291,7 +301,7 @@ export default function ReportsScreen() {
                     {toDate}
                   </Text>
                 </View>
-                <Calendar size={15} color="#6B9FE8" />
+                <Calendar size={15} color={isDark ? '#60A5FA' : '#153580'} />
               </TouchableOpacity>
             </View>
           </View>

@@ -20,7 +20,7 @@ export const MOCK_ENTERPRISE: Enterprise = {
   dateFormat: 'dd/MM/yyyy',
   branding: {
     primaryColor: '#0C1829',
-    secondaryColor: '#6B9FE8',
+    secondaryColor: '#153580',
     accentColor: '#00C896',
     tagline: 'Car AC Repair & Auto Care Specialists',
   },

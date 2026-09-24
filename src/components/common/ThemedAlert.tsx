@@ -58,7 +58,7 @@ export function ThemedAlert({
       case 'warning':
         return <AlertTriangle size={32} color="#F59E0B" />;
       case 'info':
-        return <Info size={32} color="#6B9FE8" />;
+        return <Info size={32} color={isDark ? '#60A5FA' : '#153580'} />;
       case 'error':
       default:
         return <AlertCircle size={32} color="#EF4444" />;
@@ -72,7 +72,7 @@ export function ThemedAlert({
       case 'warning':
         return 'rgba(245, 158, 11, 0.14)';
       case 'info':
-        return 'rgba(107, 159, 232, 0.14)';
+        return isDark ? 'rgba(96, 165, 250, 0.14)' : 'rgba(21, 53, 128, 0.14)';
       case 'error':
       default:
         return 'rgba(239, 68, 68, 0.14)';

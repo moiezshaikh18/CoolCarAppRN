@@ -145,7 +145,7 @@ export default function VehiclesListScreen() {
     setRefreshing(false);
   };
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const skyBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
 
   return (

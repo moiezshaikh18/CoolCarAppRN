@@ -133,7 +133,7 @@ export function CalendarPickerModal({
               {/* Header */}
               <View style={styles.headerRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <CalendarIcon size={18} color="#6B9FE8" />
+                  <CalendarIcon size={18} color={isDark ? '#60A5FA' : '#153580'} />
                   <Text style={[styles.headerTitle, { color: textPrimary }]}>
                     {title}
                   </Text>
@@ -207,12 +207,12 @@ export function CalendarPickerModal({
                       style={[
                         styles.dayCell,
                         isSelected && {
-                          backgroundColor: '#6B9FE8',
+                          backgroundColor: '#153580',
                           borderRadius: 18,
                         },
                         isToday && !isSelected && {
                           borderWidth: 1.5,
-                          borderColor: '#6B9FE8',
+                          borderColor: '#153580',
                           borderRadius: 18,
                         },
                       ]}
@@ -224,7 +224,7 @@ export function CalendarPickerModal({
                             color: isSelected
                               ? '#FFFFFF'
                               : isToday
-                              ? '#6B9FE8'
+                              ? (isDark ? '#60A5FA' : '#153580')
                               : textPrimary,
                             fontWeight: isSelected || isToday ? '900' : '600',
                           },
@@ -242,7 +242,7 @@ export function CalendarPickerModal({
                 <Text style={{ fontSize: 12, color: textMuted, fontWeight: '700' }}>
                   Selected:
                 </Text>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: '#6B9FE8' }}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: isDark ? '#60A5FA' : '#153580' }}>
                   {activeDate}
                 </Text>
               </View>

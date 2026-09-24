@@ -152,7 +152,7 @@ export default function AddVehicleScreen() {
     ]);
   };
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const skyBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
   const cardBg = isDark ? '#101927' : '#FFFFFF';
   const inputBg = isDark ? '#141926' : '#F8FAFC';

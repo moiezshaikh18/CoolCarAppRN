@@ -76,7 +76,7 @@ export default function InventoryScreen() {
     );
   }, [parts, searchQuery]);
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const canvasBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#111622' : '#FFFFFF';
   const cardBg = isDark ? '#182030' : '#F8FAFD';
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
@@ -115,7 +115,7 @@ export default function InventoryScreen() {
                   paddingHorizontal: 8,
                   paddingVertical: 2,
                   borderRadius: 8,
-                  backgroundColor: '#6B9FE8',
+                  backgroundColor: isDark ? '#60A5FA' : '#153580',
                 }}
               >
                 <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
@@ -124,7 +124,7 @@ export default function InventoryScreen() {
               </View>
             </View>
 
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#6B9FE8', marginTop: 2 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#60A5FA' : '#153580', marginTop: 2 }}>
               {item.vendorName}
             </Text>
           </View>
@@ -195,8 +195,8 @@ export default function InventoryScreen() {
 
                 {/* Car Tag Capsule */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                  <Car size={11} color="#6B9FE8" />
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8' }}>
+                  <Car size={11} color={isDark ? '#60A5FA' : '#153580'} />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580' }}>
                     {part.assignedVehicleNumber}
                   </Text>
                 </View>

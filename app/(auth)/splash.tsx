@@ -96,7 +96,7 @@ export default function SplashScreen() {
           {/* Bottom Row of Signboard: Marathi text (left) & Tagline (right) */}
           <View style={styles.signboardFooter}>
             <Text style={styles.marathiText}>कूल कार ए. सी. रिपेअर्स</Text>
-            <Text style={styles.taglineText}>'Our Perfection... Your Satisfaction'</Text>
+            <Text style={styles.taglineText}>{"'Our Perfection... Your Satisfaction'"}</Text>
           </View>
         </View>
       </Animated.View>

@@ -42,9 +42,16 @@ export default function StaffDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
+  // If accidentally routed to [id] with id="pay", redirect to dedicated pay screen
+  React.useEffect(() => {
+    if (id === 'pay') {
+      router.replace('/staff/pay' as any);
+    }
+  }, [id]);
+
   const { getEmployeeById, getPaymentsByEmployeeId, markEmployeeAsLeft, updateEmployee } = useEmployeeStore();
-  const staff = getEmployeeById(id);
-  const paymentHistory = getPaymentsByEmployeeId(id);
+  const staff = id && id !== 'pay' ? getEmployeeById(id) : undefined;
+  const paymentHistory = id && id !== 'pay' ? getPaymentsByEmployeeId(id) : [];
 
   const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
     visible: false,
@@ -81,9 +88,13 @@ export default function StaffDetailScreen() {
     showAlert('Privileges Updated', `Staff permissions for ${staff.name} saved.`, 'success');
   };
 
+  if (id === 'pay') {
+    return null;
+  }
+
   if (!staff) {
     return (
-      <View style={{ flex: 1, backgroundColor: isDark ? '#070A0F' : '#6B9FE8', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#153580', justifyContent: 'center', alignItems: 'center' }}>
         <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>Staff Member Not Found</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 14 }}>
           <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Go Back</Text>
@@ -114,10 +125,12 @@ export default function StaffDetailScreen() {
 
   const hasAdvance = (staff.currentAdvance || 0) > 0;
   const isLeft = staff.status === 'LEFT';
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
-  const cardBg = isDark ? '#101927' : '#FFFFFF';
-  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const skyBg = isDark ? '#000000' : '#153580';
+
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
+
 
   return (
     <View style={{ flex: 1, backgroundColor: skyBg }}>
@@ -302,7 +315,7 @@ export default function StaffDetailScreen() {
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <CreditCard size={16} color="#6B9FE8" />
+                <CreditCard size={16} color={isDark ? '#60A5FA' : '#153580'} />
                 <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: '600' }}>
                   {staff.officialDocType || 'Document'}:
                 </Text>
@@ -314,7 +327,7 @@ export default function StaffDetailScreen() {
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Calendar size={16} color="#6B9FE8" />
+                <Calendar size={16} color={isDark ? '#60A5FA' : '#153580'} />
                 <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: '600' }}>
                   Joining Date:
                 </Text>
@@ -419,7 +432,7 @@ export default function StaffDetailScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <ShieldCheck size={18} color="#6B9FE8" />
+              <ShieldCheck size={18} color={isDark ? '#60A5FA' : '#153580'} />
               <View>
                 <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                   Staff Privileges (Admin Control)
@@ -438,7 +451,7 @@ export default function StaffDetailScreen() {
               <Switch
                 value={privileges.canCreateJobSheets}
                 onValueChange={() => togglePrivilege('canCreateJobSheets')}
-                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+                trackColor={{ false: '#64748B', true: isDark ? '#60A5FA' : '#153580' }}
               />
             </View>
 
@@ -450,7 +463,7 @@ export default function StaffDetailScreen() {
               <Switch
                 value={privileges.canRecordExpenses}
                 onValueChange={() => togglePrivilege('canRecordExpenses')}
-                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+                trackColor={{ false: '#64748B', true: isDark ? '#60A5FA' : '#153580' }}
               />
             </View>
 
@@ -462,7 +475,7 @@ export default function StaffDetailScreen() {
               <Switch
                 value={privileges.canManageChalans}
                 onValueChange={() => togglePrivilege('canManageChalans')}
-                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+                trackColor={{ false: '#64748B', true: isDark ? '#60A5FA' : '#153580' }}
               />
             </View>
 
@@ -474,7 +487,7 @@ export default function StaffDetailScreen() {
               <Switch
                 value={privileges.canViewBankBalances}
                 onValueChange={() => togglePrivilege('canViewBankBalances')}
-                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+                trackColor={{ false: '#64748B', true: isDark ? '#60A5FA' : '#153580' }}
               />
             </View>
 
@@ -486,7 +499,7 @@ export default function StaffDetailScreen() {
               <Switch
                 value={privileges.canViewReports}
                 onValueChange={() => togglePrivilege('canViewReports')}
-                trackColor={{ false: '#64748B', true: '#6B9FE8' }}
+                trackColor={{ false: '#64748B', true: isDark ? '#60A5FA' : '#153580' }}
               />
             </View>
           </View>
@@ -522,7 +535,7 @@ export default function StaffDetailScreen() {
                 No Payment Records Yet
               </Text>
               <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
-                Tap "Pay Salary" or "Give Advance" to create first entry
+                {'Tap "Pay Salary" or "Give Advance" to create first entry'}
               </Text>
             </View>
           ) : (
@@ -571,7 +584,7 @@ export default function StaffDetailScreen() {
                         </Text>
                         {item.notes ? (
                           <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2, fontStyle: 'italic' }}>
-                            "{item.notes}"
+                            {`"${item.notes}"`}
                           </Text>
                         ) : null}
                       </View>

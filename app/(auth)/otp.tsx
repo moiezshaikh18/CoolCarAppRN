@@ -142,20 +142,20 @@ export default function OTPScreen() {
     }
   };
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
-  const cardBg = isDark ? '#101927' : '#FFFFFF';
-  const inputBg = isDark ? '#141926' : '#F8FAFC';
-  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const skyBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const inputBg = isDark ? '#1C2538' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: skyBg }}
     >
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
-      {/* Symmetrical Sky Blue Top Header */}
+      {/* Royal Blue Top Header */}
       <View
         style={{
           paddingTop: 50,
@@ -163,6 +163,7 @@ export default function OTPScreen() {
           paddingBottom: 24,
         }}
       >
+
         <TouchableOpacity
           onPress={() => router.back()}
           style={{
@@ -247,20 +248,20 @@ export default function OTPScreen() {
             </Text>
           )}
 
-          {/* Midnight Navy CTA Button */}
+          {/* Royal Blue CTA Button */}
           <TouchableOpacity
             onPress={handleVerify}
             disabled={isLoading}
             activeOpacity={0.88}
             style={{
-              backgroundColor: '#0C1829',
+              backgroundColor: isDark ? '#FFFFFF' : '#153580',
               paddingVertical: 18,
               borderRadius: 34,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 10,
-              shadowColor: '#000',
+              shadowColor: '#153580',
               shadowOpacity: 0.35,
               shadowRadius: 10,
               shadowOffset: { width: 0, height: 4 },
@@ -268,16 +269,17 @@ export default function OTPScreen() {
             }}
           >
             {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={isDark ? '#0C1829' : '#FFFFFF'} />
             ) : (
               <>
-                <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                <Check size={20} color={isDark ? '#0C1829' : '#FFFFFF'} strokeWidth={2.5} />
+                <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
                   Verify & Enter
                 </Text>
               </>
             )}
           </TouchableOpacity>
+
         </Animated.View>
 
         {/* Resend Section */}

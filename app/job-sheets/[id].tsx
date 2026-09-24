@@ -1,7 +1,7 @@
 // ============================================================
 // Job Sheet Details Screen — Cool Car AC Repair Workshop
 // Simple English labels, Mechanic Assignment, Balance Due & Status Management
-// Sky Blue (#6B9FE8) & Midnight Navy (#0C1829) Luxury Aesthetic
+// Signboard Royal Blue (#153580) & Midnight Navy (#0C1829) Luxury Aesthetic
 // ============================================================
 
 import React, { useMemo, useState } from 'react';
@@ -111,7 +111,7 @@ export default function JobSheetDetailsScreen() {
 
   const statusStyle = getStatusBadge(currentStatus);
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const canvasBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#111622' : '#FFFFFF';
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
   const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
@@ -423,7 +423,7 @@ export default function JobSheetDetailsScreen() {
                       width: 44,
                       height: 44,
                       borderRadius: 22,
-                      backgroundColor: '#6B9FE8',
+                      backgroundColor: isDark ? '#60A5FA' : '#153580',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}

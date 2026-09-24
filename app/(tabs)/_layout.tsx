@@ -3,9 +3,9 @@
 // Directly matching media_1790189780212.png & media_1790189816628.png
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Tabs, router } from 'expo-router';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import {
   Wallet,
   TrendingUp,
@@ -19,11 +19,23 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/hooks/useTheme';
 import { GlassBottomSheet } from '../../src/components/common/GlassBottomSheet';
+import { useTabBarStore } from '../../src/store/tabBarStore';
 
 function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const isTabBarVisible = useTabBarStore((s) => s.isVisible);
+  const [translateY] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    Animated.spring(translateY, {
+      toValue: isTabBarVisible ? 0 : 120,
+      useNativeDriver: true,
+      bounciness: 0,
+      speed: 16,
+    }).start();
+  }, [isTabBarVisible]);
 
   const tabConfig = [
     { name: 'index', label: 'Home', icon: Wallet },
@@ -38,8 +50,8 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
 
   return (
     <>
-      {/* Floating Midnight Navy Capsule Dock */}
-      <View
+      {/* Floating Midnight Navy Capsule Dock with Hide-on-Scroll */}
+      <Animated.View
         style={{
           position: 'absolute',
           bottom: insets.bottom > 0 ? insets.bottom + 8 : 18,
@@ -59,8 +71,10 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
           elevation: 12,
           borderWidth: 1,
           borderColor: dockBorder,
+          transform: [{ translateY }],
         }}
       >
+
         {state.routes.map((route: any, index: number) => {
           const config = tabConfig[index] || { label: route.name, icon: Wallet };
           const isFocused = state.index === index;
@@ -121,7 +135,8 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </Animated.View>
+
 
       {/* Quick Action Bottom Sheet */}
       <GlassBottomSheet
@@ -202,8 +217,9 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
                 Daily Expense Entry
               </Text>
               <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
-                Reason, Kisne Liya (Staff) & Bank deduction
+                Reason, Spent By & Bank Ledger
               </Text>
+
             </View>
           </TouchableOpacity>
 

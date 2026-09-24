@@ -28,6 +28,8 @@ import {
   Calendar,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useHideOnScroll } from '../../src/store/tabBarStore';
+
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { GlassCard } from '../../src/components/common/GlassCard';
@@ -66,6 +68,7 @@ const MENU_SECTIONS = [
 export default function MoreScreen() {
   const { theme, isDark, toggleMode } = useTheme();
   const insets = useSafeAreaInsets();
+  const { onScroll: onHideNavScroll } = useHideOnScroll();
   const { user, reset: resetAuth, setAuthState } = useAuthStore();
   const { activeMember, reset: resetEnterprise } = useEnterpriseStore();
 
@@ -85,27 +88,31 @@ export default function MoreScreen() {
     ]);
   };
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#111622' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const canvasBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        onScroll={onHideNavScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Sky Blue Header */}
-        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+
+        {/* Royal Blue Top Header */}
+        <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <View>
               <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
                 Garage Control
               </Text>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
-                Settings & Enterprise Modules
+              <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+                Settings & Workshop Modules
               </Text>
             </View>
+
 
             {/* Dark/Light Mode Toggle */}
             <TouchableOpacity

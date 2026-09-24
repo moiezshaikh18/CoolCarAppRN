@@ -1,7 +1,7 @@
 // ============================================================
 // Add Daily Expense Screen — Cool Car Workshop
 // Reason, Kisne Liya (Spent By), Exact Time & Date, Bank/Cash Binding
-// Sky Blue (#6B9FE8) & Midnight Navy (#0C1829) Luxury Aesthetic
+// Signboard Royal Blue (#153580) & Midnight Navy (#0C1829) Luxury Aesthetic
 // ============================================================
 
 import React, { useState } from 'react';
@@ -54,14 +54,17 @@ export default function AddExpenseScreen() {
   const insets = useSafeAreaInsets();
 
   const { addExpense } = useExpenseStore();
-  const { employees } = useEmployeeStore();
-  const { accounts, debitAccount } = useBankAccountStore();
+  const rawEmployees = useEmployeeStore((s) => s.employees);
+  const employees = Array.isArray(rawEmployees) ? rawEmployees : [];
+  const rawAccounts = useBankAccountStore((s) => s.accounts);
+  const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
+  const debitAccount = useBankAccountStore((s) => s.debitAccount);
 
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState(COMMON_EXPENSE_REASONS[0]);
   const [customReason, setCustomReason] = useState('');
 
-  // Kisne Liya (Who took the money)
+  // Spent By / Logged By
   const [spentBy, setSpentBy] = useState(employees[0]?.name || 'Irfan Khan');
   const [customSpentBy, setCustomSpentBy] = useState('');
 
@@ -82,6 +85,7 @@ export default function AddExpenseScreen() {
     title: '',
     message: '',
   });
+
 
   const showAlert = (
     title: string,
@@ -115,7 +119,7 @@ export default function AddExpenseScreen() {
     }
 
     if (!effectiveSpentBy) {
-      showAlert('Person Required', 'Please specify who took the money (Kisne Liya).', 'warning');
+      showAlert('Person Required', 'Please specify who took or spent the money.', 'warning');
       return;
     }
 
@@ -139,7 +143,7 @@ export default function AddExpenseScreen() {
       date,
       time,
       spentBy: effectiveSpentBy,
-      description: `${effectiveReason} — Taken by: ${effectiveSpentBy}${notes ? ` (${notes})` : ''}`,
+      description: `${effectiveReason} — Spent by: ${effectiveSpentBy}${notes ? ` (${notes})` : ''}`,
       voided: false,
       createdBy: 'Cool Car Manager',
       createdAt: new Date().toISOString(),
@@ -150,22 +154,23 @@ export default function AddExpenseScreen() {
 
     showAlert(
       'Expense Logged!',
-      `Recorded ${currencySymbol}${num} for "${effectiveReason}"\nTaken by: ${effectiveSpentBy}\nPaid from: ${selectedAccountName}`,
+      `Recorded ${currencySymbol}${num} for "${effectiveReason}"\nSpent by: ${effectiveSpentBy}\nPaid from: ${selectedAccountName}`,
       'success',
       [{ text: 'Done', style: 'default', onPress: () => router.back() }]
     );
   };
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#111622' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
-  const primaryBtnBg = isDark ? '#FFFFFF' : '#0C1829';
+  const canvasBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
+  const primaryBtnBg = isDark ? '#FFFFFF' : '#153580';
   const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
 
   return (
     <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      {/* Sky Blue Header */}
+      {/* Royal Blue Top Header */}
       <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -254,11 +259,12 @@ export default function AddExpenseScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Tag size={16} color="#6B9FE8" />
+              <Tag size={16} color={isDark ? '#60A5FA' : '#153580'} />
               <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                Kya Chiz Ke Liye Paise Gaye (Reason) *
+                Expense Purpose / Category *
               </Text>
             </View>
+
 
             {/* Quick Reason Pills */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
@@ -331,15 +337,15 @@ export default function AddExpenseScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <User size={16} color="#6B9FE8" />
+              <User size={16} color={isDark ? '#60A5FA' : '#153580'} />
               <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                Kisne Liya / Spent By *
+                Spent By / Paid To *
               </Text>
             </View>
 
             {/* Quick Staff Selection Chips */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-              {['Workshop Cashier / Self', ...employees.map((e) => e.name), 'Vendor / Delivery Boy'].map((person) => {
+              {['Workshop Cashier / Self', ...(employees || []).map((e) => e?.name || '').filter(Boolean), 'Vendor / Delivery Boy'].map((person) => {
                 const isSel = person === spentBy && !customSpentBy.trim();
                 return (
                   <TouchableOpacity
@@ -348,6 +354,7 @@ export default function AddExpenseScreen() {
                       setSpentBy(person);
                       setCustomSpentBy('');
                     }}
+
                     style={{
                       paddingHorizontal: 12,
                       paddingVertical: 7,
@@ -426,7 +433,7 @@ export default function AddExpenseScreen() {
                     borderColor: cardBorder,
                   }}
                 >
-                  <Calendar size={15} color="#6B9FE8" />
+                  <Calendar size={15} color={isDark ? '#60A5FA' : '#153580'} />
                   <Text style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '700' }}>
                     {date}
                   </Text>

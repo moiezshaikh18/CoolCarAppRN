@@ -52,7 +52,7 @@ export default function WelcomeScreen() {
         </Text>
 
         <Text style={styles.sloganText}>
-          "Our Perfection... Your Satisfaction"
+          {'"Our Perfection... Your Satisfaction"'}
         </Text>
 
         {/* Feature Highlights Grid */}
@@ -79,16 +79,17 @@ export default function WelcomeScreen() {
       {/* Bottom Center CTA */}
       <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 24 }]}>
         <TouchableOpacity
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => router.push('/(auth)/login')}
           activeOpacity={0.9}
           style={styles.pillButton}
         >
-          <Text style={styles.pillButtonText}>Enter Cool Car Garage</Text>
+          <Text style={styles.pillButtonText}>Login</Text>
           <View style={styles.arrowCircle}>
-            <ChevronRight size={18} color="#0C1829" strokeWidth={2.8} />
+            <ChevronRight size={18} color="#FFFFFF" strokeWidth={2.8} />
           </View>
         </TouchableOpacity>
       </View>
+
     </View>
   );
 }
@@ -191,31 +192,35 @@ const styles = StyleSheet.create({
   },
   pillButton: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#153580',
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
+    shadowColor: '#153580',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   pillButtonText: {
-    color: '#0C1829',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: 17,
     fontWeight: '900',
     paddingLeft: 8,
+    letterSpacing: 0.5,
   },
   arrowCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E2E8F0',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+
 });

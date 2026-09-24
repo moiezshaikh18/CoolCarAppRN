@@ -28,6 +28,8 @@ import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { router } from 'expo-router';
 import { useExpenseStore } from '../../src/store/expenseStore';
+import { useHideOnScroll } from '../../src/store/tabBarStore';
+
 
 interface JobSheetEntry {
   id: string;
@@ -61,7 +63,9 @@ export default function EntriesScreen() {
   const { theme, isDark } = useTheme();
   const { enterprise, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
+  const { onScroll: onHideNavScroll } = useHideOnScroll();
   const [activeTab, setActiveTab] = useState<'jobSheets' | 'expenses'>('jobSheets');
+
   const [currentDate] = useState('Today');
   const [jobs, setJobs] = useState<JobSheetEntry[]>(DEFAULT_JOBS);
   const [expenses, setExpenses] = useState<ExpenseEntry[]>(DEFAULT_EXPENSES);
@@ -130,24 +134,27 @@ export default function EntriesScreen() {
   const totalJobsAmount = jobs.reduce((sum, j) => sum + j.amount, 0);
   const totalExpensesAmount = realExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#111622' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const canvasBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        onScroll={onHideNavScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Sky Blue Header */}
-        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+
+        {/* Royal Blue Top Header */}
+        <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <View>
               <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
                 Daily Ledger
               </Text>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
                 Operational & Financial Tracking
               </Text>
             </View>
@@ -162,7 +169,7 @@ export default function EntriesScreen() {
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
@@ -191,7 +198,7 @@ export default function EntriesScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Calendar size={14} color="#FFFFFF" />
               <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                {currentDate} • 24 May 2026
+                {currentDate}
               </Text>
             </View>
             <TouchableOpacity style={{ padding: 4 }}>
@@ -200,7 +207,7 @@ export default function EntriesScreen() {
           </View>
         </View>
 
-        {/* Crisp White Lower Sheet */}
+        {/* Lower Content Sheet */}
         <View
           style={{
             backgroundColor: sheetBg,
@@ -221,7 +228,7 @@ export default function EntriesScreen() {
           <View
             style={{
               flexDirection: 'row',
-              backgroundColor: isDark ? '#182030' : '#F4F7FC',
+              backgroundColor: isDark ? '#182030' : '#E2E8F0',
               borderRadius: 24,
               padding: 4,
               marginBottom: 20,
@@ -233,7 +240,7 @@ export default function EntriesScreen() {
                 flex: 1,
                 paddingVertical: 12,
                 borderRadius: 20,
-                backgroundColor: activeTab === 'jobSheets' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
+                backgroundColor: activeTab === 'jobSheets' ? (isDark ? '#FFFFFF' : '#153580') : 'transparent',
                 alignItems: 'center',
               }}
             >
@@ -241,7 +248,7 @@ export default function EntriesScreen() {
                 style={{
                   fontSize: 13,
                   fontWeight: '800',
-                  color: activeTab === 'jobSheets' ? (isDark ? '#0C1829' : '#FFFFFF') : '#64748B',
+                  color: activeTab === 'jobSheets' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#94A3B8' : '#64748B'),
                 }}
               >
                 Job Sheets ({jobs.length})
@@ -254,7 +261,7 @@ export default function EntriesScreen() {
                 flex: 1,
                 paddingVertical: 12,
                 borderRadius: 20,
-                backgroundColor: activeTab === 'expenses' ? (isDark ? '#FFFFFF' : '#0C1829') : 'transparent',
+                backgroundColor: activeTab === 'expenses' ? (isDark ? '#FFFFFF' : '#153580') : 'transparent',
                 alignItems: 'center',
               }}
             >
@@ -262,13 +269,14 @@ export default function EntriesScreen() {
                 style={{
                   fontSize: 13,
                   fontWeight: '800',
-                  color: activeTab === 'expenses' ? (isDark ? '#0C1829' : '#FFFFFF') : '#64748B',
+                  color: activeTab === 'expenses' ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#94A3B8' : '#64748B'),
                 }}
               >
                 Expenses ({realExpenses.length})
               </Text>
             </TouchableOpacity>
           </View>
+
 
           {/* Day Total Metric Card */}
           <GlassCard
@@ -411,7 +419,7 @@ export default function EntriesScreen() {
                         <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
                           {item.spentBy ? `Taken by: ${item.spentBy}` : 'General Expense'} {item.time ? `• ${item.time}` : ''}
                         </Text>
-                        <Text style={{ fontSize: 10, color: '#6B9FE8', fontWeight: '700', marginTop: 1 }}>
+                        <Text style={{ fontSize: 10, color: isDark ? '#60A5FA' : '#153580', fontWeight: '700', marginTop: 1 }}>
                           {item.paymentMode} {item.paymentAccountName ? `(${item.paymentAccountName})` : ''}
                         </Text>
                       </View>

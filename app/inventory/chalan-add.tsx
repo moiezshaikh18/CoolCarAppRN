@@ -75,7 +75,7 @@ export default function AddPurchaseChalanScreen() {
   const { addExpense } = useExpenseStore();
 
   // Basic Info
-  const [chalanNumber, setChalanNumber] = useState(`CH-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [chalanNumber, setChalanNumber] = useState(() => `CH-${Math.floor(1000 + Math.random() * 9000)}`);
   const [vendorName, setVendorName] = useState('');
   const [vendorPhone, setVendorPhone] = useState('');
   const [notes, setNotes] = useState('');
@@ -272,11 +272,12 @@ export default function AddPurchaseChalanScreen() {
     );
   };
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#111622' : '#FFFFFF';
-  const cardBg = isDark ? '#182030' : '#F8FAFD';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
-  const inputBg = isDark ? '#141A28' : '#F1F5F9';
+  const canvasBg = isDark ? '#000000' : '#F4F6F9';
+  const headerBg = isDark ? '#0A0D14' : '#153580';
+  const sheetBg = isDark ? '#000000' : '#F4F6F9';
+  const cardBg = isDark ? '#141A23' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
+  const inputBg = isDark ? '#1C2538' : '#F8FAFD';
   const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
   const textMuted = '#64748B';
 
@@ -284,8 +285,8 @@ export default function AddPurchaseChalanScreen() {
     <View style={{ flex: 1, backgroundColor: canvasBg }}>
       <StatusBar barStyle="light-content" />
 
-      {/* Sky Blue Header */}
-      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
+      {/* Signboard Royal Blue Header */}
+      <View style={{ backgroundColor: headerBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -293,7 +294,7 @@ export default function AddPurchaseChalanScreen() {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.18)',
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -314,14 +315,12 @@ export default function AddPurchaseChalanScreen() {
         </View>
       </View>
 
-      {/* Curved Lower Sheet */}
+      {/* Main Content Area */}
       <View
         style={{
           flex: 1,
           backgroundColor: sheetBg,
-          borderTopLeftRadius: 36,
-          borderTopRightRadius: 36,
-          paddingTop: 24,
+          paddingTop: 16,
         }}
       >
         <ScrollView
@@ -340,7 +339,7 @@ export default function AddPurchaseChalanScreen() {
               marginBottom: 20,
             }}
           >
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#6B9FE8', textTransform: 'uppercase', marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580', textTransform: 'uppercase', marginBottom: 14 }}>
               Chalan & Supplier Details
             </Text>
 
@@ -419,7 +418,7 @@ export default function AddPurchaseChalanScreen() {
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 14,
-                    backgroundColor: vendorName === v ? '#6B9FE8' : isDark ? '#222D42' : '#E2E8F0',
+                    backgroundColor: vendorName === v ? '#153580' : isDark ? '#222D42' : '#E2E8F0',
                   }}
                 >
                   <Text
@@ -454,7 +453,7 @@ export default function AddPurchaseChalanScreen() {
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
-                  backgroundColor: '#6B9FE8',
+                  backgroundColor: '#153580',
                   paddingHorizontal: 14,
                   paddingVertical: 8,
                   borderRadius: 16,
@@ -491,7 +490,7 @@ export default function AddPurchaseChalanScreen() {
                           width: 24,
                           height: 24,
                           borderRadius: 12,
-                          backgroundColor: '#6B9FE8',
+                          backgroundColor: '#153580',
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}
@@ -604,7 +603,7 @@ export default function AddPurchaseChalanScreen() {
                           alignItems: 'flex-end',
                         }}
                       >
-                        <Text style={{ fontSize: 14, fontWeight: '900', color: '#6B9FE8' }}>
+                        <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#60A5FA' : '#153580' }}>
                           ₹{rowTotal.toLocaleString()}
                         </Text>
                       </View>
@@ -622,7 +621,7 @@ export default function AddPurchaseChalanScreen() {
                     }}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <Car size={14} color="#6B9FE8" />
+                      <Car size={14} color={isDark ? '#60A5FA' : '#153580'} />
                       <Text style={{ fontSize: 11, fontWeight: '800', color: textPrimary, textTransform: 'uppercase' }}>
                         Brought for Vehicle (Car Tag):
                       </Text>
@@ -684,7 +683,7 @@ export default function AddPurchaseChalanScreen() {
               onPress={addItemRow}
               style={{
                 borderWidth: 1.5,
-                borderColor: '#6B9FE8',
+                borderColor: '#153580',
                 borderStyle: 'dashed',
                 borderRadius: 20,
                 paddingVertical: 14,
@@ -694,8 +693,8 @@ export default function AddPurchaseChalanScreen() {
                 gap: 8,
               }}
             >
-              <Plus size={18} color="#6B9FE8" />
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#6B9FE8' }}>
+              <Plus size={18} color="#153580" />
+              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580' }}>
                 + Add Another Part to Chalan (10-N items)
               </Text>
             </TouchableOpacity>
@@ -712,7 +711,7 @@ export default function AddPurchaseChalanScreen() {
               marginBottom: 20,
             }}
           >
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#6B9FE8', textTransform: 'uppercase', marginBottom: 14 }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580', textTransform: 'uppercase', marginBottom: 14 }}>
               Payment & Settlement
             </Text>
 
@@ -814,19 +813,19 @@ export default function AddPurchaseChalanScreen() {
             onPress={handleSaveChalan}
             activeOpacity={0.88}
             style={{
-              backgroundColor: isDark ? '#FFFFFF' : '#0C1829',
+              backgroundColor: '#153580',
               borderRadius: 24,
               paddingVertical: 18,
               alignItems: 'center',
               justifyContent: 'center',
-              shadowColor: '#000',
+              shadowColor: '#153580',
               shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
+              shadowOpacity: 0.25,
               shadowRadius: 10,
               elevation: 4,
             }}
           >
-            <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
               Save Purchase Chalan (₹{grandTotal.toLocaleString()})
             </Text>
           </TouchableOpacity>

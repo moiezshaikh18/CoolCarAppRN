@@ -105,8 +105,11 @@ export default function CreateJobSheetScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   const { addJobSheet } = useJobSheetStore();
-  const { employees } = useEmployeeStore();
-  const { accounts, creditAccount } = useBankAccountStore();
+  const rawEmployees = useEmployeeStore((s) => s.employees);
+  const employees = Array.isArray(rawEmployees) ? rawEmployees : [];
+  const rawAccounts = useBankAccountStore((s) => s.accounts);
+  const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
+  const creditAccount = useBankAccountStore((s) => s.creditAccount);
 
   // Work Type: Dropdown inside Job Sheet
   const [workCategory, setWorkCategory] = useState<WorkCategory>('AC');
@@ -149,9 +152,11 @@ export default function CreateJobSheetScreen() {
     { id: '2', name: 'Cabin AC Filter OEM', type: 'PART', price: 450 },
   ]);
 
-  // Quick Add Services Dropdown Modal
+  // Quick Add Services Dropdown Modal & Category Tabs
   const [isQuickAddModalOpen, setIsQuickAddModalOpen] = useState(false);
+  const [presetCategory, setPresetCategory] = useState<'ALL' | 'AC' | 'MECHANICAL' | 'PARTS'>('ALL');
   const [quickAddSearch, setQuickAddSearch] = useState('');
+
 
   // Edit Item Modal (Tap to Edit)
   const [editingItem, setEditingItem] = useState<JobItem | null>(null);
@@ -191,31 +196,51 @@ export default function CreateJobSheetScreen() {
     return employees.find((e) => e.id === assignedEmployeeId);
   }, [employees, assignedEmployeeId]);
 
-  // Combined Active Presets
+  // Combined Active Presets with Category Filtering
   const allPresets = useMemo(() => {
-    const list = [...AC_PRESETS, ...MECHANICAL_PRESETS];
+    let list: Array<{ name: string; type: 'SERVICE' | 'PART'; price: number; category: 'AC' | 'MECHANICAL' | 'PARTS'; emoji: string }> = [
+      ...AC_PRESETS.map((p) => ({
+        ...p,
+        category: (p.type === 'PART' ? 'PARTS' : 'AC') as 'AC' | 'MECHANICAL' | 'PARTS',
+        emoji: '❄️',
+      })),
+      ...MECHANICAL_PRESETS.map((p) => ({
+        ...p,
+        category: (p.type === 'PART' ? 'PARTS' : 'MECHANICAL') as 'AC' | 'MECHANICAL' | 'PARTS',
+        emoji: '🔧',
+      })),
+    ];
+
+    if (presetCategory === 'AC') {
+      list = list.filter((p) => p.category === 'AC');
+    } else if (presetCategory === 'MECHANICAL') {
+      list = list.filter((p) => p.category === 'MECHANICAL');
+    } else if (presetCategory === 'PARTS') {
+      list = list.filter((p) => p.category === 'PARTS' || p.type === 'PART');
+    }
+
     if (!quickAddSearch.trim()) return list;
     const q = quickAddSearch.toLowerCase();
     return list.filter((p) => p.name.toLowerCase().includes(q));
-  }, [quickAddSearch]);
+  }, [quickAddSearch, presetCategory]);
 
-  const handleAddPresetItem = (preset: { name: string; type: 'SERVICE' | 'PART'; price: number }) => {
-    const exists = items.some((i) => i.name === preset.name);
-    if (exists) {
-      showAlert('Already Added', `"${preset.name}" is already in this job sheet.`);
-      return;
+  const handleTogglePresetItem = (preset: { name: string; type: 'SERVICE' | 'PART'; price: number }) => {
+    const existingIndex = items.findIndex((i) => i.name === preset.name);
+    if (existingIndex >= 0) {
+      setItems((prev) => prev.filter((_, idx) => idx !== existingIndex));
+    } else {
+      setItems((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString() + Math.random().toString().slice(2, 6),
+          name: preset.name,
+          type: preset.type,
+          price: preset.price,
+        },
+      ]);
     }
-    setItems((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        name: preset.name,
-        type: preset.type,
-        price: preset.price,
-      },
-    ]);
-    setIsQuickAddModalOpen(false);
   };
+
 
   // Open Edit Modal for an item
   const openEditModal = (item: JobItem) => {
@@ -342,14 +367,15 @@ export default function CreateJobSheetScreen() {
     );
   };
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#111622' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
+  const canvasBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: canvasBg }}>
-      {/* Top Header */}
-      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 16 }}>
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      {/* Royal Blue Top Header */}
+      <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 16 }}>
+
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -417,7 +443,7 @@ export default function CreateJobSheetScreen() {
               borderColor: cardBorder,
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8', textTransform: 'uppercase', marginBottom: 6 }}>
+            <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580', textTransform: 'uppercase', marginBottom: 6 }}>
               Nature of Work (Job Category) *
             </Text>
 
@@ -442,7 +468,7 @@ export default function CreateJobSheetScreen() {
                   ? '🔧 Mechanical Repair & Service'
                   : '⚙️ Complete AC & Mechanical Work'}
               </Text>
-              <ChevronDown size={18} color="#6B9FE8" />
+              <ChevronDown size={18} color={isDark ? '#60A5FA' : '#153580'} />
             </TouchableOpacity>
           </View>
 
@@ -503,7 +529,7 @@ export default function CreateJobSheetScreen() {
                   <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
                     📅 {jobDate}
                   </Text>
-                  <CalendarIcon size={16} color="#6B9FE8" />
+                  <CalendarIcon size={16} color={isDark ? '#60A5FA' : '#153580'} />
                 </TouchableOpacity>
               </View>
 
@@ -524,7 +550,7 @@ export default function CreateJobSheetScreen() {
                     borderColor: cardBorder,
                   }}
                 >
-                  <Clock size={16} color="#6B9FE8" />
+                  <Clock size={16} color={isDark ? '#60A5FA' : '#153580'} />
                   <TextInput
                     value={jobTime}
                     onChangeText={setJobTime}
@@ -589,54 +615,45 @@ export default function CreateJobSheetScreen() {
               </View>
             </View>
 
-            {/* Model Year Picker with Scroller trigger */}
-            <View style={{ marginBottom: 10 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>
-                  Model Year ({modelYear})
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setIsYearPickerOpen(true)}
-                  style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderRadius: 8,
-                    backgroundColor: 'rgba(107, 159, 232, 0.18)',
-                  }}
-                >
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6B9FE8' }}>
-                    + All Years (1950 - {YEARS_LIST[0]})
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                {YEARS_LIST.slice(0, 8).map((yr) => (
-                  <TouchableOpacity
-                    key={yr}
-                    onPress={() => setModelYear(String(yr))}
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 12,
-                      backgroundColor: modelYear === String(yr) ? '#6B9FE8' : isDark ? '#1C2538' : '#FFFFFF',
-                      borderWidth: 1,
-                      borderColor: cardBorder,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: '800',
-                        color: modelYear === String(yr) ? '#FFFFFF' : isDark ? '#FFFFFF' : '#0C1829',
-                      }}
-                    >
-                      {yr}
+            {/* Model Year Selector Button (Tap opens 1950 - Current Year Modal) */}
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
+                Model Year
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsYearPickerOpen(true)}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  height: 46,
+                  borderWidth: 1,
+                  borderColor: cardBorder,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <CalendarIcon size={16} color={isDark ? '#60A5FA' : '#153580'} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                    Model Year:{' '}
+                    <Text style={{ fontWeight: '900', color: isDark ? '#60A5FA' : '#153580' }}>
+                      {modelYear}
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580' }}>
+                    Change (1950 - {YEARS_LIST[0]})
+                  </Text>
+                  <ChevronDown size={14} color={isDark ? '#60A5FA' : '#153580'} />
+                </View>
+              </TouchableOpacity>
             </View>
+
 
             {/* Customer Details (Optional) */}
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -730,9 +747,9 @@ export default function CreateJobSheetScreen() {
             </ScrollView>
           </View>
 
-          {/* STEP 4: BILLED ITEMS (QUICK DROPDOWN + TAP TO EDIT) */}
+          {/* STEP 4: BILLED ITEMS (MODAL TO ADD & TAP TO EDIT) */}
           <View style={{ marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <View>
                 <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
                   Billed Items ({items.length})
@@ -742,80 +759,32 @@ export default function CreateJobSheetScreen() {
                 </Text>
               </View>
 
-              {/* Quick Add Dropdown Button */}
+              {/* Standard Services & Parts Popup Button */}
               <TouchableOpacity
                 onPress={() => setIsQuickAddModalOpen(true)}
+                activeOpacity={0.85}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 4,
-                  backgroundColor: '#6B9FE8',
+                  gap: 6,
+                  backgroundColor: isDark ? '#FFFFFF' : '#153580',
                   paddingHorizontal: 12,
-                  paddingVertical: 7,
+                  paddingVertical: 8,
                   borderRadius: 14,
+                  shadowColor: '#153580',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 4,
+                  elevation: 2,
                 }}
               >
-                <Plus size={14} color="#FFFFFF" strokeWidth={2.5} />
-                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
-                  + Quick Select
+                <Plus size={15} color={isDark ? '#0C1829' : '#FFFFFF'} strokeWidth={2.8} />
+                <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 12, fontWeight: '800' }}>
+                  + Standard Items
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* 1-Tap Quick Standard Services & Parts Chips */}
-            <View style={{ marginBottom: 12 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 6 }}>
-                ⚡ Standard Services & Parts (1-Tap Add):
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {STANDARD_SERVICES_AND_PARTS.map((std) => {
-                  const isAdded = items.some((i) => i.name === std.name);
-                  return (
-                    <TouchableOpacity
-                      key={std.name}
-                      onPress={() => {
-                        if (isAdded) {
-                          showAlert('Already Added', `"${std.name}" is already in your bill.`);
-                        } else {
-                          handleAddPresetItem({ name: std.name, type: std.type, price: std.price });
-                        }
-                      }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingVertical: 7,
-                        paddingHorizontal: 12,
-                        borderRadius: 14,
-                        backgroundColor: isAdded ? 'rgba(0, 200, 150, 0.15)' : isDark ? '#141926' : '#F1F5F9',
-                        borderWidth: 1,
-                        borderColor: isAdded ? '#00C896' : cardBorder,
-                      }}
-                    >
-                      <Text style={{ fontSize: 12 }}>{std.emoji}</Text>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: '800',
-                          color: isAdded ? '#00C896' : isDark ? '#FFFFFF' : '#0C1829',
-                        }}
-                      >
-                        {std.name}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: '800',
-                          color: '#6B9FE8',
-                        }}
-                      >
-                        ₹{std.price.toLocaleString()}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
 
             {/* Items List (Click to Edit) */}
             <View style={{ gap: 8 }}>
@@ -847,7 +816,7 @@ export default function CreateJobSheetScreen() {
                         justifyContent: 'center',
                       }}
                     >
-                      {item.type === 'PART' ? <Package size={14} color="#6B9FE8" /> : <Wrench size={14} color="#00C896" />}
+                      {item.type === 'PART' ? <Package size={14} color={isDark ? '#60A5FA' : '#153580'} /> : <Wrench size={14} color="#00C896" />}
                     </View>
 
                     <View style={{ flex: 1 }}>
@@ -865,7 +834,7 @@ export default function CreateJobSheetScreen() {
                       ₹{item.price.toLocaleString()}
                     </Text>
 
-                    <Edit2 size={14} color="#6B9FE8" />
+                    <Edit2 size={14} color={isDark ? '#60A5FA' : '#153580'} />
                   </View>
                 </TouchableOpacity>
               ))}
@@ -883,7 +852,7 @@ export default function CreateJobSheetScreen() {
               borderColor: cardBorder,
             }}
           >
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#6B9FE8', textTransform: 'uppercase', marginBottom: 12 }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580', textTransform: 'uppercase', marginBottom: 12 }}>
               Bill Breakdown & Pending Balance
             </Text>
 
@@ -1035,7 +1004,7 @@ export default function CreateJobSheetScreen() {
               }}
               style={styles.modalOption}
             >
-              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'AC' ? '#6B9FE8' : isDark ? '#FFFFFF' : '#0C1829' }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'AC' ? (isDark ? '#60A5FA' : '#153580') : isDark ? '#FFFFFF' : '#0C1829' }}>
                 ❄️ Car AC Repair & Service
               </Text>
             </TouchableOpacity>
@@ -1047,7 +1016,7 @@ export default function CreateJobSheetScreen() {
               }}
               style={styles.modalOption}
             >
-              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'MECHANICAL' ? '#6B9FE8' : isDark ? '#FFFFFF' : '#0C1829' }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'MECHANICAL' ? (isDark ? '#60A5FA' : '#153580') : isDark ? '#FFFFFF' : '#0C1829' }}>
                 🔧 Mechanical Repair & Service
               </Text>
             </TouchableOpacity>
@@ -1059,7 +1028,7 @@ export default function CreateJobSheetScreen() {
               }}
               style={styles.modalOption}
             >
-              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'BOTH' ? '#6B9FE8' : isDark ? '#FFFFFF' : '#0C1829' }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: workCategory === 'BOTH' ? (isDark ? '#60A5FA' : '#153580') : isDark ? '#FFFFFF' : '#0C1829' }}>
                 ⚙️ Complete AC & Mechanical Work
               </Text>
             </TouchableOpacity>
@@ -1067,7 +1036,7 @@ export default function CreateJobSheetScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* MODAL 2: QUICK-ADD ITEMS DROPDOWN SEARCH */}
+      {/* MODAL 2: QUICK-ADD STANDARD SERVICES & PARTS POPUP */}
       <Modal
         visible={isQuickAddModalOpen}
         transparent
@@ -1075,14 +1044,78 @@ export default function CreateJobSheetScreen() {
         onRequestClose={() => setIsQuickAddModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.sheetModal, { backgroundColor: isDark ? '#121A29' : '#FFFFFF' }]}>
+          <View
+            style={[
+              styles.sheetModal,
+              {
+                backgroundColor: isDark ? '#111622' : '#FFFFFF',
+                maxHeight: '85%',
+                width: '92%',
+                maxWidth: 440,
+                padding: 18,
+              },
+            ]}
+          >
+            {/* Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                Select Standard Service or Part
-              </Text>
-              <TouchableOpacity onPress={() => setIsQuickAddModalOpen(false)}>
-                <X size={20} color="#64748B" />
+              <View>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  Standard Services & Parts
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                  Tap to add or remove standard catalog items
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsQuickAddModalOpen(false)}
+                style={{ padding: 6, borderRadius: 8, backgroundColor: isDark ? '#1C2538' : '#F1F5F9' }}
+              >
+                <X size={18} color={isDark ? '#94A3B8' : '#64748B'} />
               </TouchableOpacity>
+            </View>
+
+            {/* Category Filter Tabs */}
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+              {(
+                [
+                  { key: 'ALL', label: 'All' },
+                  { key: 'AC', label: '❄️ AC' },
+                  { key: 'MECHANICAL', label: '🔧 Mech' },
+                  { key: 'PARTS', label: '📦 Parts' },
+                ] as const
+              ).map((tab) => {
+                const isActive = presetCategory === tab.key;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    onPress={() => setPresetCategory(tab.key)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 7,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isActive
+                        ? '#153580'
+                        : isDark
+                        ? '#1C2538'
+                        : '#F1F5F9',
+                      borderWidth: 1,
+                      borderColor: isActive ? '#153580' : cardBorder,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '800',
+                        color: isActive ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
+                      }}
+                    >
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Search */}
@@ -1091,14 +1124,16 @@ export default function CreateJobSheetScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
-                borderRadius: 14,
+                borderRadius: 12,
                 paddingHorizontal: 12,
-                height: 42,
+                height: 40,
                 gap: 8,
                 marginBottom: 12,
+                borderWidth: 1,
+                borderColor: cardBorder,
               }}
             >
-              <Search size={16} color="#64748B" />
+              <Search size={15} color="#64748B" />
               <TextInput
                 value={quickAddSearch}
                 onChangeText={setQuickAddSearch}
@@ -1106,36 +1141,108 @@ export default function CreateJobSheetScreen() {
                 placeholderTextColor="#94A3B8"
                 style={{ flex: 1, fontSize: 13, color: isDark ? '#FFFFFF' : '#0C1829' }}
               />
+              {quickAddSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setQuickAddSearch('')}>
+                  <X size={14} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
             </View>
 
-            <ScrollView style={{ maxHeight: 340 }}>
-              {allPresets.map((preset, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => handleAddPresetItem(preset)}
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingVertical: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: cardBorder,
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                      {preset.name}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
-                      {preset.type === 'PART' ? 'Spare Part' : 'Service Labor'}
-                    </Text>
-                  </View>
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#6B9FE8' }}>
-                    ₹{preset.price}
+            {/* Presets List */}
+            <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: 280 }}>
+              {allPresets.length === 0 ? (
+                <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '600' }}>
+                    No matching items found
                   </Text>
-                </TouchableOpacity>
-              ))}
+                </View>
+              ) : (
+                allPresets.map((preset, idx) => {
+                  const isAdded = items.some((it) => it.name === preset.name);
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => handleTogglePresetItem(preset)}
+                      activeOpacity={0.7}
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        paddingVertical: 10,
+                        paddingHorizontal: 10,
+                        borderRadius: 12,
+                        marginBottom: 6,
+                        backgroundColor: isAdded
+                          ? isDark
+                            ? 'rgba(21, 53, 128, 0.25)'
+                            : '#EFF4FF'
+                          : isDark
+                          ? '#161E2E'
+                          : '#F8FAFD',
+                        borderWidth: 1,
+                        borderColor: isAdded ? '#153580' : cardBorder,
+                      }}
+                    >
+                      <View style={{ flex: 1, marginRight: 10 }}>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '800',
+                            color: isDark ? '#FFFFFF' : '#0C1829',
+                          }}
+                        >
+                          {preset.emoji} {preset.name}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                          {preset.type === 'PART' ? 'Spare Part' : 'Service Labor'} • ₹{preset.price.toLocaleString()}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingVertical: 6,
+                          paddingHorizontal: 10,
+                          borderRadius: 8,
+                          backgroundColor: isAdded ? '#059669' : '#153580',
+                        }}
+                      >
+                        {isAdded ? (
+                          <>
+                            <Check size={13} color="#FFFFFF" strokeWidth={3} />
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Added</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={13} color="#FFFFFF" strokeWidth={3} />
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Add</Text>
+                          </>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </ScrollView>
+
+            {/* Bottom Done CTA */}
+            <TouchableOpacity
+              onPress={() => setIsQuickAddModalOpen(false)}
+              style={{
+                marginTop: 14,
+                backgroundColor: '#153580',
+                paddingVertical: 13,
+                borderRadius: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF' }}>
+                Done ({items.length} {items.length === 1 ? 'Item' : 'Items'} in Job Sheet)
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1228,7 +1335,7 @@ export default function CreateJobSheetScreen() {
                 onPress={handleSaveEditedItem}
                 style={{
                   flex: 1.5,
-                  backgroundColor: '#0C1829',
+                  backgroundColor: '#153580',
                   paddingVertical: 12,
                   borderRadius: 14,
                   alignItems: 'center',
@@ -1292,12 +1399,12 @@ export default function CreateJobSheetScreen() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         backgroundColor: isSelected
-                          ? '#6B9FE8'
+                          ? '#153580'
                           : isDark
                           ? '#1C2538'
                           : '#F1F5F9',
                         borderWidth: 1,
-                        borderColor: isSelected ? '#6B9FE8' : cardBorder,
+                        borderColor: isSelected ? '#153580' : cardBorder,
                       }}
                     >
                       <Text

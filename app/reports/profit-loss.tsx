@@ -32,7 +32,7 @@ export default function ProfitLossScreen() {
   const netProfit = income - expense;
   const profitMargin = Math.round((netProfit / income) * 100);
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const skyBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
   const cardBg = isDark ? '#101927' : '#FFFFFF';
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';

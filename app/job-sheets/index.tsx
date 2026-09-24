@@ -253,7 +253,7 @@ export default function JobSheetsScreen() {
         {/* Assigned Mechanic */}
         {item.assignedMechanicName ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <Wrench size={13} color="#6B9FE8" />
+            <Wrench size={13} color={isDark ? '#60A5FA' : '#153580'} />
             <Text style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
               Staff: <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontWeight: '700' }}>{item.assignedMechanicName}</Text>
             </Text>
@@ -306,7 +306,7 @@ export default function JobSheetsScreen() {
     );
   };
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const skyBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
 
   return (

@@ -147,6 +147,7 @@ export const useBankAccountStore = create<BankAccountStore>()(
 
 // Selectors
 export const selectActiveAccounts = (state: BankAccountStore) =>
-  state.accounts.filter((a) => a.isActive);
+  (state?.accounts || []).filter((a) => a?.isActive);
 export const selectCashAccount = (state: BankAccountStore) =>
-  state.accounts.find((a) => a.accountType === 'CASH_IN_HAND');
+  (state?.accounts || []).find((a) => a?.accountType === 'CASH_IN_HAND');
+

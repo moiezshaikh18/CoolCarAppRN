@@ -161,7 +161,7 @@ export default function PaymentsScreen() {
     }
   };
 
-  const canvasBg = isDark ? '#070A0F' : '#6B9FE8';
+  const canvasBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#111622' : '#FFFFFF';
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.06)';
 

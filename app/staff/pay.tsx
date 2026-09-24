@@ -44,9 +44,13 @@ export default function PayStaffScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ staffId?: string; defaultType?: PaymentType }>();
 
-  const { employees, recordSalaryPayment } = useEmployeeStore();
+  const rawEmployees = useEmployeeStore((s) => s.employees);
+  const employees = Array.isArray(rawEmployees) ? rawEmployees : [];
+  const recordSalaryPayment = useEmployeeStore((s) => s.recordSalaryPayment);
   const { addExpense } = useExpenseStore();
-  const { accounts, debitAccount } = useBankAccountStore();
+  const rawAccounts = useBankAccountStore((s) => s.accounts);
+  const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
+  const debitAccount = useBankAccountStore((s) => s.debitAccount);
 
   const [selectedStaffId, setSelectedStaffId] = useState<string>(
     params.staffId || (employees[0]?.id ?? '')
@@ -61,6 +65,7 @@ export default function PayStaffScreen() {
   const [forMonth, setForMonth] = useState(`${MONTHS[new Date().getMonth()]} ${new Date().getFullYear()}`);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
+
 
   const selectedStaff = useMemo(() => {
     return employees.find((e) => e.id === selectedStaffId);
@@ -150,17 +155,18 @@ export default function PayStaffScreen() {
     );
   };
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
-  const cardBg = isDark ? '#101927' : '#FFFFFF';
-  const inputBg = isDark ? '#141926' : '#F8FAFC';
-  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const skyBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const inputBg = isDark ? '#1C2538' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
 
   return (
     <View style={{ flex: 1, backgroundColor: skyBg }}>
       <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
-      {/* Symmetrical Sky Blue Top Header */}
+      {/* Royal Blue Top Header */}
+
       <View
         style={{
           paddingTop: insets.top + 10,
@@ -233,12 +239,13 @@ export default function PayStaffScreen() {
                         paddingHorizontal: 16,
                         paddingVertical: 10,
                         borderRadius: 18,
-                        backgroundColor: isSelected ? '#0C1829' : inputBg,
+                        backgroundColor: isSelected ? (isDark ? '#FFFFFF' : '#153580') : inputBg,
                         borderWidth: 1,
-                        borderColor: isSelected ? '#0C1829' : borderColor,
+                        borderColor: isSelected ? (isDark ? '#FFFFFF' : '#153580') : borderColor,
                       }}
                     >
-                      <Text style={{ color: isSelected ? '#FFFFFF' : theme.text, fontSize: 14, fontWeight: '800' }}>
+                      <Text style={{ color: isSelected ? (isDark ? '#0C1829' : '#FFFFFF') : theme.text, fontSize: 14, fontWeight: '800' }}>
+
                         {staff.name}
                       </Text>
                       <Text style={{ color: isSelected ? 'rgba(255,255,255,0.7)' : theme.textMuted, fontSize: 11, marginTop: 2 }}>

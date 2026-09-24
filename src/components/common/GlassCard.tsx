@@ -72,7 +72,7 @@ export function GlassCard({
       bg = '#0C1829';
       border = '#0C1829';
     } else if (variant === 'sky') {
-      bg = '#6B9FE8';
+      bg = '#153580';
       border = 'rgba(255, 255, 255, 0.2)';
     } else if (variant === 'sand') {
       bg = '#F4F7FC';

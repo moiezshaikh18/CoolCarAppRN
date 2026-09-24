@@ -66,17 +66,18 @@ export default function SignUpScreen() {
     router.replace('/(tabs)');
   };
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
-  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
-  const cardBg = isDark ? '#101927' : '#FFFFFF';
-  const inputBg = isDark ? '#141926' : '#F8FAFC';
-  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const skyBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const inputBg = isDark ? '#1C2538' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
 
   return (
     <View style={{ flex: 1, backgroundColor: skyBg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} backgroundColor={skyBg} />
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
-      {/* Symmetrical Sky Blue Top Header */}
+      {/* Royal Blue Top Header */}
+
       <View
         style={{
           paddingTop: insets.top + 10,
@@ -235,23 +236,24 @@ export default function SignUpScreen() {
               onPress={handleSignUp}
               activeOpacity={0.88}
               style={{
-                backgroundColor: '#0C1829',
+                backgroundColor: isDark ? '#FFFFFF' : '#153580',
                 paddingVertical: 18,
                 borderRadius: 34,
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginTop: 6,
-                shadowColor: '#000',
+                shadowColor: '#153580',
                 shadowOpacity: 0.35,
                 shadowRadius: 10,
                 shadowOffset: { width: 0, height: 4 },
                 elevation: 6,
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
                 Register Workshop
               </Text>
             </TouchableOpacity>
+
           </View>
 
           {/* Login Link */}

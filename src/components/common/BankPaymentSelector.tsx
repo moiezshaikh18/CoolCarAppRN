@@ -44,14 +44,16 @@ export function BankPaymentSelector({
   label = 'Payment Mode & Bank Account',
 }: BankPaymentSelectorProps) {
   const { isDark } = useTheme();
-  const accounts = useBankAccountStore(selectActiveAccounts);
+  const rawAccounts = useBankAccountStore(selectActiveAccounts);
+  const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
   const [modalVisible, setModalVisible] = useState(false);
 
   // Filter bank accounts (exclude pure cash account for UPI/Card)
-  const bankOnlyAccounts = accounts.filter((a) => a.accountType !== 'CASH_IN_HAND');
-  const cashAccount = accounts.find((a) => a.accountType === 'CASH_IN_HAND');
+  const bankOnlyAccounts = accounts.filter((a) => a?.accountType !== 'CASH_IN_HAND');
+  const cashAccount = accounts.find((a) => a?.accountType === 'CASH_IN_HAND');
 
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+  const selectedAccount = accounts.find((a) => a?.id === selectedAccountId);
+
 
   const handleSelectMode = (mode: PaymentMode) => {
     onPaymentModeChange(mode);
@@ -233,7 +235,7 @@ export function BankPaymentSelector({
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: paymentMode === 'UPI' ? '#6B9FE8' : '#8B5CF6',
+                backgroundColor: paymentMode === 'UPI' ? (isDark ? '#60A5FA' : '#153580') : '#8B5CF6',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
@@ -331,7 +333,7 @@ export function BankPaymentSelector({
                       >
                         <Building
                           size={18}
-                          color={isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : '#6B9FE8'}
+                          color={isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : (isDark ? '#60A5FA' : '#153580')}
                         />
                       </View>
                       <View style={{ flex: 1 }}>

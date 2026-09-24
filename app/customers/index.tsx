@@ -65,7 +65,7 @@ export default function CustomerListScreen() {
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search))
   );
 
-  const skyBg = isDark ? '#070A0F' : '#6B9FE8';
+  const skyBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
 
   return (

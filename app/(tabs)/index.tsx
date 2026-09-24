@@ -47,6 +47,8 @@ import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 import { router } from 'expo-router';
+import { useHideOnScroll } from '../../src/store/tabBarStore';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Card width calculated to perfectly fit with 18px horizontal padding on both sides
@@ -57,8 +59,10 @@ export default function DashboardScreen() {
   const { isDark, toggleMode } = useTheme();
   const { currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
+  const { onScroll: onHideNavScroll } = useHideOnScroll();
 
   // Stores
+
   const { employees } = useEmployeeStore();
   const { accounts } = useBankAccountStore();
   const { expenses } = useExpenseStore();
@@ -256,9 +260,12 @@ export default function DashboardScreen() {
       {/* SCROLLABLE BODY CONTENT */}
       <ScrollView
         showsVerticalScrollIndicator={false}
+        onScroll={onHideNavScroll}
+        scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />}
         contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
       >
+
         {/* TOP HERO SECTION: Canvas background */}
         <View style={{ backgroundColor: canvasBg, paddingBottom: 24, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
           {/* SLIDING HERO CAROUSEL: CARD 1 (AAJ) vs CARD 2 (MAHINA) */}
@@ -293,8 +300,9 @@ export default function DashboardScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00C896' }} />
                     <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                      Today's Snapshot (Aaj)
+                      {"Today's Overview"}
                     </Text>
+
                   </View>
                   <View
                     style={{
@@ -313,7 +321,7 @@ export default function DashboardScreen() {
                 {/* Figure */}
                 <View style={{ marginVertical: 10 }}>
                   <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, fontWeight: '700' }}>
-                    Today's Collected Inflow
+                    {"Today's Collected Inflow"}
                   </Text>
                   <Text style={{ color: '#FFFFFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.8 }}>
                     +{formatCurrency(todayCollections, currencySymbol)}
@@ -334,7 +342,7 @@ export default function DashboardScreen() {
                 >
                   <View>
                     <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
-                      Today's Outflow
+                      {"Today's Outflow"}
                     </Text>
                     <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: '900' }}>
                       -{formatCurrency(todayExpensesTotal, currencySymbol)}
@@ -345,7 +353,7 @@ export default function DashboardScreen() {
                     <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
                       Liquid Bank Balances
                     </Text>
-                    <Text style={{ color: '#6B9FE8', fontSize: 14, fontWeight: '900' }}>
+                    <Text style={{ color: '#60A5FA', fontSize: 14, fontWeight: '900' }}>
                       {formatCurrency(totalLiquidBalance, currencySymbol)}
                     </Text>
                   </View>
@@ -371,7 +379,7 @@ export default function DashboardScreen() {
                         width: 40,
                         height: 40,
                         borderRadius: 20,
-                        backgroundColor: '#6B9FE8',
+                        backgroundColor: '#60A5FA',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
@@ -465,20 +473,21 @@ export default function DashboardScreen() {
                 {/* Header */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Calendar size={14} color="#6B9FE8" />
+                    <Calendar size={14} color="#60A5FA" />
                     <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                      This Month Till Date (Mahina)
+                      Monthly Summary
                     </Text>
+
                   </View>
                   <View
                     style={{
-                      backgroundColor: 'rgba(107, 159, 232, 0.22)',
+                      backgroundColor: 'rgba(96, 165, 250, 0.22)',
                       paddingHorizontal: 8,
                       paddingVertical: 3,
                       borderRadius: 8,
                     }}
                   >
-                    <Text style={{ color: '#6B9FE8', fontSize: 10, fontWeight: '900' }}>
+                    <Text style={{ color: '#60A5FA', fontSize: 10, fontWeight: '900' }}>
                       {monthCarsServiced} CARS SERVICED
                     </Text>
                   </View>
@@ -649,8 +658,9 @@ export default function DashboardScreen() {
                     Daily Expenses
                   </Text>
                   <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
-                    Kisne Liya & Reason
+                    Logged By & Purpose
                   </Text>
+
                 </TouchableOpacity>
               </View>
 
@@ -1007,7 +1017,7 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 11, color: '#6B9FE8', fontWeight: '700' }}>
+                    <Text style={{ fontSize: 11, color: isDark ? '#60A5FA' : '#153580', fontWeight: '700' }}>
                       {chalan.items.length} parts • Tagged: {chalan.items.map((i) => i.assignedVehicleNumber).slice(0, 2).join(', ')}
                     </Text>
                     <Text style={{ fontSize: 11, color: chalan.pendingAmount === 0 ? '#00C896' : '#EF4444', fontWeight: '800' }}>
