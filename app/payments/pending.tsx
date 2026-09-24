@@ -351,7 +351,7 @@ export default function PendingCustomerPaymentsScreen() {
 
                     {/* Action Button: Collect Payment */}
                     <TouchableOpacity
-                      onPress={() => router.push(`/job-sheets/${job.id}`)}
+                      onPress={() => router.push(`/job-sheets/${job.id}?openPayment=true` as any)}
                       activeOpacity={0.88}
                       style={{
                         backgroundColor: '#153580',

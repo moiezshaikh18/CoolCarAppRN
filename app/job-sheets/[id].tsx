@@ -5,7 +5,7 @@
 // Payment CTA with Amount Modification & Bank Account Selector
 // ============================================================
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ import {
   Building2,
   X,
   ArrowDown,
+  Layers,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -47,7 +48,7 @@ export default function JobSheetDetailsScreen() {
   const { isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; openPayment?: string }>();
   const { jobSheets, updateJobSheet } = useJobSheetStore();
   const { addPayment } = usePaymentStore();
   const accounts = useBankAccountStore((s) => s.accounts);
@@ -57,9 +58,19 @@ export default function JobSheetDetailsScreen() {
 
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentType, setPaymentType] = useState<'SINGLE' | 'SPLIT'>('SINGLE');
+
+  // Single mode state
   const [paymentAmountStr, setPaymentAmountStr] = useState('');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
   const [selectedBankId, setSelectedBankId] = useState<string>('');
+
+  // Multi-mode Split Payment state (e.g. ₹1000 Cash + ₹3000 UPI + ₹2000 Swipe)
+  const [splitCashStr, setSplitCashStr] = useState('');
+  const [splitUpiStr, setSplitUpiStr] = useState('');
+  const [splitUpiBankId, setSplitUpiBankId] = useState<string>('');
+  const [splitSwipeStr, setSplitSwipeStr] = useState('');
+  const [splitSwipeBankId, setSplitSwipeBankId] = useState<string>('');
 
   const job = useMemo(() => {
     const found = jobSheets.find((j) => j.id === params.id || j.jobNumber === params.id);
@@ -97,57 +108,179 @@ export default function JobSheetDetailsScreen() {
 
   // Open Payment modal with pre-filled pending amount
   const handleOpenPayment = () => {
-    setPaymentAmountStr(job.pendingAmount > 0 ? String(job.pendingAmount) : String(job.finalAmount));
+    const defaultAmt = job.pendingAmount > 0 ? String(job.pendingAmount) : String(job.finalAmount);
+    setPaymentAmountStr(defaultAmt);
     setPaymentMode('CASH');
     if (activeAccounts.length > 0) {
       setSelectedBankId(activeAccounts[0].id);
+      setSplitUpiBankId(activeAccounts[0].id);
+      setSplitSwipeBankId(activeAccounts[0].id);
     }
+    setSplitCashStr(defaultAmt);
+    setSplitUpiStr('');
+    setSplitSwipeStr('');
+    setPaymentType('SINGLE');
     setIsPaymentModalOpen(true);
   };
 
-  const handleConfirmPayment = () => {
-    const amt = parseFloat(paymentAmountStr);
-    if (isNaN(amt) || amt <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid payment amount.');
-      return;
+  // Auto-open if query param openPayment === 'true'
+  useEffect(() => {
+    if (params.openPayment === 'true') {
+      handleOpenPayment();
     }
+  }, [params.openPayment]);
 
-    const selectedAcc = activeAccounts.find((a) => a.id === selectedBankId);
-    const newTotalPaid = (job.totalPaid || 0) + amt;
-    const newPending = Math.max(0, job.finalAmount - newTotalPaid);
-    const isFullyPaid = newPending === 0;
-
-    // 1. Record in Payment Store
-    addPayment({
-      id: `pay-${Date.now()}`,
-      enterpriseId: enterpriseId || 'enterprise-dev-001',
-      jobSheetId: job.id,
-      customerId: (job as any).customerId || 'cust-walkin',
-      vehicleId: (job as any).vehicleId || 'veh-generic',
-      amount: amt,
-      paymentMode,
-      paymentAccountId: (paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') ? selectedBankId : undefined,
-      paymentAccountName: (paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') ? selectedAcc?.bankName : 'Cash Counter Register',
-      date: new Date().toISOString(),
-      referenceNumber: `${paymentMode === 'UPI' ? 'UPI' : paymentMode === 'CARD_SWIPE' ? 'POS' : 'CSH'}-${Date.now().toString().slice(-4)}`,
-      voided: false,
-      createdBy: 'user-manager',
-      createdAt: new Date().toISOString(),
-    });
-
-    // 2. Update Job Sheet: If fully paid -> COMPLETED ("Done"), else IN_PROGRESS
+  // Mark Work as Completed directly without payment (e.g. car ready for delivery)
+  const handleMarkWorkDone = () => {
     updateJobSheet(job.id, {
-      totalPaid: newTotalPaid,
-      pendingAmount: newPending,
-      status: isFullyPaid ? 'COMPLETED' : 'IN_PROGRESS',
-      paymentStatus: isFullyPaid ? 'PAID' : 'PARTIALLY_PAID',
+      status: 'COMPLETED',
     });
-
-    setIsPaymentModalOpen(false);
     Alert.alert(
-      'Payment Recorded',
-      `Collected ${formatCurrency(amt, currencySymbol)} via ${paymentMode === 'CARD_SWIPE' ? 'Swipe' : paymentMode}.\nJob Sheet Status: ${isFullyPaid ? 'Done' : 'In Progress'}`
+      'Work Completed ✓',
+      `Job #${job.jobNumber} marked as COMPLETED.\n${job.pendingAmount > 0 ? `Remaining customer balance (₹${job.pendingAmount}) can be collected anytime.` : 'All dues are settled.'}`
     );
+  };
+
+  const handleConfirmPayment = () => {
+    if (paymentType === 'SINGLE') {
+      const amt = parseFloat(paymentAmountStr);
+      if (isNaN(amt) || amt <= 0) {
+        Alert.alert('Invalid Amount', 'Please enter a valid payment amount.');
+        return;
+      }
+
+      const selectedAcc = activeAccounts.find((a) => a.id === selectedBankId);
+      const newTotalPaid = (job.totalPaid || 0) + amt;
+      const newPending = Math.max(0, job.finalAmount - newTotalPaid);
+      const isFullyPaid = newPending === 0;
+
+      // 1. Record in Payment Store
+      addPayment({
+        id: `pay-${Date.now()}`,
+        enterpriseId: enterpriseId || 'enterprise-dev-001',
+        jobSheetId: job.id,
+        customerId: (job as any).customerId || 'cust-walkin',
+        vehicleId: (job as any).vehicleId || 'veh-generic',
+        amount: amt,
+        paymentMode,
+        paymentAccountId: (paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') ? selectedBankId : undefined,
+        paymentAccountName: (paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') ? selectedAcc?.bankName : 'Cash Counter Register',
+        date: new Date().toISOString(),
+        referenceNumber: `${paymentMode === 'UPI' ? 'UPI' : paymentMode === 'CARD_SWIPE' ? 'POS' : 'CSH'}-${Date.now().toString().slice(-4)}`,
+        voided: false,
+        createdBy: 'user-manager',
+        createdAt: new Date().toISOString(),
+      });
+
+      // 2. Update Job Sheet: Always mark as COMPLETED as work is done!
+      updateJobSheet(job.id, {
+        totalPaid: newTotalPaid,
+        pendingAmount: newPending,
+        status: 'COMPLETED',
+        paymentStatus: isFullyPaid ? 'PAID' : (newTotalPaid > 0 ? 'PARTIALLY_PAID' : 'PENDING'),
+      });
+
+      setIsPaymentModalOpen(false);
+      Alert.alert(
+        'Payment Recorded',
+        `Collected ${formatCurrency(amt, currencySymbol)} via ${paymentMode === 'CARD_SWIPE' ? 'Swipe' : paymentMode}.\nJob Status: Completed${!isFullyPaid ? ` • Pending Udhari: ${formatCurrency(newPending, currencySymbol)}` : ' • Fully Settled'}`
+      );
+    } else {
+      // Split Multi-Mode Payment
+      const cashAmt = parseFloat(splitCashStr) || 0;
+      const upiAmt = parseFloat(splitUpiStr) || 0;
+      const swipeAmt = parseFloat(splitSwipeStr) || 0;
+      const totalCollected = cashAmt + upiAmt + swipeAmt;
+
+      if (totalCollected <= 0) {
+        Alert.alert('Invalid Amount', 'Please enter at least one payment amount (Cash, UPI, or Swipe).');
+        return;
+      }
+
+      const upiAcc = activeAccounts.find((a) => a.id === splitUpiBankId);
+      const swipeAcc = activeAccounts.find((a) => a.id === splitSwipeBankId);
+      const now = Date.now();
+      const modesUsed: string[] = [];
+
+      if (cashAmt > 0) {
+        addPayment({
+          id: `pay-${now}-cash`,
+          enterpriseId: enterpriseId || 'enterprise-dev-001',
+          jobSheetId: job.id,
+          customerId: (job as any).customerId || 'cust-walkin',
+          vehicleId: (job as any).vehicleId || 'veh-generic',
+          amount: cashAmt,
+          paymentMode: 'CASH',
+          paymentAccountName: 'Cash Counter Register',
+          date: new Date().toISOString(),
+          referenceNumber: `CSH-${now.toString().slice(-4)}`,
+          voided: false,
+          createdBy: 'user-manager',
+          createdAt: new Date().toISOString(),
+        });
+        modesUsed.push(`Cash: ${formatCurrency(cashAmt, currencySymbol)}`);
+      }
+
+      if (upiAmt > 0) {
+        addPayment({
+          id: `pay-${now + 1}-upi`,
+          enterpriseId: enterpriseId || 'enterprise-dev-001',
+          jobSheetId: job.id,
+          customerId: (job as any).customerId || 'cust-walkin',
+          vehicleId: (job as any).vehicleId || 'veh-generic',
+          amount: upiAmt,
+          paymentMode: 'UPI',
+          paymentAccountId: splitUpiBankId || undefined,
+          paymentAccountName: upiAcc?.bankName || 'UPI Account',
+          date: new Date().toISOString(),
+          referenceNumber: `UPI-${(now + 1).toString().slice(-4)}`,
+          voided: false,
+          createdBy: 'user-manager',
+          createdAt: new Date().toISOString(),
+        });
+        modesUsed.push(`UPI (${upiAcc?.bankName || 'Bank'}): ${formatCurrency(upiAmt, currencySymbol)}`);
+      }
+
+      if (swipeAmt > 0) {
+        addPayment({
+          id: `pay-${now + 2}-swipe`,
+          enterpriseId: enterpriseId || 'enterprise-dev-001',
+          jobSheetId: job.id,
+          customerId: (job as any).customerId || 'cust-walkin',
+          vehicleId: (job as any).vehicleId || 'veh-generic',
+          amount: swipeAmt,
+          paymentMode: 'CARD_SWIPE',
+          paymentAccountId: splitSwipeBankId || undefined,
+          paymentAccountName: swipeAcc?.bankName || 'POS Terminal',
+          date: new Date().toISOString(),
+          referenceNumber: `POS-${(now + 2).toString().slice(-4)}`,
+          voided: false,
+          createdBy: 'user-manager',
+          createdAt: new Date().toISOString(),
+        });
+        modesUsed.push(`Swipe (${swipeAcc?.bankName || 'POS'}): ${formatCurrency(swipeAmt, currencySymbol)}`);
+      }
+
+      const newTotalPaid = (job.totalPaid || 0) + totalCollected;
+      const newPending = Math.max(0, job.finalAmount - newTotalPaid);
+      const isFullyPaid = newPending === 0;
+
+      // Update Job Sheet: Always mark as COMPLETED as work is done!
+      updateJobSheet(job.id, {
+        totalPaid: newTotalPaid,
+        pendingAmount: newPending,
+        status: 'COMPLETED',
+        paymentStatus: isFullyPaid ? 'PAID' : (newTotalPaid > 0 ? 'PARTIALLY_PAID' : 'PENDING'),
+      });
+
+      setIsPaymentModalOpen(false);
+      Alert.alert(
+        'Split Payment Recorded',
+        `Total Collected: ${formatCurrency(totalCollected, currencySymbol)}\n` +
+        modesUsed.join('\n') +
+        `\n\nJob Status: Completed${!isFullyPaid ? `\nRemaining Udhari: ${formatCurrency(newPending, currencySymbol)}` : '\nAll Dues Settled ✓'}`
+      );
+    }
   };
 
   const isDone = (job.pendingAmount === 0 && job.finalAmount > 0) || job.status === 'COMPLETED';
@@ -474,55 +607,132 @@ export default function JobSheetDetailsScreen() {
             </View>
           )}
 
-          {/* User Requested: "Payment" button with Amount Modify & Bank Selection */}
-          {isDone ? (
-            <View
-              style={{
-                backgroundColor: '#10B981',
-                paddingVertical: 16,
-                borderRadius: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                marginTop: 20,
-              }}
-            >
-              <CheckCircle2 size={20} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                Job Completed & Paid in Full ✓
-              </Text>
-            </View>
+          {/* Workflow Action Buttons */}
+          {job.status === 'COMPLETED' ? (
+            job.pendingAmount > 0 ? (
+              <View style={{ marginTop: 20, gap: 10 }}>
+                {/* Completed badge with pending udhari note */}
+                <View
+                  style={{
+                    backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                    padding: 14,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: '#F59E0B',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <CheckCircle2 size={18} color="#10B981" />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                      Workshop Work Completed
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#EF4444' }}>
+                    Due: {formatCurrency(job.pendingAmount, currencySymbol)}
+                  </Text>
+                </View>
+
+                {/* Collect Pending Udhari Button */}
+                <TouchableOpacity
+                  onPress={handleOpenPayment}
+                  activeOpacity={0.88}
+                  style={{
+                    backgroundColor: '#153580',
+                    paddingVertical: 16,
+                    borderRadius: 24,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    shadowColor: '#153580',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 10,
+                    elevation: 4,
+                  }}
+                >
+                  <ArrowDown size={18} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                    Collect Pending Udhari ({formatCurrency(job.pendingAmount, currencySymbol)})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View
+                style={{
+                  backgroundColor: '#10B981',
+                  paddingVertical: 16,
+                  borderRadius: 24,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  marginTop: 20,
+                }}
+              >
+                <CheckCircle2 size={20} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                  Job Completed & Paid in Full ✓
+                </Text>
+              </View>
+            )
           ) : (
-            <TouchableOpacity
-              onPress={handleOpenPayment}
-              activeOpacity={0.88}
-              style={{
-                backgroundColor: '#153580',
-                paddingVertical: 16,
-                borderRadius: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                marginTop: 20,
-                shadowColor: '#153580',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 10,
-                elevation: 4,
-              }}
-            >
-              <ArrowDown size={18} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                Payment {job.pendingAmount > 0 ? `(${formatCurrency(job.pendingAmount, currencySymbol)})` : ''}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ marginTop: 20, gap: 10 }}>
+              {/* Payment & Settle Bill */}
+              <TouchableOpacity
+                onPress={handleOpenPayment}
+                activeOpacity={0.88}
+                style={{
+                  backgroundColor: '#153580',
+                  paddingVertical: 16,
+                  borderRadius: 24,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  shadowColor: '#153580',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 10,
+                  elevation: 4,
+                }}
+              >
+                <ArrowDown size={18} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                  Payment {job.pendingAmount > 0 ? `(${formatCurrency(job.pendingAmount, currencySymbol)})` : ''}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Mark Work Completed without immediate payment */}
+              <TouchableOpacity
+                onPress={handleMarkWorkDone}
+                activeOpacity={0.88}
+                style={{
+                  backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                  borderWidth: 1.5,
+                  borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#CBD5E1',
+                  paddingVertical: 14,
+                  borderRadius: 24,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <CheckCircle2 size={18} color="#10B981" />
+                <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 14, fontWeight: '800' }}>
+                  Mark Workshop Work as Completed
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </ScrollView>
       </View>
 
-      {/* Payment Collection Modal with Amount Modify & Bank Selection */}
+      {/* Payment Collection Modal with Amount Modify, Split Payment & Bank Selection */}
       <Modal
         visible={isPaymentModalOpen}
         transparent
@@ -537,6 +747,7 @@ export default function JobSheetDetailsScreen() {
               borderTopRightRadius: 28,
               padding: 20,
               paddingBottom: insets.bottom + 20,
+              maxHeight: '90%',
               gap: 14,
             }}
           >
@@ -558,208 +769,467 @@ export default function JobSheetDetailsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Total, Paid, and Current Balance Overview */}
+            {/* Payment Type Switcher: Single Mode vs Split Payment */}
             <View
               style={{
                 flexDirection: 'row',
-                backgroundColor: isDark ? '#1C2538' : '#F8FAFC',
-                borderRadius: 16,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: cardBorder,
-                justifyContent: 'space-around',
+                backgroundColor: isDark ? '#141824' : '#E2E8F0',
+                borderRadius: 14,
+                padding: 4,
+                gap: 4,
               }}
             >
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Total Bill</Text>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A', marginTop: 2 }}>
-                  {formatCurrency(job.finalAmount, currencySymbol)}
+              <TouchableOpacity
+                onPress={() => setPaymentType('SINGLE')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  backgroundColor: paymentType === 'SINGLE' ? '#153580' : 'transparent',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '800',
+                    color: paymentType === 'SINGLE' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B'),
+                  }}
+                >
+                  Single Mode
                 </Text>
-              </View>
-              <View style={{ width: 1, backgroundColor: cardBorder }} />
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Already Paid</Text>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: '#10B981', marginTop: 2 }}>
-                  {formatCurrency(job.totalPaid || 0, currencySymbol)}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setPaymentType('SPLIT');
+                  if (!splitCashStr && !splitUpiStr && !splitSwipeStr) {
+                    setSplitCashStr(job.pendingAmount > 0 ? String(job.pendingAmount) : String(job.finalAmount));
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 5,
+                  backgroundColor: paymentType === 'SPLIT' ? '#153580' : 'transparent',
+                }}
+              >
+                <Layers size={13} color={paymentType === 'SPLIT' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B')} />
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '800',
+                    color: paymentType === 'SPLIT' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B'),
+                  }}
+                >
+                  Split (Cash + UPI + Card)
                 </Text>
-              </View>
-              <View style={{ width: 1, backgroundColor: cardBorder }} />
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Balance Due</Text>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: '#EF4444', marginTop: 2 }}>
-                  {formatCurrency(job.pendingAmount, currencySymbol)}
-                </Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
-            {/* Editable Amount Input */}
-            <View>
-              <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 6 }}>
-                Collecting Now (Modify if customer leaves balance/udhari)
-              </Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+              {/* Total, Paid, and Current Balance Overview */}
               <View
                 style={{
                   flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                  backgroundColor: isDark ? '#1C2538' : '#F8FAFC',
                   borderRadius: 16,
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
+                  padding: 12,
                   borderWidth: 1,
                   borderColor: cardBorder,
+                  justifyContent: 'space-around',
                 }}
               >
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#153580', marginRight: 8 }}>
-                  ₹
-                </Text>
-                <TextInput
-                  value={paymentAmountStr}
-                  onChangeText={setPaymentAmountStr}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor="#94A3B8"
-                  style={{
-                    flex: 1,
-                    fontSize: 22,
-                    fontWeight: '900',
-                    color: isDark ? '#FFFFFF' : '#0F172A',
-                  }}
-                />
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Total Bill</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A', marginTop: 2 }}>
+                    {formatCurrency(job.finalAmount, currencySymbol)}
+                  </Text>
+                </View>
+                <View style={{ width: 1, backgroundColor: cardBorder }} />
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Already Paid</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#10B981', marginTop: 2 }}>
+                    {formatCurrency(job.totalPaid || 0, currencySymbol)}
+                  </Text>
+                </View>
+                <View style={{ width: 1, backgroundColor: cardBorder }} />
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Balance Due</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#EF4444', marginTop: 2 }}>
+                    {formatCurrency(job.pendingAmount, currencySymbol)}
+                  </Text>
+                </View>
               </View>
 
-              {/* Dynamic Udhari / Balance Calculation */}
-              {(() => {
-                const payingNow = parseFloat(paymentAmountStr) || 0;
-                const remainingUdhari = Math.max(0, job.pendingAmount - payingNow);
-                return remainingUdhari > 0 ? (
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: isDark ? '#450A0A' : '#FEF2F2',
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 12,
-                      marginTop: 8,
-                      gap: 6,
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#EF4444' }}>
-                      Remaining Udhari / Due: {formatCurrency(remainingUdhari, currencySymbol)}
+              {paymentType === 'SINGLE' ? (
+                <>
+                  {/* Editable Amount Input */}
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 6 }}>
+                      Collecting Now (Modify if customer leaves balance/udhari)
                     </Text>
-                  </View>
-                ) : (
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: isDark ? '#064E3B' : '#F0FDF4',
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 12,
-                      marginTop: 8,
-                      gap: 6,
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#10B981' }}>
-                      Full payment — no customer balance will remain.
-                    </Text>
-                  </View>
-                );
-              })()}
-            </View>
-
-            {/* Payment Mode Selector Tabs with Authentic Logos */}
-            <View>
-              <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 8 }}>
-                Payment Method
-              </Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {[
-                  { mode: 'CASH' as PaymentMode, label: 'Cash', icon: Banknote },
-                  { mode: 'UPI' as PaymentMode, label: 'UPI', icon: QrCode },
-                  { mode: 'CARD_SWIPE' as PaymentMode, label: 'Swipe', icon: CreditCard },
-                ].map((item) => {
-                  const isSelected = paymentMode === item.mode;
-                  const ModeIcon = item.icon;
-                  return (
-                    <TouchableOpacity
-                      key={item.mode}
-                      onPress={() => setPaymentMode(item.mode)}
+                    <View
                       style={{
-                        flex: 1,
-                        paddingVertical: 10,
-                        borderRadius: 16,
-                        backgroundColor: isSelected ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
+                        flexDirection: 'row',
                         alignItems: 'center',
-                        gap: 4,
+                        backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                        borderRadius: 16,
+                        paddingHorizontal: 16,
+                        paddingVertical: 12,
                         borderWidth: 1,
-                        borderColor: isSelected ? '#153580' : cardBorder,
+                        borderColor: cardBorder,
                       }}
                     >
-                      <ModeIcon size={16} color={isSelected ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B')} />
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
-                        {item.label}
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#153580', marginRight: 8 }}>
+                        ₹
                       </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Target Bank Account (Shown when UPI or Swipe is selected) */}
-            {(paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') && (
-              <View>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 8 }}>
-                  Deposit Into Bank Account:
-                </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {activeAccounts.map((acc) => {
-                    const isSelected = selectedBankId === acc.id;
-                    return (
-                      <TouchableOpacity
-                        key={acc.id}
-                        onPress={() => setSelectedBankId(acc.id)}
+                      <TextInput
+                        value={paymentAmountStr}
+                        onChangeText={setPaymentAmountStr}
+                        keyboardType="numeric"
+                        placeholder="0"
+                        placeholderTextColor="#94A3B8"
                         style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 6,
-                          paddingHorizontal: 12,
-                          paddingVertical: 8,
+                          flex: 1,
+                          fontSize: 22,
+                          fontWeight: '900',
+                          color: isDark ? '#FFFFFF' : '#0F172A',
+                        }}
+                      />
+                    </View>
+
+                    {/* Dynamic Udhari / Balance Calculation */}
+                    {(() => {
+                      const payingNow = parseFloat(paymentAmountStr) || 0;
+                      const remainingUdhari = Math.max(0, job.pendingAmount - payingNow);
+                      return remainingUdhari > 0 ? (
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: isDark ? '#450A0A' : '#FEF2F2',
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 12,
+                            marginTop: 8,
+                            gap: 6,
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#EF4444' }}>
+                            Remaining Udhari / Due: {formatCurrency(remainingUdhari, currencySymbol)}
+                          </Text>
+                        </View>
+                      ) : (
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: isDark ? '#064E3B' : '#F0FDF4',
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 12,
+                            marginTop: 8,
+                            gap: 6,
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#10B981' }}>
+                            Full payment — no customer balance will remain.
+                          </Text>
+                        </View>
+                      );
+                    })()}
+                  </View>
+
+                  {/* Payment Mode Selector Tabs with Authentic Logos */}
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 8 }}>
+                      Payment Method
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {[
+                        { mode: 'CASH' as PaymentMode, label: 'Cash', icon: Banknote },
+                        { mode: 'UPI' as PaymentMode, label: 'UPI', icon: QrCode },
+                        { mode: 'CARD_SWIPE' as PaymentMode, label: 'Swipe', icon: CreditCard },
+                      ].map((item) => {
+                        const isSelected = paymentMode === item.mode;
+                        const ModeIcon = item.icon;
+                        return (
+                          <TouchableOpacity
+                            key={item.mode}
+                            onPress={() => setPaymentMode(item.mode)}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 10,
+                              borderRadius: 16,
+                              backgroundColor: isSelected ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
+                              alignItems: 'center',
+                              gap: 4,
+                              borderWidth: 1,
+                              borderColor: isSelected ? '#153580' : cardBorder,
+                            }}
+                          >
+                            <ModeIcon size={16} color={isSelected ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B')} />
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
+                              {item.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Target Bank Account (Shown when UPI or Swipe is selected) */}
+                  {(paymentMode === 'UPI' || paymentMode === 'CARD_SWIPE') && (
+                    <View>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 8 }}>
+                        Deposit Into Bank Account:
+                      </Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                        {activeAccounts.map((acc) => {
+                          const isSelected = selectedBankId === acc.id;
+                          return (
+                            <TouchableOpacity
+                              key={acc.id}
+                              onPress={() => setSelectedBankId(acc.id)}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                paddingHorizontal: 12,
+                                paddingVertical: 8,
+                                borderRadius: 14,
+                                backgroundColor: isSelected ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
+                                borderWidth: 1,
+                                borderColor: isSelected ? '#153580' : cardBorder,
+                              }}
+                            >
+                              <Building2 size={13} color={isSelected ? '#FFFFFF' : '#64748B'} />
+                              <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
+                                {acc.bankName} {acc.accountNumber ? `(${acc.accountNumber.slice(-4)})` : ''}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
+                </>
+              ) : (
+                /* Multi-Mode Split Payment UI (Cash + UPI + Swipe) */
+                <View style={{ gap: 14 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? '#94A3B8' : '#64748B' }}>
+                    Enter payment amounts received across modes:
+                  </Text>
+
+                  {/* 1. Cash Portion */}
+                  <View style={{ backgroundColor: isDark ? '#1C2538' : '#F8FAFC', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: cardBorder }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <Banknote size={16} color="#10B981" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                        Cash Received
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                        borderRadius: 12,
+                        paddingHorizontal: 12,
+                        height: 44,
+                        borderWidth: 1,
+                        borderColor: cardBorder,
+                      }}
+                    >
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#10B981', marginRight: 6 }}>₹</Text>
+                      <TextInput
+                        value={splitCashStr}
+                        onChangeText={setSplitCashStr}
+                        keyboardType="numeric"
+                        placeholder="0"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, fontSize: 16, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}
+                      />
+                    </View>
+                  </View>
+
+                  {/* 2. UPI Portion */}
+                  <View style={{ backgroundColor: isDark ? '#1C2538' : '#F8FAFC', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: cardBorder }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <QrCode size={16} color="#3B82F6" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                        UPI / Online QR
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                        borderRadius: 12,
+                        paddingHorizontal: 12,
+                        height: 44,
+                        borderWidth: 1,
+                        borderColor: cardBorder,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#3B82F6', marginRight: 6 }}>₹</Text>
+                      <TextInput
+                        value={splitUpiStr}
+                        onChangeText={setSplitUpiStr}
+                        keyboardType="numeric"
+                        placeholder="0"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, fontSize: 16, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}
+                      />
+                    </View>
+                    {/* Bank selector for UPI */}
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase' }}>
+                      Deposit Bank:
+                    </Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                      {activeAccounts.map((acc) => {
+                        const isSelected = splitUpiBankId === acc.id;
+                        return (
+                          <TouchableOpacity
+                            key={acc.id}
+                            onPress={() => setSplitUpiBankId(acc.id)}
+                            style={{
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 10,
+                              backgroundColor: isSelected ? '#153580' : (isDark ? '#141824' : '#E2E8F0'),
+                            }}
+                          >
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: isSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
+                              {acc.bankName}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+
+                  {/* 3. Card Swipe / POS Portion */}
+                  <View style={{ backgroundColor: isDark ? '#1C2538' : '#F8FAFC', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: cardBorder }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <CreditCard size={16} color="#8B5CF6" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                        Card Swipe / POS
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                        borderRadius: 12,
+                        paddingHorizontal: 12,
+                        height: 44,
+                        borderWidth: 1,
+                        borderColor: cardBorder,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#8B5CF6', marginRight: 6 }}>₹</Text>
+                      <TextInput
+                        value={splitSwipeStr}
+                        onChangeText={setSplitSwipeStr}
+                        keyboardType="numeric"
+                        placeholder="0"
+                        placeholderTextColor="#94A3B8"
+                        style={{ flex: 1, fontSize: 16, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}
+                      />
+                    </View>
+                    {/* Bank selector for Swipe */}
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', marginBottom: 6, textTransform: 'uppercase' }}>
+                      POS Settlement Bank:
+                    </Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                      {activeAccounts.map((acc) => {
+                        const isSelected = splitSwipeBankId === acc.id;
+                        return (
+                          <TouchableOpacity
+                            key={acc.id}
+                            onPress={() => setSplitSwipeBankId(acc.id)}
+                            style={{
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 10,
+                              backgroundColor: isSelected ? '#153580' : (isDark ? '#141824' : '#E2E8F0'),
+                            }}
+                          >
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: isSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
+                              {acc.bankName}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+
+                  {/* Split Summary */}
+                  {(() => {
+                    const c = parseFloat(splitCashStr) || 0;
+                    const u = parseFloat(splitUpiStr) || 0;
+                    const s = parseFloat(splitSwipeStr) || 0;
+                    const totalNow = c + u + s;
+                    const rem = Math.max(0, job.pendingAmount - totalNow);
+                    return (
+                      <View
+                        style={{
+                          backgroundColor: rem > 0 ? (isDark ? '#450A0A' : '#FEF2F2') : (isDark ? '#064E3B' : '#F0FDF4'),
+                          padding: 12,
                           borderRadius: 14,
-                          backgroundColor: isSelected ? '#153580' : (isDark ? '#1C2538' : '#F1F5F9'),
-                          borderWidth: 1,
-                          borderColor: isSelected ? '#153580' : cardBorder,
+                          gap: 4,
                         }}
                       >
-                        <Building2 size={13} color={isSelected ? '#FFFFFF' : '#64748B'} />
-                        <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? '#FFFFFF' : (isDark ? '#CBD5E1' : '#475569') }}>
-                          {acc.bankName} {acc.accountNumber ? `(${acc.accountNumber.slice(-4)})` : ''}
-                        </Text>
-                      </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: rem > 0 ? '#EF4444' : '#10B981' }}>
+                            Total Collecting Now:
+                          </Text>
+                          <Text style={{ fontSize: 14, fontWeight: '900', color: rem > 0 ? '#EF4444' : '#10B981' }}>
+                            {formatCurrency(totalNow, currencySymbol)}
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: rem > 0 ? '#EF4444' : '#10B981' }}>
+                            Remaining Customer Udhari:
+                          </Text>
+                          <Text style={{ fontSize: 14, fontWeight: '900', color: rem > 0 ? '#EF4444' : '#10B981' }}>
+                            {formatCurrency(rem, currencySymbol)}
+                          </Text>
+                        </View>
+                      </View>
                     );
-                  })}
-                </ScrollView>
-              </View>
-            )}
+                  })()}
+                </View>
+              )}
 
-            {/* Confirm Payment CTA */}
-            <TouchableOpacity
-              onPress={handleConfirmPayment}
-              activeOpacity={0.88}
-              style={{
-                backgroundColor: '#10B981',
-                paddingVertical: 15,
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 6,
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
-                Confirm & Mark Job Done
-              </Text>
-            </TouchableOpacity>
+              {/* Confirm Payment CTA */}
+              <TouchableOpacity
+                onPress={handleConfirmPayment}
+                activeOpacity={0.88}
+                style={{
+                  backgroundColor: '#10B981',
+                  paddingVertical: 15,
+                  borderRadius: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: 6,
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
+                  Confirm & Mark Job Done
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>

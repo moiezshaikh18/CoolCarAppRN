@@ -1,6 +1,7 @@
 // ============================================================
 // OTP Verification Screen
-// Signature Sky Blue Header & Mega-Curved Lower Sheet
+// Clean Unified Layout, Vertically Centered Content
+// Zero Cut-off Divs & Full Light/Dark Consistency
 // ============================================================
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -12,11 +13,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
-  Alert,
   ActivityIndicator,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, RefreshCw, Check } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
@@ -28,6 +30,7 @@ const RESEND_SECONDS = 60;
 
 export default function OTPScreen() {
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ phone: string; verificationId: string }>();
   const { setLoading, isLoading, setError, error, setUser, setAuthState } = useAuthStore();
   const { setActiveEnterprise, setActiveMember } = useEnterpriseStore();
@@ -142,26 +145,25 @@ export default function OTPScreen() {
     }
   };
 
-  const skyBg = isDark ? '#000000' : '#153580';
-  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
-  const cardBg = isDark ? '#141824' : '#FFFFFF';
-  const inputBg = isDark ? '#1C2538' : '#F8FAFC';
+  const pageBg = isDark ? '#181A20' : '#F4F6F9';
+  const cardBg = isDark ? '#242834' : '#FFFFFF';
+  const inputBg = isDark ? '#1E232F' : '#F8FAFC';
   const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: sheetBg }}
+      style={{ flex: 1, backgroundColor: pageBg }}
     >
-      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={pageBg} />
 
-      {/* Royal Blue Top Header */}
+      {/* Top Bar with Back Button */}
       <View
         style={{
-          backgroundColor: skyBg,
-          paddingTop: 50,
-          paddingHorizontal: 20,
-          paddingBottom: 28,
+          position: 'absolute',
+          top: insets.top + 10,
+          left: 16,
+          zIndex: 10,
         }}
       >
         <TouchableOpacity
@@ -170,54 +172,84 @@ export default function OTPScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: 'rgba(255,255,255,0.22)',
+            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: 16,
           }}
         >
-          <ArrowLeft size={20} color="#FFFFFF" />
+          <ArrowLeft size={20} color={isDark ? '#FFFFFF' : '#0F172A'} />
         </TouchableOpacity>
-
-        <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>
-          Verify OTP
-        </Text>
-        <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4, fontWeight: '500' }}>
-          Sent 6-digit code to {phone || 'registered phone'}
-        </Text>
       </View>
 
-      {/* Signature Lower Content Sheet */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: sheetBg,
-          marginTop: -16,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          overflow: 'hidden',
-          paddingHorizontal: 20,
-          paddingTop: 30,
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingHorizontal: 22,
+          paddingTop: insets.top + 60,
+          paddingBottom: insets.bottom + 20,
         }}
       >
-        {/* OTP Input Card */}
+        {/* Centered Header Text */}
+        <View style={{ alignItems: 'center', marginBottom: 26 }}>
+          <Text
+            style={{
+              color: isDark ? '#FFFFFF' : '#0F172A',
+              fontSize: 26,
+              fontWeight: '900',
+              letterSpacing: -0.5,
+              textAlign: 'center',
+            }}
+          >
+            Verify OTP
+          </Text>
+          <Text
+            style={{
+              color: isDark ? '#94A3B8' : '#64748B',
+              fontSize: 14,
+              marginTop: 6,
+              fontWeight: '600',
+              textAlign: 'center',
+            }}
+          >
+            Sent 6-digit code to {phone || 'registered phone'}
+          </Text>
+        </View>
+
+        {/* Centered Verification Card */}
         <Animated.View
           style={{
             backgroundColor: cardBg,
             borderRadius: 24,
-            padding: 24,
+            padding: 22,
             borderWidth: 1,
             borderColor: borderColor,
             transform: [{ translateX: shakeAnim }],
             marginBottom: 20,
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: isDark ? 0.25 : 0.06,
+            shadowRadius: 12,
+            elevation: 3,
           }}
         >
-          <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 16, textAlign: 'center', letterSpacing: 0.5 }}>
-            ENTER 6-DIGIT VERIFICATION CODE
+          <Text
+            style={{
+              color: isDark ? '#CBD5E1' : '#475569',
+              fontSize: 11,
+              fontWeight: '800',
+              marginBottom: 16,
+              textAlign: 'center',
+              letterSpacing: 0.5,
+              textTransform: 'uppercase',
+            }}
+          >
+            Enter 6-Digit Verification Code
           </Text>
 
           {/* 6 Digit Inputs */}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
             {otp.map((digit, index) => (
               <TextInput
                 key={index}
@@ -229,12 +261,12 @@ export default function OTPScreen() {
                 maxLength={1}
                 textAlign="center"
                 style={{
-                  width: 46,
-                  height: 56,
-                  borderRadius: 16,
+                  width: 44,
+                  height: 54,
+                  borderRadius: 14,
                   backgroundColor: inputBg,
                   borderWidth: digit ? 2 : 1,
-                  borderColor: digit ? (isDark ? '#60A5FA' : '#3B82F6') : borderColor,
+                  borderColor: digit ? '#153580' : borderColor,
                   color: theme.text,
                   fontSize: 22,
                   fontWeight: '800',
@@ -244,7 +276,15 @@ export default function OTPScreen() {
           </View>
 
           {error && (
-            <Text style={{ color: isDark ? '#F87171' : '#DC2626', fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 16 }}>
+            <Text
+              style={{
+                color: isDark ? '#F87171' : '#DC2626',
+                fontSize: 13,
+                fontWeight: '600',
+                textAlign: 'center',
+                marginBottom: 16,
+              }}
+            >
               {error}
             </Text>
           )}
@@ -255,9 +295,9 @@ export default function OTPScreen() {
             disabled={isLoading}
             activeOpacity={0.88}
             style={{
-              backgroundColor: isDark ? '#FFFFFF' : '#153580',
-              paddingVertical: 18,
-              borderRadius: 34,
+              backgroundColor: '#153580',
+              paddingVertical: 16,
+              borderRadius: 30,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -266,21 +306,20 @@ export default function OTPScreen() {
               shadowOpacity: 0.35,
               shadowRadius: 10,
               shadowOffset: { width: 0, height: 4 },
-              elevation: 6,
+              elevation: 4,
             }}
           >
             {isLoading ? (
-              <ActivityIndicator color={isDark ? '#0C1829' : '#FFFFFF'} />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <>
-                <Check size={20} color={isDark ? '#0C1829' : '#FFFFFF'} strokeWidth={2.5} />
-                <Text style={{ color: isDark ? '#0C1829' : '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
                   Verify & Enter
                 </Text>
               </>
             )}
           </TouchableOpacity>
-
         </Animated.View>
 
         {/* Resend Section */}
@@ -288,7 +327,7 @@ export default function OTPScreen() {
           <RefreshCw size={15} color={theme.textMuted} />
           {canResend ? (
             <TouchableOpacity onPress={() => { setResendTimer(RESEND_SECONDS); setCanResend(false); }}>
-              <Text style={{ color: isDark ? '#60A5FA' : '#1D4ED8', fontSize: 14, fontWeight: '700' }}>
+              <Text style={{ color: '#153580', fontSize: 14, fontWeight: '800' }}>
                 Resend New Code
               </Text>
             </TouchableOpacity>
@@ -298,7 +337,7 @@ export default function OTPScreen() {
             </Text>
           )}
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

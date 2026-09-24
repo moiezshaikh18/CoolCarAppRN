@@ -149,7 +149,7 @@ export default function EntriesScreen() {
       >
 
         {/* Royal Blue Top Header */}
-        <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 22 }}>
+        <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
           <View style={{ marginBottom: 16 }}>
             <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
               Daily Ledger
@@ -188,24 +188,8 @@ export default function EntriesScreen() {
           </View>
         </View>
 
-        {/* Lower Content Sheet (Full Height with Zero Cutoff) */}
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: sheetBg,
-            marginTop: -14,
-            borderTopLeftRadius: 36,
-            borderTopRightRadius: 36,
-            paddingTop: 24,
-            paddingHorizontal: 20,
-            paddingBottom: 40,
-            shadowColor: '#0C1829',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: isDark ? 0.4 : 0.06,
-            shadowRadius: 16,
-            elevation: 8,
-          }}
-        >
+        {/* Unified Lower Content (Seamless with zero cut-off lines) */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
           {/* Segmented Switcher Capsule */}
           <View
             style={{
