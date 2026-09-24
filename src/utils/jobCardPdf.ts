@@ -7,6 +7,7 @@
 
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { File, Paths } from 'expo-file-system';
 
 export interface JobCardPdfData {
   jobNumber: string;
@@ -595,23 +596,27 @@ export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<
 </body>
 </html>`;
 
-  try {
-    // Print HTML to PDF file
-    const result = await Print.printToFileAsync({ html, base64: false });
-    const pdfUri = result.uri;
+  // Step 1: Render HTML → temp PDF (expo-print writes to an internal temp dir)
+  const result = await Print.printToFileAsync({ html, base64: false });
+  const tempUri = result.uri;
 
-    // Share / Download via native sheet
-    const canShare = await Sharing.isAvailableAsync();
-    if (canShare) {
-      await Sharing.shareAsync(pdfUri, {
-        mimeType: 'application/pdf',
-        UTI: 'com.adobe.pdf',
-      });
-    } else {
-      // Fallback: Just print it
-      await Print.printAsync({ uri: pdfUri });
-    }
-  } catch (printErr) {
-    throw printErr;
+  // Step 2: Copy to a named file in cacheDirectory.
+  // Android expo-sharing CANNOT access the raw expo-print temp path directly.
+  // Copying to Paths.cache (cacheDirectory) first is the correct fix.
+  const safeJobNum = (data.jobNumber || 'job').replace(/[^a-zA-Z0-9-]/g, '_');
+  const destFile = new File(Paths.cache, `CoolCar_JobCard_${safeJobNum}.pdf`);
+  const sourceFile = new File(tempUri);
+  sourceFile.copy(destFile);
+
+  // Step 3: Share from the accessible cache URI
+  const canShare = await Sharing.isAvailableAsync();
+  if (canShare) {
+    await Sharing.shareAsync(destFile.uri, {
+      mimeType: 'application/pdf',
+      UTI: 'com.adobe.pdf',
+    });
+  } else {
+    // Fallback: open system print dialog
+    await Print.printAsync({ uri: destFile.uri });
   }
 }
