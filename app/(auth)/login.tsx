@@ -74,10 +74,10 @@ export default function LoginScreen() {
     });
   };
 
-  const skyBg = isDark ? '#000000' : '#153580';
-  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
-  const cardBg = isDark ? '#141824' : '#FFFFFF';
-  const inputBg = isDark ? '#1C2538' : '#F8FAFC';
+  const skyBg = isDark ? '#181A20' : '#153580';
+  const sheetBg = isDark ? '#181A20' : '#F4F6F9';
+  const cardBg = isDark ? '#242834' : '#FFFFFF';
+  const inputBg = isDark ? '#1E232F' : '#F8FAFC';
   const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
 
   return (

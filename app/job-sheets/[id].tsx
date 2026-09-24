@@ -475,30 +475,50 @@ export default function JobSheetDetailsScreen() {
           )}
 
           {/* User Requested: "Payment" button with Amount Modify & Bank Selection */}
-          <TouchableOpacity
-            onPress={handleOpenPayment}
-            activeOpacity={0.88}
-            style={{
-              backgroundColor: '#153580',
-              paddingVertical: 16,
-              borderRadius: 24,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              marginTop: 20,
-              shadowColor: '#153580',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 10,
-              elevation: 4,
-            }}
-          >
-            <ArrowDown size={18} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              Payment {job.pendingAmount > 0 ? `(${formatCurrency(job.pendingAmount, currencySymbol)})` : ''}
-            </Text>
-          </TouchableOpacity>
+          {isDone ? (
+            <View
+              style={{
+                backgroundColor: '#10B981',
+                paddingVertical: 16,
+                borderRadius: 24,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                marginTop: 20,
+              }}
+            >
+              <CheckCircle2 size={20} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                Job Completed & Paid in Full ✓
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={handleOpenPayment}
+              activeOpacity={0.88}
+              style={{
+                backgroundColor: '#153580',
+                paddingVertical: 16,
+                borderRadius: 24,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                marginTop: 20,
+                shadowColor: '#153580',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 10,
+                elevation: 4,
+              }}
+            >
+              <ArrowDown size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                Payment {job.pendingAmount > 0 ? `(${formatCurrency(job.pendingAmount, currencySymbol)})` : ''}
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </View>
 
@@ -517,7 +537,7 @@ export default function JobSheetDetailsScreen() {
               borderTopRightRadius: 28,
               padding: 20,
               paddingBottom: insets.bottom + 20,
-              gap: 16,
+              gap: 14,
             }}
           >
             {/* Modal Header */}
@@ -538,10 +558,44 @@ export default function JobSheetDetailsScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Total, Paid, and Current Balance Overview */}
+            <View
+              style={{
+                flexDirection: 'row',
+                backgroundColor: isDark ? '#1C2538' : '#F8FAFC',
+                borderRadius: 16,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: cardBorder,
+                justifyContent: 'space-around',
+              }}
+            >
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Total Bill</Text>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A', marginTop: 2 }}>
+                  {formatCurrency(job.finalAmount, currencySymbol)}
+                </Text>
+              </View>
+              <View style={{ width: 1, backgroundColor: cardBorder }} />
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Already Paid</Text>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#10B981', marginTop: 2 }}>
+                  {formatCurrency(job.totalPaid || 0, currencySymbol)}
+                </Text>
+              </View>
+              <View style={{ width: 1, backgroundColor: cardBorder }} />
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Balance Due</Text>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#EF4444', marginTop: 2 }}>
+                  {formatCurrency(job.pendingAmount, currencySymbol)}
+                </Text>
+              </View>
+            </View>
+
             {/* Editable Amount Input */}
             <View>
               <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 6 }}>
-                Payment Amount (Modify if partial payment)
+                Collecting Now (Modify if customer leaves balance/udhari)
               </Text>
               <View
                 style={{
@@ -572,6 +626,47 @@ export default function JobSheetDetailsScreen() {
                   }}
                 />
               </View>
+
+              {/* Dynamic Udhari / Balance Calculation */}
+              {(() => {
+                const payingNow = parseFloat(paymentAmountStr) || 0;
+                const remainingUdhari = Math.max(0, job.pendingAmount - payingNow);
+                return remainingUdhari > 0 ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: isDark ? '#450A0A' : '#FEF2F2',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      marginTop: 8,
+                      gap: 6,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#EF4444' }}>
+                      Remaining Udhari / Due: {formatCurrency(remainingUdhari, currencySymbol)}
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: isDark ? '#064E3B' : '#F0FDF4',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      marginTop: 8,
+                      gap: 6,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#10B981' }}>
+                      Full payment — no customer balance will remain.
+                    </Text>
+                  </View>
+                );
+              })()}
             </View>
 
             {/* Payment Mode Selector Tabs with Authentic Logos */}

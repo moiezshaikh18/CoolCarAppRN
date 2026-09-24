@@ -134,9 +134,10 @@ export default function EntriesScreen() {
   const totalJobsAmount = jobs.reduce((sum, j) => sum + j.amount, 0);
   const totalExpensesAmount = realExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const canvasBg = isDark ? '#000000' : '#153580';
-  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
+  const canvasBg = isDark ? '#181A20' : '#153580';
+  const sheetBg = isDark ? '#181A20' : '#F4F6F9';
+  const cardBg = isDark ? '#242834' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
@@ -144,38 +145,18 @@ export default function EntriesScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={onHideNavScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
       >
 
         {/* Royal Blue Top Header */}
-        <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <View>
-              <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
-                Daily Ledger
-              </Text>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
-                Operational & Financial Tracking
-              </Text>
-            </View>
-
-            {/* Circular Add Button */}
-            <TouchableOpacity
-              onPress={() => {
-                if (activeTab === 'jobSheets') router.push('/job-sheets/create');
-                else router.push('/expenses/add');
-              }}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.22)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
+        <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 22 }}>
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
+              Daily Ledger
+            </Text>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+              Operational & Financial Tracking
+            </Text>
           </View>
 
           {/* Date Selector Pill */}
@@ -207,16 +188,17 @@ export default function EntriesScreen() {
           </View>
         </View>
 
-        {/* Lower Content Sheet */}
+        {/* Lower Content Sheet (Full Height with Zero Cutoff) */}
         <View
           style={{
+            flex: 1,
             backgroundColor: sheetBg,
+            marginTop: -14,
             borderTopLeftRadius: 36,
             borderTopRightRadius: 36,
             paddingTop: 24,
             paddingHorizontal: 20,
-            paddingBottom: 24,
-            minHeight: 500,
+            paddingBottom: 40,
             shadowColor: '#0C1829',
             shadowOffset: { width: 0, height: -4 },
             shadowOpacity: isDark ? 0.4 : 0.06,
@@ -331,9 +313,14 @@ export default function EntriesScreen() {
                     paddingVertical: 14,
                     paddingHorizontal: 16,
                     borderRadius: 22,
-                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                    backgroundColor: cardBg,
                     borderWidth: 1,
                     borderColor: cardBorder,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: isDark ? 0.2 : 0.04,
+                    shadowRadius: 8,
+                    elevation: 2,
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
@@ -394,9 +381,14 @@ export default function EntriesScreen() {
                       paddingVertical: 14,
                       paddingHorizontal: 16,
                       borderRadius: 22,
-                      backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                      backgroundColor: cardBg,
                       borderWidth: 1,
                       borderColor: cardBorder,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: isDark ? 0.2 : 0.04,
+                      shadowRadius: 8,
+                      elevation: 2,
                     }}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>

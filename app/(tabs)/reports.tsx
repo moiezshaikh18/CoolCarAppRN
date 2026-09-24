@@ -26,6 +26,12 @@ import {
   Receipt,
   Car,
   CheckCircle2,
+  Banknote,
+  QrCode,
+  CreditCard,
+  Building2,
+  Package,
+  Wallet,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -35,8 +41,12 @@ import { formatCurrency } from '../../src/utils/currency';
 import { useExpenseStore } from '../../src/store/expenseStore';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { useChalanStore } from '../../src/store/chalanStore';
+import { usePaymentStore } from '../../src/store/paymentStore';
+import { useBankAccountStore } from '../../src/store/bankAccountStore';
+import { generateAndShareFinancialPdf } from '../../src/utils/pdfReport';
 import { router } from 'expo-router';
 import { useHideOnScroll } from '../../src/store/tabBarStore';
+import { Alert, ActivityIndicator } from 'react-native';
 
 export default function ReportsScreen() {
   const { theme, isDark } = useTheme();
@@ -48,6 +58,9 @@ export default function ReportsScreen() {
   const { expenses } = useExpenseStore();
   const { jobSheets } = useJobSheetStore();
   const { chalans } = useChalanStore();
+  const { payments } = usePaymentStore();
+  const { accounts } = useBankAccountStore();
+  const [isExporting, setIsExporting] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const firstOfMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
@@ -100,6 +113,13 @@ export default function ReportsScreen() {
     });
   }, [chalans, fromDate, toDate]);
 
+  const filteredPayments = useMemo(() => {
+    return payments.filter((p) => {
+      const d = (p.date ? (typeof p.date === 'string' ? p.date : new Date(p.date).toISOString()) : '').split('T')[0];
+      return d >= fromDate && d <= toDate;
+    });
+  }, [payments, fromDate, toDate]);
+
   // Aggregated Financials
   const totalBilled = filteredJobs.reduce((sum, j) => sum + (j.finalAmount || 0), 0);
   const totalCollected = filteredJobs.reduce((sum, j) => sum + (j.totalPaid || 0), 0);
@@ -112,9 +132,81 @@ export default function ReportsScreen() {
   const totalOutflow = totalExpenseOutflow + totalChalanPaid;
   const netSurplus = totalCollected - totalOutflow;
 
-  const canvasBg = isDark ? '#000000' : '#153580';
-  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
+  // Granular Collections Breakdown
+  const cashCollections = useMemo(() => {
+    return filteredPayments.filter((p) => p.paymentMode === 'CASH').reduce((sum, p) => sum + p.amount, 0);
+  }, [filteredPayments]);
+
+  const upiCollections = useMemo(() => {
+    return filteredPayments.filter((p) => p.paymentMode === 'UPI').reduce((sum, p) => sum + p.amount, 0);
+  }, [filteredPayments]);
+
+  const swipeCollections = useMemo(() => {
+    return filteredPayments.filter((p) => p.paymentMode === 'CARD_SWIPE').reduce((sum, p) => sum + p.amount, 0);
+  }, [filteredPayments]);
+
+  const bankCollections = useMemo(() => {
+    const map = new Map<string, { bankName: string; amount: number; mode: string }>();
+    filteredPayments.forEach((p) => {
+      if ((p.paymentMode === 'UPI' || p.paymentMode === 'CARD_SWIPE') && p.paymentAccountName) {
+        const key = `${p.paymentAccountName}-${p.paymentMode}`;
+        const existing = map.get(key) || { 
+          bankName: p.paymentAccountName, 
+          amount: 0, 
+          mode: p.paymentMode === 'CARD_SWIPE' ? 'Swipe (POS)' : 'UPI QR' 
+        };
+        existing.amount += p.amount;
+        map.set(key, existing);
+      }
+    });
+    return Array.from(map.values());
+  }, [filteredPayments]);
+
+  const staffSalaryExpenses = useMemo(() => {
+    return filteredExpenses
+      .filter((e) => e.categoryId === 'cat-salary' || e.categoryId === 'cat-advance' || e.categoryName?.toLowerCase().includes('salary') || e.categoryName?.toLowerCase().includes('advance'))
+      .reduce((sum, e) => sum + e.amount, 0);
+  }, [filteredExpenses]);
+
+  const generalExpenses = useMemo(() => {
+    return Math.max(0, totalExpenseOutflow - staffSalaryExpenses);
+  }, [totalExpenseOutflow, staffSalaryExpenses]);
+
+  const handleExportPdf = async () => {
+    try {
+      setIsExporting(true);
+      await generateAndShareFinancialPdf({
+        fromDate,
+        toDate,
+        currencySymbol,
+        totalBilled,
+        totalCollected,
+        totalPendingReceivables,
+        totalExpenseOutflow,
+        totalChalanPaid,
+        totalChalanPending,
+        netSurplus,
+        cashCollections,
+        upiCollections,
+        swipeCollections,
+        bankCollections,
+        staffSalaryExpenses,
+        partsPurchasesAmount: totalChalanPaid,
+        generalExpenses,
+        jobsCount: filteredJobs.length,
+        chalansCount: filteredChalans.length,
+      });
+    } catch (err: any) {
+      Alert.alert('Export Error', err?.message || 'Could not generate PDF report.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const canvasBg = isDark ? '#181A20' : '#153580';
+  const sheetBg = isDark ? '#181A20' : '#F4F6F9';
+  const cardBg = isDark ? '#242834' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
@@ -134,7 +226,8 @@ export default function ReportsScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={() => router.push('/settings/export')}
+            onPress={handleExportPdf}
+            disabled={isExporting}
             style={{
               width: 40,
               height: 40,
@@ -144,7 +237,11 @@ export default function ReportsScreen() {
               justifyContent: 'center',
             }}
           >
-            <Download size={18} color="#FFFFFF" />
+            {isExporting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Download size={18} color="#FFFFFF" />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -415,6 +512,253 @@ export default function ReportsScreen() {
                 {formatCurrency(totalChalanPending, currencySymbol)}
               </Text>
               <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>{filteredChalans.length} chalans</Text>
+            </View>
+          </View>
+
+          {/* Granular Inflow Breakdown by Channel & Bank Accounts */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 14,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: 'rgba(0, 200, 150, 0.12)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Wallet size={16} color="#00C896" />
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  Inflows by Channel & Bank
+                </Text>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: '#00C896' }}>
+                +{formatCurrency(totalCollected, currencySymbol)}
+              </Text>
+            </View>
+
+            {/* Cash Counter */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingVertical: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Banknote size={16} color="#10B981" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E2E8F0' : '#1E293B' }}>
+                  Cash Counter Collection
+                </Text>
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                {formatCurrency(cashCollections, currencySymbol)}
+              </Text>
+            </View>
+
+            {/* UPI QR Inflows */}
+            <View
+              style={{
+                paddingVertical: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <QrCode size={16} color="#3B82F6" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E2E8F0' : '#1E293B' }}>
+                    UPI QR Inflows
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  {formatCurrency(upiCollections, currencySymbol)}
+                </Text>
+              </View>
+
+              {/* Sub-rows for each UPI bank account */}
+              {bankCollections
+                .filter((b) => b.mode === 'UPI QR')
+                .map((b, idx) => (
+                  <View
+                    key={`upi-${b.bankName}-${idx}`}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingLeft: 24,
+                      paddingTop: 6,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                      ↳ {b.bankName}
+                    </Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? '#94A3B8' : '#475569' }}>
+                      {formatCurrency(b.amount, currencySymbol)}
+                    </Text>
+                  </View>
+                ))}
+            </View>
+
+            {/* Card Swipe / POS Inflows */}
+            <View style={{ paddingVertical: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <CreditCard size={16} color="#8B5CF6" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E2E8F0' : '#1E293B' }}>
+                    Card Swipe (POS Machine)
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  {formatCurrency(swipeCollections, currencySymbol)}
+                </Text>
+              </View>
+
+              {/* Sub-rows for each Swipe bank account */}
+              {bankCollections
+                .filter((b) => b.mode === 'Swipe (POS)')
+                .map((b, idx) => (
+                  <View
+                    key={`swipe-${b.bankName}-${idx}`}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingLeft: 24,
+                      paddingTop: 6,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                      ↳ {b.bankName}
+                    </Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? '#94A3B8' : '#475569' }}>
+                      {formatCurrency(b.amount, currencySymbol)}
+                    </Text>
+                  </View>
+                ))}
+            </View>
+          </View>
+
+          {/* Granular Outflow Breakdown: Parts, Staff & General Expenses */}
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <TrendingDown size={16} color="#EF4444" />
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  Outflows Breakdown
+                </Text>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: '#EF4444' }}>
+                -{formatCurrency(totalOutflow, currencySymbol)}
+              </Text>
+            </View>
+
+            {/* Spare Parts Purchases */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingVertical: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Package size={16} color="#F59E0B" />
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E2E8F0' : '#1E293B' }}>
+                    Inward Parts Purchases
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>From vendor chalans</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                {formatCurrency(totalChalanPaid, currencySymbol)}
+              </Text>
+            </View>
+
+            {/* Staff Salaries & Advances */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingVertical: 10,
+                borderBottomWidth: 1,
+                borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Building2 size={16} color="#6366F1" />
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E2E8F0' : '#1E293B' }}>
+                    Staff Salary & Advances
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>Mechanic & helper payroll</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                {formatCurrency(staffSalaryExpenses, currencySymbol)}
+              </Text>
+            </View>
+
+            {/* General Workshop Expenses */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: 10,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Receipt size={16} color="#64748B" />
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E2E8F0' : '#1E293B' }}>
+                    General Expenses
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>Rent, tea, utilities, consumables</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                {formatCurrency(generalExpenses, currencySymbol)}
+              </Text>
             </View>
           </View>
 

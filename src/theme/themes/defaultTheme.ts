@@ -13,16 +13,16 @@ export const defaultTheme: EnterpriseTheme = {
   secondary: '#153580',
   accent: '#00C896',
 
-  // Backgrounds — True dark black with deep navy surfaces
-  background: '#070A0F',
-  surface: '#111622',
-  surfaceAlt: '#182030',
+  // Backgrounds — Sleek Slate Dark Mode matching reference design (media_1790285303012.png)
+  background: '#181A20',
+  surface: '#242834',
+  surfaceAlt: '#2D3242',
 
   // Text — Crisp white contrast
   text: '#FFFFFF',
   textSecondary: '#94A3B8',
   textMuted: '#64748B',
-  textInverse: '#070A0F',
+  textInverse: '#181A20',
 
   // Semantic
   error: '#EF4444',
@@ -31,18 +31,18 @@ export const defaultTheme: EnterpriseTheme = {
   info: '#60A5FA',
 
   // Borders
-  border: 'rgba(255, 255, 255, 0.1)',
-  borderLight: 'rgba(255, 255, 255, 0.05)',
+  border: 'rgba(255, 255, 255, 0.08)',
+  borderLight: 'rgba(255, 255, 255, 0.04)',
 
   // Glass
   glassOpacity: 0.15,
   glassBlur: 20,
-  glassBorder: 'rgba(255, 255, 255, 0.12)',
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
   glassSurface: 'rgba(255, 255, 255, 0.06)',
 
   // Gradients
-  gradientStart: '#111622',
-  gradientEnd: '#070A0F',
+  gradientStart: '#242834',
+  gradientEnd: '#181A20',
   gradientAngle: 135,
 
   // Shape — Mega-curved luxury radius

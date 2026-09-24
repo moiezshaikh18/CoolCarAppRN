@@ -352,7 +352,7 @@ export default function CreateJobSheetScreen() {
       workCategory,
       date: jobDate,
       time: jobTime,
-      status: (remainingBalance === 0 ? 'COMPLETED' : 'IN_PROGRESS') as any,
+      status: 'IN_PROGRESS' as any,
       assignedMechanicId: selectedMechanic?.id || '',
       assignedMechanicName: selectedMechanic ? `${selectedMechanic.name} (${selectedMechanic.role})` : 'Unassigned',
       items: items.map((it) => ({
@@ -367,13 +367,10 @@ export default function CreateJobSheetScreen() {
       discount: discountVal,
       previousPendingAmount: prevPendingVal,
       finalAmount: totalBillDue,
-      amountCollectedNow: paidNowVal,
-      totalPaid: paidNowVal,
-      pendingAmount: remainingBalance,
-      paymentStatus: (remainingBalance === 0 ? 'PAID' : paidNowVal > 0 ? 'PARTIALLY_PAID' : 'PENDING') as any,
-      paymentMode: paidNowVal > 0 ? paymentMode : undefined,
-      bankAccountId: paidNowVal > 0 ? selectedAccountId : undefined,
-      bankAccountName: paidNowVal > 0 ? selectedAccountName : undefined,
+      amountCollectedNow: 0,
+      totalPaid: 0,
+      pendingAmount: totalBillDue,
+      paymentStatus: 'PENDING' as any,
       notes: `${workCategory} Work Order - Intaken at Cool Car`,
       voided: false,
       createdBy: 'Cool Car Manager',
@@ -385,7 +382,7 @@ export default function CreateJobSheetScreen() {
 
     showAlert(
       'Job Sheet Created!',
-      `Job Sheet #${jobNum} created for ${finalModel} (${cleanReg}).\nTotal Bill: ₹${totalBillDue.toLocaleString()}.\nPaid Now: ₹${paidNowVal.toLocaleString()}.`,
+      `Job Sheet #${jobNum} created for ${finalModel} (${cleanReg}).\nTotal Bill: ₹${totalBillDue.toLocaleString()}.\nStatus: In Progress.`,
       'success',
       [
         {
@@ -958,56 +955,7 @@ export default function CreateJobSheetScreen() {
                 ₹{totalBillDue.toLocaleString()}
               </Text>
             </View>
-
-            {/* Amount Paid Now */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={{ fontSize: 13, color: '#00C896', fontWeight: '800' }}>Amount Paid Now:</Text>
-              <TextInput
-                value={amountPaidNow}
-                onChangeText={setAmountPaidNow}
-                keyboardType="numeric"
-                style={{
-                  width: 110,
-                  backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
-                  borderRadius: 12,
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  fontSize: 15,
-                  fontWeight: '900',
-                  color: '#00C896',
-                  textAlign: 'right',
-                  borderWidth: 1,
-                  borderColor: cardBorder,
-                }}
-              />
-            </View>
-
-            {/* Remaining Balance */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: remainingBalance > 0 ? '#EF4444' : '#00C896' }}>
-                {remainingBalance > 0 ? 'Remaining Balance Due:' : 'Status:'}
-              </Text>
-              <Text style={{ fontSize: 14, fontWeight: '900', color: remainingBalance > 0 ? '#EF4444' : '#00C896' }}>
-                {remainingBalance > 0 ? `₹${remainingBalance.toLocaleString()}` : 'Fully Paid ✓'}
-              </Text>
-            </View>
           </View>
-
-          {/* STEP 6: Bank & Payment Mode Selector */}
-          {paidNowVal > 0 && (
-            <View style={{ marginBottom: 16 }}>
-              <BankPaymentSelector
-                paymentMode={paymentMode}
-                onPaymentModeChange={setPaymentMode}
-                selectedAccountId={selectedAccountId}
-                onAccountChange={(id, name) => {
-                  setSelectedAccountId(id);
-                  setSelectedAccountName(name);
-                }}
-                label="Receive Payment Into"
-              />
-            </View>
-          )}
 
           {/* SUBMIT BUTTON */}
           <TouchableOpacity

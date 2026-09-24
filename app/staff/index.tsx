@@ -99,25 +99,6 @@ export default function StaffListScreen() {
               </Text>
             </View>
           </View>
-
-          <TouchableOpacity
-            onPress={() => router.push('/staff/add')}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: '#0C1829',
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOpacity: 0.25,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 4,
-            }}
-          >
-            <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-          </TouchableOpacity>
         </View>
 
         {/* Search Input */}
@@ -360,7 +341,7 @@ export default function StaffListScreen() {
         </ScrollView>
 
         {/* Floating Midnight Navy CTA: Add New Staff */}
-        <View style={{ position: 'absolute', bottom: 24, left: 20, right: 20 }}>
+        <View style={{ position: 'absolute', bottom: Math.max(insets.bottom + 10, 20), left: 20, right: 20 }}>
           <TouchableOpacity
             onPress={() => router.push('/staff/add')}
             activeOpacity={0.88}

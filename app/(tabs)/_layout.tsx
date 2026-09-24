@@ -15,6 +15,7 @@ import {
   Car,
   Receipt,
   FileText,
+  AlertCircle,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -295,6 +296,44 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
               </Text>
               <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
                 Record salary payment with bank/cash deduction
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* 5. Pending Customer Balances (Udhari) */}
+          <TouchableOpacity
+            onPress={() => {
+              setAddSheetOpen(false);
+              router.push('/payments/pending');
+            }}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 16,
+              borderRadius: 22,
+              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              gap: 14,
+            }}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: '#EF4444',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AlertCircle size={20} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 16, fontWeight: '800' }}>
+                Pending Customer Balances
+              </Text>
+              <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
+                Track udhari, unpaid work orders & collect due cash
               </Text>
             </View>
           </TouchableOpacity>

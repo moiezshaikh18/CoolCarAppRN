@@ -105,25 +105,6 @@ export default function CustomerListScreen() {
               </Text>
             </View>
           </View>
-
-          <TouchableOpacity
-            onPress={() => router.push('/customers/add' as any)}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: '#0C1829',
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOpacity: 0.25,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 4,
-            }}
-          >
-            <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-          </TouchableOpacity>
         </View>
 
         {/* Pill Search Input */}
@@ -257,7 +238,7 @@ export default function CustomerListScreen() {
         </ScrollView>
 
         {/* Floating Midnight Navy CTA Button */}
-        <View style={{ position: 'absolute', bottom: 24, left: 20, right: 20 }}>
+        <View style={{ position: 'absolute', bottom: Math.max(insets.bottom + 10, 20), left: 20, right: 20 }}>
           <TouchableOpacity
             onPress={() => router.push('/customers/add' as any)}
             activeOpacity={0.88}

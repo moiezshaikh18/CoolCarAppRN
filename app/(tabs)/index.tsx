@@ -141,9 +141,9 @@ export default function DashboardScreen() {
   }, [storeJobSheets]);
 
   // Derived Metrics
-  const totalLiquidBalance = useMemo(
-    () => accounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0),
-    [accounts]
+  const totalCustomerPendingDue = useMemo(
+    () => allJobSheets.reduce((sum, j) => sum + (j.pendingAmount !== undefined ? j.pendingAmount : Math.max(0, j.amount - j.paidAmount)), 0),
+    [allJobSheets]
   );
 
   const activeStaffCount = useMemo(
@@ -197,9 +197,9 @@ export default function DashboardScreen() {
 
   // Color Palette
   // Light Mode: Mechanic Uniform Slate Charcoal (#2B3544) & Royal Blue (#153580)
-  // Dark Mode: Deep Black (#000000) & Stark White (#FFFFFF)
-  const canvasBg = isDark ? '#000000' : '#153580'; // Top Hero/Header Background
-  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9'; // Seamless Lower Background
+  // Dark Mode: Slate Charcoal (#181A20) & Cards (#242834) matching reference design
+  const canvasBg = isDark ? '#181A20' : '#153580'; // Top Hero/Header Background
+  const sheetBg = isDark ? '#181A20' : '#F4F6F9'; // Seamless Lower Background
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
 
   return (
@@ -351,10 +351,10 @@ export default function DashboardScreen() {
 
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
-                      Liquid Bank Balances
+                      Customer Due (Udhari)
                     </Text>
-                    <Text style={{ color: '#60A5FA', fontSize: 14, fontWeight: '900' }}>
-                      {formatCurrency(totalLiquidBalance, currencySymbol)}
+                    <Text style={{ color: '#FCA5A5', fontSize: 14, fontWeight: '900' }}>
+                      {formatCurrency(totalCustomerPendingDue, currencySymbol)}
                     </Text>
                   </View>
                 </View>
@@ -590,7 +590,7 @@ export default function DashboardScreen() {
                   activeOpacity={0.88}
                   style={{
                     flex: 1,
-                    backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
                     borderRadius: 20,
                     padding: 14,
                     borderWidth: 1,
@@ -629,7 +629,7 @@ export default function DashboardScreen() {
                   activeOpacity={0.88}
                   style={{
                     flex: 1,
-                    backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
                     borderRadius: 20,
                     padding: 14,
                     borderWidth: 1,
@@ -672,7 +672,7 @@ export default function DashboardScreen() {
                   activeOpacity={0.88}
                   style={{
                     flex: 1,
-                    backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
                     borderRadius: 20,
                     padding: 14,
                     borderWidth: 1,
@@ -711,7 +711,7 @@ export default function DashboardScreen() {
                   activeOpacity={0.88}
                   style={{
                     flex: 1,
-                    backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
                     borderRadius: 20,
                     padding: 14,
                     borderWidth: 1,
@@ -755,7 +755,7 @@ export default function DashboardScreen() {
             <View
               style={{
                 flexDirection: 'row',
-                backgroundColor: isDark ? '#141824' : '#E2E8F0',
+                backgroundColor: isDark ? '#242834' : '#E2E8F0',
                 borderRadius: 22,
                 padding: 4,
                 borderWidth: 1,
@@ -830,7 +830,7 @@ export default function DashboardScreen() {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                backgroundColor: isDark ? '#242834' : '#FFFFFF',
                 borderRadius: 16,
                 paddingHorizontal: 14,
                 height: 44,
@@ -879,7 +879,7 @@ export default function DashboardScreen() {
                       paddingVertical: 12,
                       paddingHorizontal: 14,
                       borderRadius: 20,
-                      backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                      backgroundColor: isDark ? '#242834' : '#FFFFFF',
                       borderWidth: 1,
                       borderColor: cardBorder,
                     }}
@@ -955,7 +955,7 @@ export default function DashboardScreen() {
                       paddingVertical: 12,
                       paddingHorizontal: 14,
                       borderRadius: 20,
-                      backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                      backgroundColor: isDark ? '#242834' : '#FFFFFF',
                       borderWidth: 1,
                       borderColor: cardBorder,
                     }}
@@ -1003,7 +1003,7 @@ export default function DashboardScreen() {
                     paddingVertical: 12,
                     paddingHorizontal: 14,
                     borderRadius: 20,
-                    backgroundColor: isDark ? '#141824' : '#FFFFFF',
+                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
                     borderWidth: 1,
                     borderColor: cardBorder,
                   }}

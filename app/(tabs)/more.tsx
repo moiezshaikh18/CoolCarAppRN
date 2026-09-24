@@ -88,9 +88,9 @@ export default function MoreScreen() {
     ]);
   };
 
-  const canvasBg = isDark ? '#000000' : '#153580';
-  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
+  const canvasBg = isDark ? '#181A20' : '#153580';
+  const sheetBg = isDark ? '#181A20' : '#F4F6F9';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(43, 53, 68, 0.06)';
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
@@ -98,7 +98,7 @@ export default function MoreScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={onHideNavScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 160 + insets.bottom }}
       >
 
         {/* Royal Blue Top Header */}

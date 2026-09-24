@@ -25,11 +25,11 @@ export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
 
-  const canvasBg = isDark ? '#0A0D14' : '#F4F6F9';
-  const cardBg = isDark ? '#141824' : '#FFFFFF';
+  const canvasBg = isDark ? '#181A20' : '#F4F6F9';
+  const cardBg = isDark ? '#242834' : '#FFFFFF';
   const textPrimary = isDark ? '#F1F5F9' : '#0F172A';
   const textSecondary = isDark ? '#94A3B8' : '#64748B';
-  const brandBlue = isDark ? '#3B82F6' : '#153580';
+  const brandBlue = isDark ? '#60A5FA' : '#153580';
   const borderCol = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
   return (
