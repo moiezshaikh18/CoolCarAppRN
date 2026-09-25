@@ -41,79 +41,54 @@ export default function LoginScreen() {
       return;
     }
 
+    let savedName = 'Manish Kumar';
+    let savedEmail = identifier.includes('@') ? identifier : 'manish@garage.com';
     try {
-      // 1. Establish real Firebase Auth session so Firestore permissions are granted
-      const { signInAnonymouslyUser } = await import('../../src/services/firebase/auth.service');
-      const fbUser = await signInAnonymouslyUser();
-      const uid = fbUser.uid || 'user-owner-1';
-
-      // 2. Check for previously saved owner name & email from AsyncStorage
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const savedName = await AsyncStorage.getItem('cool_car_saved_owner_name');
-      const savedEmail = await AsyncStorage.getItem('cool_car_saved_owner_email');
+      const n = await AsyncStorage.getItem('cool_car_saved_owner_name');
+      const e = await AsyncStorage.getItem('cool_car_saved_owner_email');
+      if (n) savedName = n;
+      if (e) savedEmail = e;
+    } catch {}
 
-      const ownerName = savedName || 'Workshop Owner';
-      const ownerEmail = savedEmail || (identifier.includes('@') ? identifier : 'owner@coolcargarage.com');
-
-      const loggedInUser = {
-        uid,
-        phone: '9876543210',
-        displayName: ownerName,
-        email: ownerEmail,
-        enterpriseIds: [MOCK_ENTERPRISE.id],
-        activeEnterpriseId: MOCK_ENTERPRISE.id,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      setUser(loggedInUser);
-      setActiveEnterprise(MOCK_ENTERPRISE);
-      setActiveMember({
-        userId: uid,
-        enterpriseId: MOCK_ENTERPRISE.id,
-        role: 'OWNER',
-        displayName: ownerName,
-        phone: '9876543210',
-        isActive: true,
-        joinedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      setAuthState('authenticated');
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      console.error('[Login] Auth error:', err);
-      // Fallback in case of network issue
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const savedName = await AsyncStorage.getItem('cool_car_saved_owner_name');
-      const ownerName = savedName || 'Workshop Owner';
-
-      const fallbackUser = {
-        uid: 'user-owner-1',
-        phone: '9876543210',
-        displayName: ownerName,
-        email: identifier.includes('@') ? identifier : 'owner@coolcargarage.com',
-        enterpriseIds: [MOCK_ENTERPRISE.id],
-        activeEnterpriseId: MOCK_ENTERPRISE.id,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setUser(fallbackUser);
-      setActiveEnterprise(MOCK_ENTERPRISE);
-      setActiveMember({
-        userId: 'user-owner-1',
-        enterpriseId: MOCK_ENTERPRISE.id,
-        role: 'OWNER',
-        displayName: ownerName,
-        phone: '9876543210',
-        isActive: true,
-        joinedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      setAuthState('authenticated');
-      router.replace('/(tabs)');
+    // Attempt Firebase anonymous auth session if allowed in console
+    try {
+      const { signInAnonymously } = await import('firebase/auth');
+      const { auth } = await import('../../src/services/firebase/firebase.config');
+      await signInAnonymously(auth);
+    } catch (authErr) {
+      console.log('[Login] Firebase Auth notice:', authErr);
     }
+
+    const { auth } = await import('../../src/services/firebase/firebase.config');
+    const currentUid = auth.currentUser?.uid || 'user-demo-1';
+
+    const mockUser = {
+      uid: currentUid,
+      phone: '9876543210',
+      displayName: savedName,
+      email: savedEmail,
+      enterpriseIds: [MOCK_ENTERPRISE.id],
+      activeEnterpriseId: MOCK_ENTERPRISE.id,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setUser(mockUser);
+    setActiveEnterprise(MOCK_ENTERPRISE);
+    setActiveMember({
+      userId: currentUid,
+      enterpriseId: MOCK_ENTERPRISE.id,
+      role: 'OWNER',
+      displayName: savedName,
+      phone: '9876543210',
+      isActive: true,
+      joinedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    setAuthState('authenticated');
+    router.replace('/(tabs)');
   };
 
   const handlePhoneOTPFlow = () => {

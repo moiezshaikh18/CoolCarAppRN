@@ -51,29 +51,37 @@ export default function ProfileScreen() {
       const updated = { ...user, displayName: name.trim(), email: email.trim() };
       setUser(updated);
 
+      // Persist locally across app signout/restart
       try {
         const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
         await AsyncStorage.setItem('cool_car_saved_owner_name', name.trim());
         await AsyncStorage.setItem('cool_car_saved_owner_email', email.trim());
-      } catch (err) {
-        console.log('[Profile] AsyncStorage error:', err);
+      } catch (e) {
+        console.log('[Profile] AsyncStorage error:', e);
       }
 
       if (activeMember) {
-        const { setActiveMember } = useEnterpriseStore.getState();
-        setActiveMember({ ...activeMember, displayName: name.trim() });
+        useEnterpriseStore.getState().setActiveMember({
+          ...activeMember,
+          displayName: name.trim(),
+        });
       }
 
       try {
         const { doc, setDoc } = await import('firebase/firestore');
-        const { db } = await import('../../src/services/firebase/firebase.config');
-        await setDoc(doc(db, 'users', user.uid), {
-          displayName: name.trim(),
-          email: email.trim(),
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
+        const { db, auth } = await import('../../src/services/firebase/firebase.config');
+        const targetUid = auth.currentUser?.uid || user.uid || 'user-demo-1';
+        await setDoc(
+          doc(db, 'users', targetUid),
+          {
+            displayName: name.trim(),
+            email: email.trim(),
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
       } catch (err) {
-        console.log('[Profile] Firestore update error:', err);
+        console.log('[Profile] Firestore update warning:', err);
       }
     }
 

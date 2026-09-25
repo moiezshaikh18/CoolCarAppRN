@@ -43,8 +43,6 @@ import { BankPaymentSelector } from '../../src/components/common/BankPaymentSele
 import { formatCurrency } from '../../src/utils/currency';
 import { router } from 'expo-router';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
-import { useCustomerStore } from '../../src/store/customerStore';
-import { useVehicleStore } from '../../src/store/vehicleStore';
 import { useEmployeeStore } from '../../src/store/employeeStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { WorkCategory } from '../../src/types/jobSheet.types';
@@ -107,8 +105,6 @@ export default function CreateJobSheetScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   const { addJobSheet } = useJobSheetStore();
-  const { customers, addCustomer } = useCustomerStore();
-  const { vehicles, addVehicle } = useVehicleStore();
   const rawEmployees = useEmployeeStore((s) => s.employees);
   const employees = Array.isArray(rawEmployees) ? rawEmployees : [];
   const rawAccounts = useBankAccountStore((s) => s.accounts);
@@ -342,85 +338,14 @@ export default function CreateJobSheetScreen() {
       creditAccount(selectedAccountId, paidNowVal);
     }
 
-    // 1. Check or Auto-Create Customer
-    let customerIdToUse = `cust-${Date.now()}`;
-    const cleanPhone = finalCustPhone.replace(/\D/g, '');
-    const existingCust = customers.find(
-      (c) => (cleanPhone && c.phone && c.phone.replace(/\D/g, '') === cleanPhone) ||
-             (c.name.toLowerCase() === finalCustName.toLowerCase() && cleanPhone && c.phone.includes(cleanPhone))
-    );
-
-    if (existingCust) {
-      customerIdToUse = existingCust.id;
-    } else if (finalCustName || finalCustPhone) {
-      const newCust = {
-        id: customerIdToUse,
-        enterpriseId: entId,
-        name: finalCustName,
-        phone: finalCustPhone || '+91 ',
-        totalJobs: 1,
-        pendingAmount: totalBillDue,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      addCustomer(newCust as any);
-      (async () => {
-        try {
-          const { doc, setDoc } = await import('firebase/firestore');
-          const { db } = await import('../../src/services/firebase/firebase.config');
-          await setDoc(doc(db, 'enterprises', entId, 'customers', customerIdToUse), newCust, { merge: true });
-        } catch (e) {
-          console.log('[CreateJob] Auto-customer save error:', e);
-        }
-      })();
-    }
-
-    // 2. Check or Auto-Create Vehicle
-    let vehicleIdToUse = `veh-${Date.now()}`;
-    const cleanPlate = cleanReg.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    const existingVeh = vehicles.find(
-      (v) => v.registrationNumber && v.registrationNumber.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() === cleanPlate
-    );
-
-    if (existingVeh) {
-      vehicleIdToUse = existingVeh.id;
-    } else {
-      const newVeh = {
-        id: vehicleIdToUse,
-        enterpriseId: entId,
-        customerId: customerIdToUse,
-        customerName: finalCustName,
-        customerPhone: finalCustPhone,
-        registrationNumber: cleanReg,
-        make: finalModel.split(' ')[0] || 'Car',
-        model: finalModel,
-        modelYear: parseInt(modelYear, 10) || 2022,
-        totalJobs: 1,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      addVehicle(newVeh as any);
-      (async () => {
-        try {
-          const { doc, setDoc } = await import('firebase/firestore');
-          const { db } = await import('../../src/services/firebase/firebase.config');
-          await setDoc(doc(db, 'enterprises', entId, 'vehicles', vehicleIdToUse), newVeh, { merge: true });
-        } catch (e) {
-          console.log('[CreateJob] Auto-vehicle save error:', e);
-        }
-      })();
-    }
-
     const newJob = {
       id: newJobId,
       enterpriseId: entId,
       jobNumber: jobNum,
-      customerId: customerIdToUse,
+      customerId: `cust-${Date.now()}`,
       customerName: finalCustName,
       customerPhone: finalCustPhone,
-      vehicleId: vehicleIdToUse,
+      vehicleId: `veh-${Date.now()}`,
       vehicleNumber: cleanReg,
       vehicleMake: finalModel.split(' ')[0],
       vehicleModel: finalModel,
@@ -454,17 +379,6 @@ export default function CreateJobSheetScreen() {
     };
 
     addJobSheet(newJob as any);
-
-    // Save directly to Firestore for cloud persistence across restarts
-    (async () => {
-      try {
-        const { doc, setDoc } = await import('firebase/firestore');
-        const { db } = await import('../../src/services/firebase/firebase.config');
-        await setDoc(doc(db, 'enterprises', entId, 'jobSheets', newJobId), newJob);
-      } catch (e) {
-        console.log('[CreateJob] Firestore save job error:', e);
-      }
-    })();
 
     showAlert(
       'Job Sheet Created!',

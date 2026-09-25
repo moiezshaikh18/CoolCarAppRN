@@ -54,7 +54,7 @@ import { useHideOnScroll } from '../../src/store/tabBarStore';
 
 export default function DashboardScreen() {
   const { isDark, toggleMode } = useTheme();
-  const { enterpriseId, currencySymbol, isOwner } = useEnterprise();
+  const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { onScroll: onHideNavScroll } = useHideOnScroll();
 
@@ -82,23 +82,35 @@ export default function DashboardScreen() {
 
         // Sync Job Sheets
         const jobsRef = collection(db, 'enterprises', entId, 'jobSheets');
-        unsubJobs = onSnapshot(query(jobsRef, orderBy('createdAt', 'desc')), (snap) => {
-          const list: any[] = [];
-          snap.forEach((doc) => {
-            list.push({ id: doc.id, ...(doc.data() as any) });
-          });
-          setJobSheets(list);
-        });
+        unsubJobs = onSnapshot(
+          query(jobsRef, orderBy('createdAt', 'desc')),
+          (snap) => {
+            const list: any[] = [];
+            snap.forEach((doc) => {
+              list.push({ id: doc.id, ...(doc.data() as any) });
+            });
+            setJobSheets(list);
+          },
+          (err) => {
+            console.log('[Dashboard] Jobs onSnapshot error:', err.message);
+          }
+        );
 
         // Sync Expenses
         const expRef = collection(db, 'enterprises', entId, 'expenses');
-        unsubExp = onSnapshot(query(expRef, orderBy('createdAt', 'desc')), (snap) => {
-          const list: any[] = [];
-          snap.forEach((doc) => {
-            list.push({ id: doc.id, ...(doc.data() as any) });
-          });
-          setExpenses(list);
-        });
+        unsubExp = onSnapshot(
+          query(expRef, orderBy('createdAt', 'desc')),
+          (snap) => {
+            const list: any[] = [];
+            snap.forEach((doc) => {
+              list.push({ id: doc.id, ...(doc.data() as any) });
+            });
+            setExpenses(list);
+          },
+          (err) => {
+            console.log('[Dashboard] Expenses onSnapshot error:', err.message);
+          }
+        );
       } catch (err) {
         console.log('[Dashboard] Firestore listener error:', err);
       }
@@ -325,15 +337,9 @@ export default function DashboardScreen() {
                   <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
                     {"Month Net Profit"}
                   </Text>
-                  {isOwner ? (
-                    <Text style={{ color: '#00C896', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
-                      +{formatCurrency(monthNetProfit, currencySymbol)}
-                    </Text>
-                  ) : (
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 12, fontWeight: '800', marginTop: 2 }}>
-                      🔒 Owner Only
-                    </Text>
-                  )}
+                  <Text style={{ color: '#00C896', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
+                    +{formatCurrency(monthNetProfit, currencySymbol)}
+                  </Text>
                 </View>
               </View>
 

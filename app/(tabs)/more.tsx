@@ -50,7 +50,6 @@ const MENU_SECTIONS = [
   {
     title: 'Garage Records & Tools',
     items: [
-      { label: 'Staff Roles & Permissions', icon: Shield, route: '/settings/users' },
       { label: 'Customers Directory', icon: Users, route: '/customers' },
       { label: 'Vehicles Fleet', icon: Car, route: '/vehicles' },
       { label: 'Expense Categories', icon: Building2, route: '/expenses/categories' },

@@ -179,9 +179,9 @@ export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<
   body {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 11px;
-    color: #000000;
-    background: #FFFFFF;
-    padding: 12px 16px 16px;
+    color: #0F172A;
+    background: #fff;
+    padding: 14px 18px 20px;
     max-width: 720px;
     margin: 0 auto;
   }
@@ -190,281 +190,328 @@ export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<
   .top-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding-bottom: 6px;
-    margin-bottom: 4px;
+    align-items: flex-start;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8px;
+    margin-bottom: 6px;
   }
-  .brand-block {
-    display: flex;
-    flex-direction: column;
-  }
-  .brand-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .brand-block {}
   .brand-name {
-    font-family: "Brush Script MT", "Segoe Script", cursive, Georgia, serif;
-    font-size: 32px;
-    font-weight: 700;
-    color: #000000;
-    line-height: 1;
-  }
-  .brand-sub {
-    font-size: 10px;
+    font-size: 26px;
     font-weight: 900;
-    letter-spacing: 2px;
-    color: #000000;
-    margin-top: 4px;
+    font-style: italic;
+    color: #153580;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .brand-name .car-icon { font-style: normal; }
+  .brand-sub {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #475569;
+    margin-top: 2px;
     text-transform: uppercase;
   }
   .job-card-badge {
-    background: #000000;
-    color: #FFFFFF;
-    font-size: 16px;
+    background: #000;
+    color: #fff;
+    font-size: 14px;
     font-weight: 900;
-    padding: 6px 18px;
-    letter-spacing: 1.5px;
+    padding: 6px 16px;
+    letter-spacing: 1px;
     border-radius: 2px;
+    align-self: flex-start;
   }
 
-  /* ── Customer Info Box (exact replica of physical card) ── */
-  .info-box {
-    border: 1.5px solid #000000;
-    padding: 6px 10px;
-    margin-bottom: 6px;
+  /* ── Customer Info ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+    margin: 6px 0;
+    border-bottom: 1px solid #555;
+    padding-bottom: 6px;
   }
-  .info-table {
-    width: 100%;
-    border-collapse: collapse;
+  .info-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 2px 0;
   }
-  .info-table td {
-    padding: 3px 4px;
-    font-size: 11px;
-    vertical-align: baseline;
-  }
-  .lbl {
+  .info-label {
     font-weight: 700;
+    font-size: 10px;
     white-space: nowrap;
-    width: 1%;
-    color: #000000;
+    color: #374151;
   }
-  .val {
-    border-bottom: 1px solid #333333;
-    padding-left: 4px;
+  .info-line {
+    flex: 1;
+    border-bottom: 1px solid #999;
+    font-size: 11px;
+    padding-bottom: 1px;
     font-weight: 600;
-    color: #000000;
-  }
-  .val-bold {
-    font-weight: 900;
+    color: #0F172A;
+    min-width: 60px;
   }
 
-  /* ── Section Titles ── */
+  /* ── Section Header ── */
   .section-title {
+    background: #E2E8F0;
     text-align: center;
-    font-weight: 900;
-    font-size: 13px;
-    letter-spacing: 0.8px;
+    font-weight: 800;
+    font-size: 11px;
     padding: 3px 0;
-    border: 1.5px solid #000000;
+    letter-spacing: 0.5px;
+    border: 1px solid #aaa;
     border-bottom: none;
-    color: #000000;
+    text-transform: uppercase;
   }
 
-  /* ── 2-Col Numbered Tables (Demanded Work, Work Done, Parts) ── */
+  /* ── Two-column numbered list ── */
   .two-col-table {
     width: 100%;
     border-collapse: collapse;
-    border: 1.5px solid #000000;
+    border: 1px solid #aaa;
     margin-bottom: 6px;
   }
   .two-col-table td {
-    border: 1px solid #000000;
-    padding: 3px 6px;
-    height: 20px;
+    border: 1px solid #aaa;
+    padding: 3px 4px;
   }
   td.num {
-    background: #000000;
-    color: #FFFFFF;
+    background: #000;
+    color: #fff;
     font-weight: 900;
-    font-size: 11px;
-    width: 22px;
+    font-size: 9px;
+    width: 16px;
     text-align: center;
   }
-  td.cell-l, td.cell-r {
-    width: calc(50% - 22px);
+  td.cell-l {
+    width: calc(50% - 16px);
     font-size: 11px;
-    color: #000000;
+    min-height: 18px;
+  }
+  td.cell-r {
+    width: calc(50% - 16px);
+    font-size: 11px;
+    min-height: 18px;
   }
 
-  /* ── Routine Check Up ── */
+  /* ── Routine Check-up ── */
   .routine-wrapper {
     display: flex;
-    border: 1.5px solid #000000;
+    gap: 0;
+    border: 1px solid #aaa;
     margin-bottom: 6px;
   }
-  .routine-col {
+  .routine-left, .routine-right {
     flex: 1;
   }
-  .routine-badge-box {
-    width: 90px;
-    border-left: 1px solid #000000;
-    border-right: 1px solid #000000;
+  .routine-left { border-right: 1px solid #aaa; }
+
+  .routine-badge {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    width: 100px;
+    border-right: 1px solid #aaa;
     text-align: center;
-    font-size: 15px;
+    padding: 4px 6px;
+    font-size: 13px;
     font-weight: 900;
     line-height: 1.3;
-    color: #000000;
-    padding: 4px;
+    color: #153580;
+    border-left: none;
   }
+
   .routine-table {
     width: 100%;
     border-collapse: collapse;
   }
   .routine-table td {
-    border-bottom: 1px solid #000000;
-    padding: 2.5px 4px;
-    height: 18px;
-  }
-  .routine-table tr:last-child td {
-    border-bottom: none;
+    border-bottom: 1px solid #ddd;
+    padding: 2px 4px;
+    vertical-align: middle;
   }
   td.rnum {
-    width: 18px;
+    background: #000;
+    color: #fff;
     font-weight: 900;
-    font-size: 10px;
-    color: #000000;
+    font-size: 9px;
+    width: 14px;
     text-align: center;
-    border-right: 1px solid #000000;
   }
   td.rlabel {
     font-size: 9.5px;
     font-weight: 600;
-    color: #000000;
-    padding-left: 4px;
+    color: #374151;
+    width: 120px;
   }
   td.rval {
     font-size: 10px;
-    font-weight: 900;
-    color: #000000;
-    text-align: right;
-    padding-right: 4px;
+    border-bottom: 1px dotted #999;
+    padding-bottom: 1px;
+    color: #0F172A;
+    font-weight: 700;
   }
 
-  /* ── Footer Signatures & Note (exact 3-column replica) ── */
-  .footer-table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 1.5px solid #000000;
+  /* ── Billing Summary ── */
+  .billing-box {
+    border: 1px solid #aaa;
+    margin-bottom: 6px;
+    overflow: hidden;
+    border-radius: 2px;
+  }
+  .billing-title {
+    background: #153580;
+    color: #fff;
+    font-weight: 800;
+    font-size: 10px;
+    padding: 3px 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .billing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 11px;
+  }
+  .billing-row:last-child { border-bottom: none; }
+  .billing-label { color: #475569; font-weight: 600; }
+  .billing-value { font-weight: 800; color: #0F172A; }
+  .billing-final {
+    background: #EFF6FF;
+    font-size: 13px;
+  }
+  .billing-final .billing-label { color: #1D4ED8; font-weight: 900; }
+  .billing-final .billing-value { color: #153580; font-weight: 900; }
+  .status-paid { color: #16A34A; }
+  .status-pending { color: #DC2626; }
+  .status-partial { color: #D97706; }
+
+  /* ── Bottom ── */
+  .bottom-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    border-top: 1px solid #aaa;
+    padding-top: 8px;
     margin-top: 4px;
   }
-  .footer-table td {
-    border: 1px solid #000000;
-    vertical-align: bottom;
-    padding: 8px 10px;
+  .sig-block { text-align: center; }
+  .sig-line {
+    border-bottom: 1px solid #333;
+    margin-bottom: 4px;
+    height: 32px;
   }
-  .foot-sig {
-    width: 28%;
-    height: 75px;
-    text-align: center;
-  }
-  .foot-note {
-    width: 44%;
-    vertical-align: top !important;
-  }
-  .foot-mechanic {
-    width: 28%;
-    height: 75px;
-    text-align: center;
-  }
-  .sig-text {
-    font-size: 11px;
-    font-weight: 900;
-    color: #000000;
+  .sig-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
   }
   .for-cool-car {
-    font-family: "Brush Script MT", "Segoe Script", cursive, Georgia, serif;
-    font-size: 20px;
-    font-weight: 700;
-    color: #000000;
-    margin-bottom: 30px;
-  }
-  .note-heading {
+    font-size: 15px;
+    font-style: italic;
     font-weight: 900;
-    font-size: 11px;
+    color: #153580;
     margin-bottom: 4px;
   }
-  .note-line {
-    border-bottom: 1px solid #555555;
-    height: 16px;
-    font-size: 10px;
+  .note-block {
+    border: 1px solid #aaa;
+    border-radius: 2px;
+    padding: 4px 8px;
+    margin-bottom: 6px;
+    min-height: 36px;
+  }
+  .note-label {
+    font-size: 9px;
+    font-weight: 800;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 3px;
+  }
+  .note-content {
+    font-size: 11px;
+    color: #0F172A;
     font-weight: 600;
-    color: #000000;
+    min-height: 22px;
   }
 
+  .divider { height: 1px; background: #CBD5E1; margin: 4px 0; }
+
   @media print {
-    body { padding: 6px 10px; }
+    body { padding: 8px 14px; }
   }
 </style>
 </head>
 <body>
 
-<!-- ══ 1. HEADER ═════════════════════════════════════════════════ -->
+<!-- ══ HEADER ═════════════════════════════════════════════════ -->
 <div class="top-header">
   <div class="brand-block">
-    <div class="brand-row">
-      <span style="font-size:20px;">🚗</span>
-      <span class="brand-name">Cool Car</span>
-      <span style="font-size:20px;">🚗</span>
+    <div class="brand-name">
+      <span style="font-size:14px;">✦</span> Cool Car <span style="font-size:14px;">🚗</span>
     </div>
     <div class="brand-sub">CAR A/C REPAIRS</div>
   </div>
   <div class="job-card-badge">JOB CARD</div>
 </div>
 
-<!-- ══ 2. CUSTOMER & VEHICLE INFO ═══════════════════════════════ -->
-<div class="info-box">
-  <table class="info-table">
-    <tr>
-      <td class="lbl">Name:</td>
-      <td class="val">${escHtml(data.customerName || '')}</td>
-      <td class="lbl" style="padding-left:14px;">Date:</td>
-      <td class="val">${escHtml(dateStr)}</td>
-    </tr>
-    <tr>
-      <td class="lbl">Address:</td>
-      <td class="val">${escHtml(data.customerAddress || '')}</td>
-      <td class="lbl" style="padding-left:14px;">Mob:</td>
-      <td class="val">${escHtml(data.customerPhone || '')}</td>
-    </tr>
-    <tr>
-      <td class="lbl">Recent K.M.:</td>
-      <td class="val">${escHtml(String(data.vehicleKm || ''))}</td>
-      <td class="lbl" style="padding-left:14px;">Vehicle No:</td>
-      <td class="val val-bold">${escHtml(data.vehicleNumber || '')}</td>
-    </tr>
-    <tr>
-      <td class="lbl"></td>
-      <td style="border:none;"></td>
-      <td class="lbl" style="padding-left:14px;">Type of Vehicle:</td>
-      <td class="val">${escHtml(`${data.vehicleMake || ''} ${data.vehicleModel || ''}`.trim())}</td>
-    </tr>
-  </table>
+<!-- ══ CUSTOMER INFO ═══════════════════════════════════════════ -->
+<div class="info-grid">
+  <div class="info-row">
+    <span class="info-label">Name:</span>
+    <span class="info-line">${escHtml(data.customerName || '')}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Date:</span>
+    <span class="info-line">${escHtml(dateStr)}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Address:</span>
+    <span class="info-line">${escHtml(data.customerAddress || '')}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Mob:</span>
+    <span class="info-line">${escHtml(data.customerPhone || '')}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Recent K.M.:</span>
+    <span class="info-line">${escHtml(String(data.vehicleKm || ''))}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Vehicle No:</span>
+    <span class="info-line">${escHtml(data.vehicleNumber || '')}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Mechanic:</span>
+    <span class="info-line">${escHtml(data.assignedMechanicName || '')}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Type of Vehicle:</span>
+    <span class="info-line">${escHtml(`${data.vehicleMake || ''} ${data.vehicleModel || ''}`.trim())}</span>
+  </div>
 </div>
 
-<!-- ══ 3. DEMANDED WORK ═════════════════════════════════════════ -->
+<!-- ══ DEMANDED WORK ════════════════════════════════════════════ -->
 <div class="section-title">Demanded Work</div>
 <table class="two-col-table">
   ${twoColRows(demandedItems)}
 </table>
 
-<!-- ══ 4. ROUTINE CHECK UP (EXACT 18 ITEMS FROM PHOTO) ═════════ -->
+<!-- ══ ROUTINE CHECK-UP ════════════════════════════════════════ -->
+<div class="section-title">Routine Check Up</div>
 <div class="routine-wrapper">
-  <!-- Left column: 1 to 9 -->
-  <div class="routine-col">
+  <!-- Left column: items 1–9 -->
+  <div class="routine-left">
     <table class="routine-table">
       ${routineRow(1, 'Actual Pressure', rc.actualPressure)}
       ${routineRow(2, 'Air Mode / Air Circulation', rc.airMode)}
@@ -472,19 +519,19 @@ export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<
       ${routineRow(4, 'Cooling Coil', rc.coolingCoil)}
       ${routineRow(5, 'Belt Check / Noise Check', rc.beltCheck)}
       ${routineRow(6, 'Leak testing in Vaccum', rc.leakTesting)}
-      ${routineRow(7, 'Auto Cut-off On ___ °C', rc.autoCutoff)}
+      ${routineRow(7, 'Auto Cut-off On __ °C', rc.autoCutoff)}
       ${routineRow(8, 'Heater', rc.heater)}
       ${routineRow(9, 'Drain Pipe / Water Leakage', rc.drainPipe)}
     </table>
   </div>
 
-  <!-- Center vertical title -->
-  <div class="routine-badge-box">
+  <!-- Center Badge -->
+  <div class="routine-badge">
     Routine<br>Check<br>up
   </div>
 
-  <!-- Right column: 10 to 18 -->
-  <div class="routine-col">
+  <!-- Right column: items 10–18 -->
+  <div class="routine-right">
     <table class="routine-table">
       ${routineRow(10, 'Nitrogen Pressure ___ psi-At', rc.nitrogenPressure)}
       ${routineRow(11, 'All Crimping / All Joints', rc.crimping)}
@@ -499,36 +546,52 @@ export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<
   </div>
 </div>
 
-<!-- ══ 5. WORK DONE ═════════════════════════════════════════════ -->
+<!-- ══ WORK DONE ════════════════════════════════════════════════ -->
 <div class="section-title">Work Done</div>
 <table class="two-col-table">
   ${twoColRows(workDoneItems)}
 </table>
 
-<!-- ══ 6. PARTS IN USE ══════════════════════════════════════════ -->
+<!-- ══ PARTS IN USE ════════════════════════════════════════════ -->
 <div class="section-title">Parts In Use</div>
 <table class="two-col-table">
   ${twoColRows(partsItems)}
 </table>
 
-<!-- ══ 7. FOOTER (CUSTOMER SIGNATURE | NOTE | FOR COOL CAR / MECHANIC) ══ -->
-<table class="footer-table">
-  <tr>
-    <td class="foot-sig">
-      <div class="sig-text">Customer Signature</div>
-    </td>
-    <td class="foot-note">
-      <div class="note-heading">Note: ${escHtml(data.notes || '')}</div>
-      <div class="note-line"></div>
-      <div class="note-line"></div>
-      <div class="note-line"></div>
-    </td>
-    <td class="foot-mechanic">
-      <div class="for-cool-car">For Cool Car</div>
-      <div class="sig-text">Mechanic Signature</div>
-    </td>
-  </tr>
-</table>
+<!-- ══ BILLING SUMMARY ═════════════════════════════════════════ -->
+<div class="billing-box">
+  <div class="billing-title">Billing Summary — Job #${escHtml(data.jobNumber)}</div>
+  ${data.subtotal !== undefined ? `<div class="billing-row"><span class="billing-label">Subtotal</span><span class="billing-value">${fmt(data.subtotal)}</span></div>` : ''}
+  ${data.discount ? `<div class="billing-row"><span class="billing-label">Discount</span><span class="billing-value" style="color:#16A34A;">– ${fmt(data.discount)}</span></div>` : ''}
+  <div class="billing-row billing-final">
+    <span class="billing-label">Total Bill Amount</span>
+    <span class="billing-value">${fmt(data.finalAmount)}</span>
+  </div>
+  ${data.totalPaid !== undefined ? `<div class="billing-row"><span class="billing-label">Amount Collected</span><span class="billing-value status-paid">${fmt(data.totalPaid)}</span></div>` : ''}
+  ${(data.pendingAmount ?? 0) > 0 ? `<div class="billing-row"><span class="billing-label">Balance Due (Udhari)</span><span class="billing-value status-pending">${fmt(data.pendingAmount)}</span></div>` : '<div class="billing-row"><span class="billing-label">Payment Status</span><span class="billing-value status-paid">✓ Fully Paid</span></div>'}
+</div>
+
+<!-- ══ NOTE ════════════════════════════════════════════════════ -->
+<div class="note-block">
+  <div class="note-label">Note:</div>
+  <div class="note-content">${escHtml(data.notes || '')}</div>
+</div>
+
+<!-- ══ SIGNATURES ══════════════════════════════════════════════ -->
+<div class="bottom-section">
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-label">Customer Signature</div>
+  </div>
+  <div class="sig-block">
+    <div class="for-cool-car">For Cool Car</div>
+    <div class="sig-label" style="color:#153580; font-size:8px;">CAR A/C REPAIRS</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line"></div>
+    <div class="sig-label">Mechanic Signature</div>
+  </div>
+</div>
 
 </body>
 </html>`;

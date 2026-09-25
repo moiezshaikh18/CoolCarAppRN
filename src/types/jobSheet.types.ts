@@ -52,7 +52,6 @@ export interface JobSheet {
   assignedMechanicId?: string;
   assignedMechanicName?: string;
   notes?: string;
-  routineCheckup?: Record<string, string>;
   voided: boolean;
   voidReason?: string;
   voidedBy?: string;

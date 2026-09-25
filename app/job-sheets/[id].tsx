@@ -16,8 +16,6 @@ import {
   Alert,
   StatusBar,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,10 +34,6 @@ import {
   ArrowDown,
   Layers,
   FileDown,
-  CheckSquare,
-  Sparkles,
-  Sliders,
-  Check,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -53,27 +47,6 @@ import { PaymentMode } from '../../src/types/payment.types';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 import { generateAndShareJobCardPdf } from '../../src/utils/jobCardPdf';
 
-export const STANDARD_18_ROUTINE_ITEMS = [
-  { key: 'actualPressure', label: '1. Actual Pressure', placeholder: 'e.g. 35 psi', defaultVal: 'OK ✓' },
-  { key: 'airMode', label: '2. Air Mode / Circulation', placeholder: 'e.g. Recirculation OK', defaultVal: 'OK ✓' },
-  { key: 'condenserFan', label: '3. Condenser / Fan', placeholder: 'e.g. High Speed OK', defaultVal: 'OK ✓' },
-  { key: 'coolingCoil', label: '4. Cooling Coil', placeholder: 'e.g. Cleaned / Tested', defaultVal: 'OK ✓' },
-  { key: 'beltCheck', label: '5. Belt / Noise Check', placeholder: 'e.g. Tight & Silent', defaultVal: 'OK ✓' },
-  { key: 'leakTesting', label: '6. Leak testing in Vaccum', placeholder: 'e.g. Held 30 min', defaultVal: 'OK ✓' },
-  { key: 'autoCutoff', label: '7. Auto Cut-off On ___ °C', placeholder: 'e.g. 4.5 °C', defaultVal: '4.5 °C' },
-  { key: 'heater', label: '8. Heater', placeholder: 'e.g. Checked / Blocked', defaultVal: 'OK ✓' },
-  { key: 'drainPipe', label: '9. Drain Pipe / Water Leak', placeholder: 'e.g. Flow Clear', defaultVal: 'OK ✓' },
-  { key: 'nitrogenPressure', label: '10. Nitrogen Pressure ___ psi', placeholder: 'e.g. 250 psi', defaultVal: '250 psi' },
-  { key: 'crimping', label: '11. All Crimping / Joints', placeholder: 'e.g. Soap Tested', defaultVal: 'OK ✓' },
-  { key: 'oilCharge', label: '12. Oil Charge', placeholder: 'e.g. 60 ml PAG 46', defaultVal: 'OK ✓' },
-  { key: 'blowerSpeed', label: '13. Blower Speed', placeholder: 'e.g. 1-2-3-4 OK', defaultVal: 'OK ✓' },
-  { key: 'pressurePin', label: '14. Pressure Pin', placeholder: 'e.g. Replaced / OK', defaultVal: 'OK ✓' },
-  { key: 'electricalCheck', label: '15. Electrical Check-up', placeholder: 'e.g. Relay & Fuse OK', defaultVal: 'OK ✓' },
-  { key: 'spannerCheck', label: '16. Spanner Check', placeholder: 'e.g. Tightened', defaultVal: 'OK ✓' },
-  { key: 'fullCharge', label: '17. Full Charge / Top up', placeholder: 'e.g. 450g R134a', defaultVal: 'Full Charge' },
-  { key: 'sticker', label: '18. Sticker', placeholder: 'e.g. Pasted On Door', defaultVal: 'Pasted ✓' },
-];
-
 export default function JobSheetDetailsScreen() {
   const { isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
@@ -84,9 +57,7 @@ export default function JobSheetDetailsScreen() {
   const accounts = useBankAccountStore((s) => s.accounts);
   const activeAccounts = useMemo(() => accounts.filter((a) => a.isActive), [accounts]);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'items' | 'inspection'>('overview');
-  const [routineValues, setRoutineValues] = useState<Record<string, string>>({});
-  const [isSavingRoutine, setIsSavingRoutine] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'items'>('overview');
 
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -136,49 +107,6 @@ export default function JobSheetDetailsScreen() {
     return jobSheets.find((j) => j.id === params.id || j.jobNumber === params.id) || dbJob;
   }, [params.id, jobSheets, dbJob]);
 
-  useEffect(() => {
-    if (job?.routineCheckup) {
-      setRoutineValues(job.routineCheckup);
-    }
-  }, [job?.id]);
-
-  const handleUpdateRoutineItem = (key: string, value: string) => {
-    setRoutineValues((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleMarkAllOk = () => {
-    const allOk: Record<string, string> = {};
-    STANDARD_18_ROUTINE_ITEMS.forEach((it) => {
-      allOk[it.key] = it.defaultVal;
-    });
-    setRoutineValues(allOk);
-    Alert.alert('18 Standard Checks Updated', 'All 18 Routine AC checkpoints populated with standard OK values. Tap "Save Checkup" to save.');
-  };
-
-  const handleSaveRoutineCheckup = async () => {
-    if (!job) return;
-    setIsSavingRoutine(true);
-    try {
-      updateJobSheet(job.id, {
-        routineCheckup: routineValues,
-      });
-      const entId = enterpriseId || 'enterprise-dev-001';
-      const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('../../src/services/firebase/firebase.config');
-      await setDoc(
-        doc(db, 'enterprises', entId, 'jobSheets', job.id),
-        { routineCheckup: routineValues, updatedAt: new Date().toISOString() },
-        { merge: true }
-      );
-      Alert.alert('Saved ✓', '18-Point Routine AC Check-up saved to cloud & will print on the physical-style Job Card.');
-    } catch (err) {
-      console.log('Error saving routine checkup:', err);
-      Alert.alert('Saved Locally', 'Saved in app memory.');
-    } finally {
-      setIsSavingRoutine(false);
-    }
-  };
-
   // ── Generate Cool Car Job Card PDF ──────────────────────────
   const handleDownloadPdf = async () => {
     if (!job) return;
@@ -211,26 +139,6 @@ export default function JobSheetDetailsScreen() {
         demandedWork: services.length > 0 ? services : undefined,
         workDone: services,
         partsInUse: parts,
-        routineCheckup: {
-          actualPressure: routineValues.actualPressure || job.routineCheckup?.actualPressure || 'OK ✓',
-          airMode: routineValues.airMode || job.routineCheckup?.airMode || 'OK ✓',
-          condenserFan: routineValues.condenserFan || job.routineCheckup?.condenserFan || 'OK ✓',
-          coolingCoil: routineValues.coolingCoil || job.routineCheckup?.coolingCoil || 'OK ✓',
-          beltCheck: routineValues.beltCheck || job.routineCheckup?.beltCheck || 'OK ✓',
-          leakTesting: routineValues.leakTesting || job.routineCheckup?.leakTesting || 'OK ✓',
-          autoCutoff: routineValues.autoCutoff || job.routineCheckup?.autoCutoff || '4.5 °C',
-          heater: routineValues.heater || job.routineCheckup?.heater || 'OK ✓',
-          drainPipe: routineValues.drainPipe || job.routineCheckup?.drainPipe || 'OK ✓',
-          nitrogenPressure: routineValues.nitrogenPressure || job.routineCheckup?.nitrogenPressure || '250 psi',
-          crimping: routineValues.crimping || job.routineCheckup?.crimping || 'OK ✓',
-          oilCharge: routineValues.oilCharge || job.routineCheckup?.oilCharge || 'OK ✓',
-          blowerSpeed: routineValues.blowerSpeed || job.routineCheckup?.blowerSpeed || 'OK ✓',
-          pressurePin: routineValues.pressurePin || job.routineCheckup?.pressurePin || 'OK ✓',
-          electricalCheck: routineValues.electricalCheck || job.routineCheckup?.electricalCheck || 'OK ✓',
-          spannerCheck: routineValues.spannerCheck || job.routineCheckup?.spannerCheck || 'OK ✓',
-          fullCharge: routineValues.fullCharge || job.routineCheckup?.fullCharge || 'Full Charge',
-          sticker: routineValues.sticker || job.routineCheckup?.sticker || 'Pasted ✓',
-        },
         notes: (job as any).notes,
         subtotal: job.subtotal,
         discount: job.discount,
@@ -621,11 +529,11 @@ export default function JobSheetDetailsScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 40 }}
         >
           {/* Segmented Switcher */}
-          <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center', marginBottom: 16 }}>
             <TouchableOpacity onPress={() => setActiveTab('overview')} activeOpacity={0.7}>
               <Text
                 style={{
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: activeTab === 'overview' ? '900' : '600',
                   color: activeTab === 'overview' ? (isDark ? '#FFFFFF' : '#0F172A') : '#94A3B8',
                 }}
@@ -637,30 +545,13 @@ export default function JobSheetDetailsScreen() {
             <TouchableOpacity onPress={() => setActiveTab('items')} activeOpacity={0.7}>
               <Text
                 style={{
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: activeTab === 'items' ? '900' : '600',
                   color: activeTab === 'items' ? (isDark ? '#FFFFFF' : '#0F172A') : '#94A3B8',
                 }}
               >
-                Items ({job.items.length})
+                Services & Parts ({job.items.length})
               </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setActiveTab('inspection')} activeOpacity={0.7}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: activeTab === 'inspection' ? '900' : '600',
-                    color: activeTab === 'inspection' ? (isDark ? '#FFFFFF' : '#0F172A') : '#94A3B8',
-                  }}
-                >
-                  18-Pt AC Check
-                </Text>
-                <View style={{ backgroundColor: '#10B981', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6 }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900' }}>PRINT</Text>
-                </View>
-              </View>
             </TouchableOpacity>
           </View>
 
@@ -747,7 +638,7 @@ export default function JobSheetDetailsScreen() {
                 </View>
               </View>
             </View>
-          ) : activeTab === 'items' ? (
+          ) : (
             <View style={{ gap: 8 }}>
               {(job.items || []).map((item: any) => (
                 <View
@@ -791,166 +682,6 @@ export default function JobSheetDetailsScreen() {
                   </Text>
                 </View>
               ))}
-            </View>
-          ) : (
-            <View style={{ gap: 12 }}>
-              {/* Inspection Banner & Action Bar */}
-              <View
-                style={{
-                  backgroundColor: cardBg,
-                  borderRadius: 20,
-                  padding: 16,
-                  borderWidth: 1,
-                  borderColor: cardBorder,
-                  gap: 12,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View style={{ flex: 1, marginRight: 8 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                      Routine AC Check-Up
-                    </Text>
-                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
-                      Exact 18 physical job card inspection checkpoints
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={handleMarkAllOk}
-                    activeOpacity={0.8}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                      backgroundColor: '#153580',
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 14,
-                    }}
-                  >
-                    <Sparkles size={13} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>All OK ✓</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Save Button */}
-                <TouchableOpacity
-                  onPress={handleSaveRoutineCheckup}
-                  disabled={isSavingRoutine}
-                  activeOpacity={0.85}
-                  style={{
-                    backgroundColor: '#10B981',
-                    borderRadius: 14,
-                    paddingVertical: 12,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'row',
-                    gap: 6,
-                  }}
-                >
-                  {isSavingRoutine ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <>
-                      <CheckSquare size={16} color="#FFFFFF" />
-                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900' }}>
-                        Save Routine Check-Up (Will Print on PDF)
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* 18 Routine Checkpoints List */}
-              <View style={{ gap: 8 }}>
-                {STANDARD_18_ROUTINE_ITEMS.map((item) => {
-                  const currentVal = routineValues[item.key] ?? item.defaultVal;
-                  const isChecked = Boolean(currentVal && currentVal !== '');
-                  return (
-                    <View
-                      key={item.key}
-                      style={{
-                        backgroundColor: cardBg,
-                        borderRadius: 16,
-                        padding: 12,
-                        borderWidth: 1,
-                        borderColor: cardBorder,
-                        gap: 8,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A', flex: 1 }}>
-                          {item.label}
-                        </Text>
-                        <View
-                          style={{
-                            paddingHorizontal: 8,
-                            paddingVertical: 3,
-                            borderRadius: 8,
-                            backgroundColor: isChecked ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
-                          }}
-                        >
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: isChecked ? '#10B981' : '#64748B' }}>
-                            {currentVal || 'Pending'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Quick Chips + Custom Input */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <TextInput
-                          value={routineValues[item.key] ?? ''}
-                          onChangeText={(t) => handleUpdateRoutineItem(item.key, t)}
-                          placeholder={item.placeholder}
-                          placeholderTextColor="#94A3B8"
-                          style={{
-                            flex: 1,
-                            backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
-                            borderRadius: 10,
-                            paddingHorizontal: 10,
-                            paddingVertical: 7,
-                            fontSize: 12,
-                            fontWeight: '700',
-                            color: isDark ? '#FFFFFF' : '#0F172A',
-                          }}
-                        />
-                        <TouchableOpacity
-                          onPress={() => handleUpdateRoutineItem(item.key, 'OK ✓')}
-                          style={{
-                            backgroundColor: currentVal === 'OK ✓' ? '#10B981' : (isDark ? '#1C2538' : '#F1F5F9'),
-                            paddingHorizontal: 10,
-                            paddingVertical: 7,
-                            borderRadius: 10,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontSize: 11,
-                              fontWeight: '800',
-                              color: currentVal === 'OK ✓' ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B'),
-                            }}
-                          >
-                            OK ✓
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => handleUpdateRoutineItem(item.key, item.defaultVal)}
-                          style={{
-                            backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
-                            paddingHorizontal: 10,
-                            paddingVertical: 7,
-                            borderRadius: 10,
-                          }}
-                        >
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B' }}>
-                            Std
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
             </View>
           )}
 
@@ -1086,18 +817,15 @@ export default function JobSheetDetailsScreen() {
         animationType="slide"
         onRequestClose={() => setIsPaymentModalOpen(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
-        >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
           <View
             style={{
               backgroundColor: cardBg,
               borderTopLeftRadius: 28,
               borderTopRightRadius: 28,
               padding: 20,
-              paddingBottom: insets.bottom + 16,
-              maxHeight: '88%',
+              paddingBottom: insets.bottom + 20,
+              maxHeight: '90%',
               gap: 14,
             }}
           >
@@ -1181,11 +909,7 @@ export default function JobSheetDetailsScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ gap: 14, paddingBottom: 60 }}
-            >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
               {/* Total, Paid, and Current Balance Overview */}
               <View
                 style={{
@@ -1585,7 +1309,7 @@ export default function JobSheetDetailsScreen() {
               </TouchableOpacity>
             </ScrollView>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </View>
   );

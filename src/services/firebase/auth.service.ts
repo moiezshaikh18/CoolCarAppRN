@@ -6,7 +6,6 @@ import {
   signInWithPhoneNumber,
   PhoneAuthProvider,
   signInWithCredential,
-  signInAnonymously,
   signOut,
   onAuthStateChanged,
   User,
@@ -69,19 +68,6 @@ export async function confirmOTP(otp: string): Promise<User> {
     return result.user;
   } catch (error) {
     console.error('[AuthService] confirmOTP error:', error);
-    throw error;
-  }
-}
-
-/**
- * Sign in anonymously for instant local/demo authentication with full Firebase auth context
- */
-export async function signInAnonymouslyUser(): Promise<User> {
-  try {
-    const cred = await signInAnonymously(auth);
-    return cred.user;
-  } catch (error) {
-    console.error('[AuthService] signInAnonymously error:', error);
     throw error;
   }
 }
