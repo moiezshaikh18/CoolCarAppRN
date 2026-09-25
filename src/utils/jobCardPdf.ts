@@ -7,7 +7,6 @@
 
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { File, Paths } from 'expo-file-system';
 
 export interface JobCardPdfData {
   jobNumber: string;
@@ -145,8 +144,8 @@ function safeFormatDate(d: string | Date | undefined): string {
   }
 }
 
-// ── Main Export ─────────────────────────────────────────────
-export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<void> {
+// ── HTML Template Generator ─────────────────────────────────
+export function generateJobCardHtml(data: JobCardPdfData): string {
   const cs = data.currencySymbol || 'Rs.';
   const fmt = (n?: number) => fmtNum(n, cs);
 
@@ -596,27 +595,28 @@ export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<
 </body>
 </html>`;
 
-  // Step 1: Render HTML → temp PDF (expo-print writes to an internal temp dir)
-  const result = await Print.printToFileAsync({ html, base64: false });
-  const tempUri = result.uri;
+  return html;
+}
 
-  // Step 2: Copy to a named file in cacheDirectory.
-  // Android expo-sharing CANNOT access the raw expo-print temp path directly.
-  // Copying to Paths.cache (cacheDirectory) first is the correct fix.
-  const safeJobNum = (data.jobNumber || 'job').replace(/[^a-zA-Z0-9-]/g, '_');
-  const destFile = new File(Paths.cache, `CoolCar_JobCard_${safeJobNum}.pdf`);
-  const sourceFile = new File(tempUri);
-  sourceFile.copy(destFile);
+// ── Print Job Card directly (Native Printer Dialog / Spooler) ──
+export async function printJobCard(data: JobCardPdfData): Promise<void> {
+  const html = generateJobCardHtml(data);
+  await Print.printAsync({ html });
+}
 
-  // Step 3: Share from the accessible cache URI
+// ── Generate PDF & Open System Share Sheet (WhatsApp, Drive, Files) ──
+export async function generateAndShareJobCardPdf(data: JobCardPdfData): Promise<string> {
+  const html = generateJobCardHtml(data);
+  const result = await Print.printToFileAsync({ html });
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
-    await Sharing.shareAsync(destFile.uri, {
+    await Sharing.shareAsync(result.uri, {
       mimeType: 'application/pdf',
-      UTI: 'com.adobe.pdf',
+      UTI: '.pdf',
+      dialogTitle: `Cool Car Job Card - ${data.jobNumber || 'Invoice'}`,
     });
   } else {
-    // Fallback: open system print dialog
-    await Print.printAsync({ uri: destFile.uri });
+    await Print.printAsync({ html });
   }
+  return result.uri;
 }

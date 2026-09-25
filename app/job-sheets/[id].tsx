@@ -35,7 +35,7 @@ import {
   X,
   ArrowDown,
   Layers,
-  FileDown,
+  Printer,
   CheckSquare,
   Sparkles,
   Sliders,
@@ -51,7 +51,7 @@ import { formatCurrency } from '../../src/utils/currency';
 import { JobSheet, JobStatus } from '../../src/types/jobSheet.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
-import { generateAndShareJobCardPdf } from '../../src/utils/jobCardPdf';
+import { generateAndShareJobCardPdf, printJobCard } from '../../src/utils/jobCardPdf';
 
 export const STANDARD_18_ROUTINE_ITEMS = [
   { key: 'actualPressure', label: '1. Actual Pressure', placeholder: 'e.g. 35 psi', defaultVal: 'OK ✓' },
@@ -181,70 +181,91 @@ export default function JobSheetDetailsScreen() {
     }
   };
 
-  // ── Generate Cool Car Job Card PDF ──────────────────────────
+  // ── Cool Car Job Card Payload Builder ────────────────────────
+  const getJobCardData = () => {
+    if (!job) return null;
+    const services = ((job as any)?.items || [])
+      .filter((it: any) => it.type === 'SERVICE')
+      .map((it: any) => it.name);
+
+    const parts = ((job as any)?.items || [])
+      .filter((it: any) => it.type === 'PART')
+      .map((it: any) => ({
+        name: it.name,
+        qty: it.quantity,
+        price: it.unitPrice,
+      }));
+
+    return {
+      jobNumber: job.jobNumber || job.id,
+      date: typeof job.date === 'string' ? job.date : new Date(job.date).toLocaleDateString('en-IN'),
+      time: job.time,
+      customerName: job.customerName,
+      customerPhone: job.customerPhone,
+      vehicleNumber: job.vehicleNumber,
+      vehicleMake: job.vehicleMake,
+      vehicleModel: job.vehicleModel,
+      workCategory: job.workCategory,
+      assignedMechanicName: job.assignedMechanicName,
+      demandedWork: services.length > 0 ? services : undefined,
+      workDone: services,
+      partsInUse: parts,
+      routineCheckup: {
+        actualPressure: routineValues.actualPressure || job.routineCheckup?.actualPressure || 'OK ✓',
+        airMode: routineValues.airMode || job.routineCheckup?.airMode || 'OK ✓',
+        condenserFan: routineValues.condenserFan || job.routineCheckup?.condenserFan || 'OK ✓',
+        coolingCoil: routineValues.coolingCoil || job.routineCheckup?.coolingCoil || 'OK ✓',
+        beltCheck: routineValues.beltCheck || job.routineCheckup?.beltCheck || 'OK ✓',
+        leakTesting: routineValues.leakTesting || job.routineCheckup?.leakTesting || 'OK ✓',
+        autoCutoff: routineValues.autoCutoff || job.routineCheckup?.autoCutoff || '4.5 °C',
+        heater: routineValues.heater || job.routineCheckup?.heater || 'OK ✓',
+        drainPipe: routineValues.drainPipe || job.routineCheckup?.drainPipe || 'OK ✓',
+        nitrogenPressure: routineValues.nitrogenPressure || job.routineCheckup?.nitrogenPressure || '250 psi',
+        crimping: routineValues.crimping || job.routineCheckup?.crimping || 'OK ✓',
+        oilCharge: routineValues.oilCharge || job.routineCheckup?.oilCharge || 'OK ✓',
+        blowerSpeed: routineValues.blowerSpeed || job.routineCheckup?.blowerSpeed || 'OK ✓',
+        pressurePin: routineValues.pressurePin || job.routineCheckup?.pressurePin || 'OK ✓',
+        electricalCheck: routineValues.electricalCheck || job.routineCheckup?.electricalCheck || 'OK ✓',
+        spannerCheck: routineValues.spannerCheck || job.routineCheckup?.spannerCheck || 'OK ✓',
+        fullCharge: routineValues.fullCharge || job.routineCheckup?.fullCharge || 'Full Charge',
+        sticker: routineValues.sticker || job.routineCheckup?.sticker || 'Pasted ✓',
+      },
+      notes: (job as any).notes,
+      subtotal: job.subtotal,
+      discount: job.discount,
+      finalAmount: job.finalAmount,
+      totalPaid: job.totalPaid,
+      pendingAmount: job.pendingAmount,
+      paymentStatus: job.paymentStatus,
+      currencySymbol,
+    };
+  };
+
+  // ── Share / Save PDF ─────────────────────────────────────────
   const handleDownloadPdf = async () => {
-    if (!job) return;
+    const data = getJobCardData();
+    if (!data) return;
     setIsPdfGenerating(true);
     try {
-      // Separate services (work done) from parts
-      const services = ((job as any)?.items || [])
-        .filter((it: any) => it.type === 'SERVICE')
-        .map((it: any) => it.name);
-
-      const parts = ((job as any)?.items || [])
-        .filter((it: any) => it.type === 'PART')
-        .map((it: any) => ({
-          name: it.name,
-          qty: it.quantity,
-          price: it.unitPrice,
-        }));
-
-      await generateAndShareJobCardPdf({
-        jobNumber: job.jobNumber || job.id,
-        date: typeof job.date === 'string' ? job.date : new Date(job.date).toLocaleDateString('en-IN'),
-        time: job.time,
-        customerName: job.customerName,
-        customerPhone: job.customerPhone,
-        vehicleNumber: job.vehicleNumber,
-        vehicleMake: job.vehicleMake,
-        vehicleModel: job.vehicleModel,
-        workCategory: job.workCategory,
-        assignedMechanicName: job.assignedMechanicName,
-        demandedWork: services.length > 0 ? services : undefined,
-        workDone: services,
-        partsInUse: parts,
-        routineCheckup: {
-          actualPressure: routineValues.actualPressure || job.routineCheckup?.actualPressure || 'OK ✓',
-          airMode: routineValues.airMode || job.routineCheckup?.airMode || 'OK ✓',
-          condenserFan: routineValues.condenserFan || job.routineCheckup?.condenserFan || 'OK ✓',
-          coolingCoil: routineValues.coolingCoil || job.routineCheckup?.coolingCoil || 'OK ✓',
-          beltCheck: routineValues.beltCheck || job.routineCheckup?.beltCheck || 'OK ✓',
-          leakTesting: routineValues.leakTesting || job.routineCheckup?.leakTesting || 'OK ✓',
-          autoCutoff: routineValues.autoCutoff || job.routineCheckup?.autoCutoff || '4.5 °C',
-          heater: routineValues.heater || job.routineCheckup?.heater || 'OK ✓',
-          drainPipe: routineValues.drainPipe || job.routineCheckup?.drainPipe || 'OK ✓',
-          nitrogenPressure: routineValues.nitrogenPressure || job.routineCheckup?.nitrogenPressure || '250 psi',
-          crimping: routineValues.crimping || job.routineCheckup?.crimping || 'OK ✓',
-          oilCharge: routineValues.oilCharge || job.routineCheckup?.oilCharge || 'OK ✓',
-          blowerSpeed: routineValues.blowerSpeed || job.routineCheckup?.blowerSpeed || 'OK ✓',
-          pressurePin: routineValues.pressurePin || job.routineCheckup?.pressurePin || 'OK ✓',
-          electricalCheck: routineValues.electricalCheck || job.routineCheckup?.electricalCheck || 'OK ✓',
-          spannerCheck: routineValues.spannerCheck || job.routineCheckup?.spannerCheck || 'OK ✓',
-          fullCharge: routineValues.fullCharge || job.routineCheckup?.fullCharge || 'Full Charge',
-          sticker: routineValues.sticker || job.routineCheckup?.sticker || 'Pasted ✓',
-        },
-        notes: (job as any).notes,
-        subtotal: job.subtotal,
-        discount: job.discount,
-        finalAmount: job.finalAmount,
-        totalPaid: job.totalPaid,
-        pendingAmount: job.pendingAmount,
-        paymentStatus: job.paymentStatus,
-        currencySymbol,
-      });
+      await generateAndShareJobCardPdf(data);
     } catch (err) {
       console.error('[JobCardPDF] Error generating PDF:', err);
       Alert.alert('PDF Error', `Could not generate Job Card PDF.\nDetails: ${String(err)}`);
+    } finally {
+      setIsPdfGenerating(false);
+    }
+  };
+
+  // ── Direct Native Print ──────────────────────────────────────
+  const handleDirectPrint = async () => {
+    const data = getJobCardData();
+    if (!data) return;
+    setIsPdfGenerating(true);
+    try {
+      await printJobCard(data);
+    } catch (err) {
+      console.error('[JobCardPDF] Error printing:', err);
+      Alert.alert('Print Error', `Could not open printer.\nDetails: ${String(err)}`);
     } finally {
       setIsPdfGenerating(false);
     }
@@ -499,24 +520,43 @@ export default function JobSheetDetailsScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity
-            onPress={handleDownloadPdf}
-            disabled={isPdfGenerating}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: 'rgba(255, 255, 255, 0.22)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {isPdfGenerating ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <FileDown size={18} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={handleDirectPrint}
+              disabled={isPdfGenerating}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              accessibilityLabel="Print Job Card"
+            >
+              <Printer size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleDownloadPdf}
+              disabled={isPdfGenerating}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              accessibilityLabel="Share or Download Job Card PDF"
+            >
+              {isPdfGenerating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Share2 size={18} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Dynamic Car Silhouette */}
