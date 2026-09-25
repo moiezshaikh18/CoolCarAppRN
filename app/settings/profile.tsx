@@ -36,8 +36,8 @@ export default function ProfileScreen() {
   const { activeEnterprise, activeMember } = useEnterpriseStore();
 
   const [name, setName] = useState(user?.displayName || 'Workshop Owner');
-  const [email, setEmail] = useState(user?.email || 'owner@coolcargarage.com');
-  const [phone] = useState(user?.phone || '+91 98765 43210');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone] = useState(user?.phone || '');
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
