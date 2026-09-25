@@ -15,6 +15,7 @@ interface ChalanStore {
   isLoading: boolean;
   addChalan: (chalan: PurchaseChalan) => void;
   deleteChalan: (id: string) => void;
+  updateChalan: (id: string, updates: Partial<PurchaseChalan>) => void;
   getChalanById: (id: string) => PurchaseChalan | undefined;
 }
 
@@ -26,6 +27,11 @@ export const useChalanStore = create<ChalanStore>()(
 
       addChalan: (chalan) =>
         set((state) => ({ chalans: [chalan, ...state.chalans] })),
+
+      updateChalan: (id, updates) =>
+        set((state) => ({
+          chalans: state.chalans.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+        })),
 
       deleteChalan: (id) =>
         set((state) => ({

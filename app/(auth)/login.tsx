@@ -35,38 +35,85 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!identifier.trim()) {
       Alert.alert('Required', 'Please enter your email or phone.');
       return;
     }
 
-    const mockUser = {
-      uid: 'user-demo-1',
-      phone: '9876543210',
-      displayName: 'Manish Kumar',
-      email: identifier.includes('@') ? identifier : 'manish@garage.com',
-      enterpriseIds: [MOCK_ENTERPRISE.id],
-      activeEnterpriseId: MOCK_ENTERPRISE.id,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      // 1. Establish real Firebase Auth session so Firestore permissions are granted
+      const { signInAnonymouslyUser } = await import('../../src/services/firebase/auth.service');
+      const fbUser = await signInAnonymouslyUser();
+      const uid = fbUser.uid || 'user-owner-1';
 
-    setUser(mockUser);
-    setActiveEnterprise(MOCK_ENTERPRISE);
-    setActiveMember({
-      userId: 'user-demo-1',
-      enterpriseId: MOCK_ENTERPRISE.id,
-      role: 'OWNER',
-      displayName: 'Manish Kumar',
-      phone: '9876543210',
-      isActive: true,
-      joinedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    setAuthState('authenticated');
-    router.replace('/(tabs)');
+      // 2. Check for previously saved owner name & email from AsyncStorage
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const savedName = await AsyncStorage.getItem('cool_car_saved_owner_name');
+      const savedEmail = await AsyncStorage.getItem('cool_car_saved_owner_email');
+
+      const ownerName = savedName || 'Workshop Owner';
+      const ownerEmail = savedEmail || (identifier.includes('@') ? identifier : 'owner@coolcargarage.com');
+
+      const loggedInUser = {
+        uid,
+        phone: '9876543210',
+        displayName: ownerName,
+        email: ownerEmail,
+        enterpriseIds: [MOCK_ENTERPRISE.id],
+        activeEnterpriseId: MOCK_ENTERPRISE.id,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setUser(loggedInUser);
+      setActiveEnterprise(MOCK_ENTERPRISE);
+      setActiveMember({
+        userId: uid,
+        enterpriseId: MOCK_ENTERPRISE.id,
+        role: 'OWNER',
+        displayName: ownerName,
+        phone: '9876543210',
+        isActive: true,
+        joinedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      setAuthState('authenticated');
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      console.error('[Login] Auth error:', err);
+      // Fallback in case of network issue
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const savedName = await AsyncStorage.getItem('cool_car_saved_owner_name');
+      const ownerName = savedName || 'Workshop Owner';
+
+      const fallbackUser = {
+        uid: 'user-owner-1',
+        phone: '9876543210',
+        displayName: ownerName,
+        email: identifier.includes('@') ? identifier : 'owner@coolcargarage.com',
+        enterpriseIds: [MOCK_ENTERPRISE.id],
+        activeEnterpriseId: MOCK_ENTERPRISE.id,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setUser(fallbackUser);
+      setActiveEnterprise(MOCK_ENTERPRISE);
+      setActiveMember({
+        userId: 'user-owner-1',
+        enterpriseId: MOCK_ENTERPRISE.id,
+        role: 'OWNER',
+        displayName: ownerName,
+        phone: '9876543210',
+        isActive: true,
+        joinedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      setAuthState('authenticated');
+      router.replace('/(tabs)');
+    }
   };
 
   const handlePhoneOTPFlow = () => {

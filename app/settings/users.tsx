@@ -4,7 +4,7 @@
 // Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ArrowLeft,
   Shield,
@@ -26,6 +27,10 @@ import {
   CheckCircle2,
   Trash2,
   Plus,
+  Lock,
+  Unlock,
+  Check,
+  Sparkles,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
@@ -38,61 +43,128 @@ interface TeamMember {
   phone: string;
   role: UserRole;
   isActive: boolean;
+  canViewProfit?: boolean;
 }
 
 const DEFAULT_MEMBERS: TeamMember[] = [
   {
     id: 'm1',
-    name: 'Manish Kumar (You)',
+    name: 'Manish Kumar (Co-Owner)',
     phone: '+91 98765 43210',
     role: 'OWNER',
     isActive: true,
+    canViewProfit: true,
   },
   {
     id: 'm2',
+    name: 'Rajesh Sharma (Partner / Co-Owner)',
+    phone: '+91 98200 55443',
+    role: 'OWNER',
+    isActive: true,
+    canViewProfit: true,
+  },
+  {
+    id: 'm3',
     name: 'Vikas Deshmukh',
     phone: '+91 98200 11223',
     role: 'MANAGER',
     isActive: true,
-  },
-  {
-    id: 'm3',
-    name: 'Kavita Singh',
-    phone: '+91 98199 44556',
-    role: 'ACCOUNTANT',
-    isActive: true,
+    canViewProfit: false,
   },
   {
     id: 'm4',
-    name: 'Rohan Patil',
+    name: 'Rohan Patil (Head AC Mechanic)',
     phone: '+91 98333 77889',
     role: 'EMPLOYEE',
     isActive: true,
+    canViewProfit: false,
   },
 ];
 
 const ROLES: { role: UserRole; label: string; desc: string }[] = [
-  { role: 'OWNER', label: 'Owner', desc: 'Full unrestricted access & billing' },
-  { role: 'ADMIN', label: 'Admin', desc: 'Business & operations management' },
+  { role: 'OWNER', label: 'Owner / Partner', desc: 'Full unrestricted access & Net Profit visibility' },
+  { role: 'ADMIN', label: 'Admin', desc: 'Business operations & team management' },
   { role: 'MANAGER', label: 'Manager', desc: 'Job sheets, customers, expenses & inventory' },
-  { role: 'ACCOUNTANT', label: 'Accountant', desc: 'Payments, bank accounts & reports' },
-  { role: 'EMPLOYEE', label: 'Employee', desc: 'Work order job sheets & vehicle lookup' },
+  { role: 'ACCOUNTANT', label: 'Accountant', desc: 'Payments, bank accounts & expense reports' },
+  { role: 'EMPLOYEE', label: 'Employee / Mechanic', desc: 'Job sheets & routine check-up work orders' },
 ];
 
 export default function UsersRolesScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { activeEnterprise } = useEnterpriseStore();
+  const { activeEnterprise, activeMember } = useEnterpriseStore();
 
   const [members, setMembers] = useState<TeamMember[]>(DEFAULT_MEMBERS);
+  const [activeMemberId, setActiveMemberId] = useState<string>('m1');
   const [modalVisible, setModalVisible] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [newRole, setNewRole] = useState<UserRole>('EMPLOYEE');
+  const [newRole, setNewRole] = useState<UserRole>('OWNER');
 
-  const handleAddMember = () => {
+  useEffect(() => {
+    const loadMembers = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('cool_car_team_members');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMembers(parsed);
+          }
+        }
+        const storedActiveId = await AsyncStorage.getItem('cool_car_active_member_id');
+        if (storedActiveId) {
+          setActiveMemberId(storedActiveId);
+        }
+      } catch (err) {
+        console.log('[Users] load error:', err);
+      }
+    };
+    loadMembers();
+  }, []);
+
+  const saveMembers = async (updated: TeamMember[]) => {
+    setMembers(updated);
+    try {
+      await AsyncStorage.setItem('cool_car_team_members', JSON.stringify(updated));
+      const entId = activeEnterprise?.id || 'enterprise-dev-001';
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../../src/services/firebase/firebase.config');
+      await setDoc(doc(db, 'enterprises', entId, 'settings', 'team'), { members: updated }, { merge: true });
+    } catch (err) {
+      console.log('[Users] save error:', err);
+    }
+  };
+
+  const handleSwitchActiveRole = async (member: TeamMember) => {
+    setActiveMemberId(member.id);
+    try {
+      await AsyncStorage.setItem('cool_car_active_member_id', member.id);
+      useEnterpriseStore.getState().setActiveMember({
+        userId: member.id,
+        enterpriseId: activeEnterprise?.id || 'enterprise-dev-001',
+        role: member.role,
+        displayName: member.name,
+        phone: member.phone,
+        isActive: true,
+        joinedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      Alert.alert(
+        'Active Persona Switched',
+        `Current app role is now: ${member.name} (${formatRoleLabel(member.role)}).\n${
+          member.role === 'OWNER'
+            ? '✓ Month Net Profit and financial till are VISIBLE on Home Screen.'
+            : '🔒 Month Net Profit is HIDDEN and restricted to owners only.'
+        }`
+      );
+    } catch (err) {
+      console.log('Error switching role:', err);
+    }
+  };
+
+  const handleAddMember = async () => {
     if (!newName.trim()) {
-      Alert.alert('Required', 'Please enter staff member name');
+      Alert.alert('Required', 'Please enter partner or staff name');
       return;
     }
     if (!newPhone.trim() || newPhone.replace(/\D/g, '').length < 10) {
@@ -106,19 +178,23 @@ export default function UsersRolesScreen() {
       phone: `+91 ${newPhone.replace(/\D/g, '').slice(-10)}`,
       role: newRole,
       isActive: true,
+      canViewProfit: newRole === 'OWNER',
     };
 
-    setMembers([...members, newMember]);
+    const updated = [...members, newMember];
+    await saveMembers(updated);
     setNewName('');
     setNewPhone('');
-    setNewRole('EMPLOYEE');
+    setNewRole('OWNER');
     setModalVisible(false);
-    Alert.alert('Added', `${newMember.name} added as ${formatRoleLabel(newMember.role)}.`);
+    Alert.alert('Added ✓', `${newMember.name} added as ${formatRoleLabel(newMember.role)}.`);
   };
 
   const handleRemoveMember = (id: string, name: string) => {
-    if (members.find((m) => m.id === id)?.role === 'OWNER') {
-      Alert.alert('Action Restricted', 'Owner account cannot be removed.');
+    const ownerCount = members.filter((m) => m.role === 'OWNER').length;
+    const target = members.find((m) => m.id === id);
+    if (target?.role === 'OWNER' && ownerCount <= 1) {
+      Alert.alert('Action Restricted', 'At least one Owner account must remain in the garage.');
       return;
     }
     Alert.alert('Remove Team Member', `Are you sure you want to revoke access for ${name}?`, [
@@ -127,7 +203,8 @@ export default function UsersRolesScreen() {
         text: 'Revoke',
         style: 'destructive',
         onPress: () => {
-          setMembers(members.filter((m) => m.id !== id));
+          const updated = members.filter((m) => m.id !== id);
+          saveMembers(updated);
         },
       },
     ]);
@@ -212,8 +289,34 @@ export default function UsersRolesScreen() {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 110 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 120 }}
         >
+          {/* Multi-Owner & RBAC Explanation Banner */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141824' : '#FFFFFF',
+              borderRadius: 20,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: borderColor,
+              gap: 8,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Shield size={18} color="#153580" />
+              <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                Multi-Owner & Role-Based Rules
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: isDark ? '#94A3B8' : '#64748B', lineHeight: 18 }}>
+              • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>Partners & Co-Owners (3-4 Partners):</Text> Can view Month Net Profit, workshop till, and bank accounts.
+            </Text>
+            <Text style={{ fontSize: 12, color: isDark ? '#94A3B8' : '#64748B', lineHeight: 18 }}>
+              • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>Mechanics & Employees:</Text> Net profit is automatically locked 🔒 and only job cards & vehicle work are shown.
+            </Text>
+          </View>
+
           <Text
             style={{
               color: theme.textMuted,
@@ -225,13 +328,15 @@ export default function UsersRolesScreen() {
               paddingLeft: 4,
             }}
           >
-            Active Workshop Staff ({members.length})
+            Garage Partners & Staff ({members.length})
           </Text>
 
           {/* Members List */}
           <View style={{ gap: 12 }}>
             {members.map((member) => {
               const isOwner = member.role === 'OWNER';
+              const isActivePersona = member.id === activeMemberId || (activeMember && activeMember.displayName === member.name);
+
               return (
                 <View
                   key={member.id}
@@ -239,77 +344,135 @@ export default function UsersRolesScreen() {
                     backgroundColor: cardBg,
                     borderRadius: 24,
                     padding: 18,
-                    borderWidth: 1,
-                    borderColor: borderColor,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    borderWidth: 1.5,
+                    borderColor: isActivePersona ? '#153580' : borderColor,
                     shadowColor: '#000',
                     shadowOpacity: isDark ? 0.3 : 0.04,
                     shadowRadius: 10,
                     shadowOffset: { width: 0, height: 4 },
                     elevation: 2,
+                    gap: 12,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
-                    <View
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
-                        backgroundColor: isDark ? '#141926' : '#EFF6FF',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <User size={22} color={isDark ? '#FFFFFF' : '#3B82F6'} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 22,
+                          backgroundColor: isOwner ? '#153580' : (isDark ? '#141926' : '#EFF6FF'),
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <User size={20} color={isOwner ? '#FFFFFF' : (isDark ? '#FFFFFF' : '#3B82F6')} />
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
+                            {member.name}
+                          </Text>
+                          {isActivePersona && (
+                            <View style={{ backgroundColor: '#10B981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                              <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900' }}>ACTIVE</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
+                          {member.phone}
+                        </Text>
+                      </View>
                     </View>
 
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                        {member.name}
+                    {!isOwner && (
+                      <TouchableOpacity
+                        onPress={() => handleRemoveMember(member.id, member.name)}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Trash2 size={15} color="#DC2626" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* Role Badge & Profit Access Tag */}
+                  <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 8,
+                        backgroundColor: isOwner ? (isDark ? '#3B2F04' : '#FEF3C7') : (isDark ? '#1E293B' : '#F1F5F9'),
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: isOwner ? (isDark ? '#FBBF24' : '#B45309') : (isDark ? '#60A5FA' : '#1D4ED8'),
+                          fontSize: 11,
+                          fontWeight: '800',
+                        }}
+                      >
+                        {formatRoleLabel(member.role)}
                       </Text>
-                      <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 2 }}>
-                        {member.phone}
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 8,
+                        backgroundColor: isOwner ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                      }}
+                    >
+                      {isOwner ? <Unlock size={11} color="#10B981" /> : <Lock size={11} color="#EF4444" />}
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: isOwner ? '#10B981' : '#EF4444' }}>
+                        {isOwner ? 'Profit: Visible ✓' : 'Profit: Hidden 🔒'}
                       </Text>
-                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-                        <View
-                          style={{
-                            paddingHorizontal: 8,
-                            paddingVertical: 3,
-                            borderRadius: 8,
-                            backgroundColor: isOwner ? (isDark ? '#3B2F04' : '#FEF3C7') : (isDark ? '#1E293B' : '#F1F5F9'),
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color: isOwner ? (isDark ? '#FBBF24' : '#B45309') : (isDark ? '#60A5FA' : '#1D4ED8'),
-                              fontSize: 11,
-                              fontWeight: '700',
-                            }}
-                          >
-                            {formatRoleLabel(member.role)}
-                          </Text>
-                        </View>
-                      </View>
                     </View>
                   </View>
 
-                  {!isOwner && (
-                    <TouchableOpacity
-                      onPress={() => handleRemoveMember(member.id, member.name)}
-                      style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: 19,
-                        backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Trash2 size={16} color="#DC2626" />
-                    </TouchableOpacity>
-                  )}
+                  {/* Switch Active Persona Button */}
+                  <TouchableOpacity
+                    onPress={() => handleSwitchActiveRole(member)}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      backgroundColor: isActivePersona ? (isDark ? '#1C2538' : '#F1F5F9') : '#153580',
+                      paddingVertical: 9,
+                      borderRadius: 12,
+                      marginTop: 2,
+                    }}
+                  >
+                    {isActivePersona ? (
+                      <>
+                        <Check size={14} color="#10B981" strokeWidth={3} />
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                          Currently Active in App
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={13} color="#FFFFFF" />
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF' }}>
+                          Switch & Test as {formatRoleLabel(member.role)}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 </View>
               );
             })}

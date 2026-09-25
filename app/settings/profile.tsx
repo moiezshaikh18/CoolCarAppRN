@@ -50,14 +50,28 @@ export default function ProfileScreen() {
     if (user) {
       const updated = { ...user, displayName: name.trim(), email: email.trim() };
       setUser(updated);
+
       try {
-        const { doc, updateDoc } = await import('firebase/firestore');
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        await AsyncStorage.setItem('cool_car_saved_owner_name', name.trim());
+        await AsyncStorage.setItem('cool_car_saved_owner_email', email.trim());
+      } catch (err) {
+        console.log('[Profile] AsyncStorage error:', err);
+      }
+
+      if (activeMember) {
+        const { setActiveMember } = useEnterpriseStore.getState();
+        setActiveMember({ ...activeMember, displayName: name.trim() });
+      }
+
+      try {
+        const { doc, setDoc } = await import('firebase/firestore');
         const { db } = await import('../../src/services/firebase/firebase.config');
-        await updateDoc(doc(db, 'users', user.uid), {
+        await setDoc(doc(db, 'users', user.uid), {
           displayName: name.trim(),
           email: email.trim(),
           updatedAt: new Date().toISOString(),
-        });
+        }, { merge: true });
       } catch (err) {
         console.log('[Profile] Firestore update error:', err);
       }

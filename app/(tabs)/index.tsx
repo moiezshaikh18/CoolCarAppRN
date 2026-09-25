@@ -54,7 +54,7 @@ import { useHideOnScroll } from '../../src/store/tabBarStore';
 
 export default function DashboardScreen() {
   const { isDark, toggleMode } = useTheme();
-  const { enterpriseId, currencySymbol } = useEnterprise();
+  const { enterpriseId, currencySymbol, isOwner } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { onScroll: onHideNavScroll } = useHideOnScroll();
 
@@ -325,9 +325,15 @@ export default function DashboardScreen() {
                   <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
                     {"Month Net Profit"}
                   </Text>
-                  <Text style={{ color: '#00C896', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
-                    +{formatCurrency(monthNetProfit, currencySymbol)}
-                  </Text>
+                  {isOwner ? (
+                    <Text style={{ color: '#00C896', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
+                      +{formatCurrency(monthNetProfit, currencySymbol)}
+                    </Text>
+                  ) : (
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 12, fontWeight: '800', marginTop: 2 }}>
+                      🔒 Owner Only
+                    </Text>
+                  )}
                 </View>
               </View>
 
