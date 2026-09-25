@@ -132,12 +132,10 @@ export default function InventoryScreen() {
         updatedAt: new Date().toISOString(),
       };
 
-      if (typeof updateChalan === 'function') {
-        updateChalan(selectedChalan.id, updates);
-      }
+      updateChalan(selectedChalan.id, updates);
 
       // Cloud Firestore sync
-      const entId = enterpriseId || 'enterprise-cool-car';
+      const entId = enterpriseId || 'enterprise-dev-001';
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
       await setDoc(doc(db, 'enterprises', entId, 'chalans', selectedChalan.id), updates, { merge: true });

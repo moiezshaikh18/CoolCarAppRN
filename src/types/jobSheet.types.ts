@@ -56,6 +56,7 @@ export interface JobSheet {
   voidReason?: string;
   voidedBy?: string;
   voidedAt?: Date | string;
+  routineCheckup?: Record<string, string>;
   createdBy: string;
   createdAt: Date | string;
   updatedAt: Date | string;

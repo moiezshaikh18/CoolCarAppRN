@@ -14,6 +14,8 @@ import {
   TextInput,
   Modal,
   StyleSheet,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -45,6 +47,9 @@ import { router } from 'expo-router';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { useEmployeeStore } from '../../src/store/employeeStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
+import { useCustomerStore } from '../../src/store/customerStore';
+import { useVehicleStore } from '../../src/store/vehicleStore';
+import { usePaymentStore } from '../../src/store/paymentStore';
 import { WorkCategory } from '../../src/types/jobSheet.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
@@ -147,10 +152,8 @@ export default function CreateJobSheetScreen() {
   const [assignedEmployeeId, setAssignedEmployeeId] = useState<string>(employees[0]?.id || '');
 
   // Job Items List
-  const [items, setItems] = useState<JobItem[]>([
-    { id: '1', name: 'AC Gas Refill (R134a)', type: 'SERVICE', price: 1800 },
-    { id: '2', name: 'Cabin AC Filter OEM', type: 'PART', price: 450 },
-  ]);
+  const [items, setItems] = useState<JobItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Quick Add Services Dropdown Modal & Category Tabs
   const [isQuickAddModalOpen, setIsQuickAddModalOpen] = useState(false);
@@ -327,70 +330,177 @@ export default function CreateJobSheetScreen() {
       return;
     }
 
-    const entId = enterpriseId || 'enterprise-cool-car';
-    const newJobId = `JS-${Date.now()}`;
-    const jobNum = `CCG-${Math.floor(1000 + Math.random() * 9000)}`;
-    const finalModel = carModel.trim() ? `${carModel.trim()} (${modelYear})` : `Vehicle (${modelYear})`;
-    const finalCustName = customerName.trim() || 'Walk-in Customer';
-    const finalCustPhone = customerPhone.trim();
+    setIsSubmitting(true);
 
-    if (paidNowVal > 0 && selectedAccountId) {
-      creditAccount(selectedAccountId, paidNowVal);
+    try {
+      const entId = enterpriseId || 'enterprise-cool-car';
+      const newJobId = `JS-${Date.now()}`;
+      const jobNum = `CCG-${Math.floor(1000 + Math.random() * 9000)}`;
+      const finalModel = carModel.trim() ? `${carModel.trim()} (${modelYear})` : `Vehicle (${modelYear})`;
+      const finalCustName = customerName.trim() || 'Walk-in Customer';
+      const finalCustPhone = customerPhone.trim();
+
+      const actualPaid = paidNowVal > 0 ? paidNowVal : 0;
+      const actualPending = Math.max(0, totalBillDue - actualPaid);
+      const isPaid = actualPending === 0 && totalBillDue > 0;
+      const paymentStatus = isPaid ? 'PAID' : (actualPaid > 0 ? 'PARTIALLY_PAID' : 'PENDING');
+
+      const custId = `cust-${cleanReg.toLowerCase()}`;
+      const vehId = `veh-${cleanReg.toLowerCase()}`;
+
+      const newJob = {
+        id: newJobId,
+        enterpriseId: entId,
+        jobNumber: jobNum,
+        customerId: custId,
+        customerName: finalCustName,
+        customerPhone: finalCustPhone,
+        vehicleId: vehId,
+        vehicleNumber: cleanReg,
+        vehicleMake: finalModel.split(' ')[0] || 'Car',
+        vehicleModel: finalModel,
+        workCategory,
+        date: jobDate,
+        time: jobTime,
+        status: 'IN_PROGRESS' as any,
+        assignedMechanicId: selectedMechanic?.id || '',
+        assignedMechanicName: selectedMechanic ? `${selectedMechanic.name} (${selectedMechanic.role})` : 'Unassigned',
+        items: items.map((it) => ({
+          id: it.id,
+          name: it.name,
+          type: it.type,
+          quantity: 1,
+          unitPrice: it.price,
+          amount: it.price,
+        })),
+        subtotal: currentSubtotal,
+        discount: discountVal,
+        previousPendingAmount: prevPendingVal,
+        finalAmount: totalBillDue,
+        amountCollectedNow: actualPaid,
+        totalPaid: actualPaid,
+        pendingAmount: actualPending,
+        paymentStatus: paymentStatus as any,
+        notes: `${workCategory} Work Order - Intaken at Cool Car`,
+        voided: false,
+        createdBy: 'Cool Car Manager',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // 1. Add to local JobSheet store
+      addJobSheet(newJob as any);
+
+      // 2. Add customer & vehicle to local directory stores
+      const customerData = {
+        id: custId,
+        enterpriseId: entId,
+        name: finalCustName,
+        phone: finalCustPhone,
+        address: '',
+        totalVisits: 1,
+        totalSpent: totalBillDue,
+        outstandingBalance: actualPending,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      useCustomerStore.getState().addCustomer(customerData as any);
+
+      const vehicleData = {
+        id: vehId,
+        enterpriseId: entId,
+        customerId: custId,
+        registrationNumber: cleanReg,
+        make: finalModel.split(' ')[0] || 'Car',
+        model: finalModel,
+        year: Number(modelYear) || new Date().getFullYear(),
+        customerName: finalCustName,
+        customerPhone: finalCustPhone,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      useVehicleStore.getState().addVehicle(vehicleData as any);
+
+      // 3. Process payment if paid now
+      if (actualPaid > 0 && selectedAccountId) {
+        creditAccount(selectedAccountId, actualPaid);
+        const payId = `pay-${Date.now()}`;
+        const payData = {
+          id: payId,
+          enterpriseId: entId,
+          jobSheetId: newJobId,
+          customerId: custId,
+          vehicleId: vehId,
+          amount: actualPaid,
+          paymentMode,
+          paymentAccountId: selectedAccountId,
+          paymentAccountName: selectedAccountName,
+          date: new Date().toISOString(),
+          referenceNumber: `REC-${Date.now().toString().slice(-4)}`,
+          voided: false,
+          createdBy: 'Cool Car Manager',
+          createdAt: new Date().toISOString(),
+        };
+        usePaymentStore.getState().addPayment(payData as any);
+      }
+
+      // 4. Cloud Firestore Persistent Sync
+      try {
+        const { doc, setDoc } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+
+        // Write JobSheet
+        await setDoc(doc(db, 'enterprises', entId, 'jobSheets', newJobId), newJob);
+
+        // Auto-save Customer in directory
+        await setDoc(doc(db, 'enterprises', entId, 'customers', custId), customerData, { merge: true });
+
+        // Auto-save Vehicle in fleet
+        await setDoc(doc(db, 'enterprises', entId, 'vehicles', vehId), vehicleData, { merge: true });
+
+        // Write Payment if applicable
+        if (actualPaid > 0) {
+          const payId = `pay-${Date.now()}`;
+          const payData = {
+            id: payId,
+            enterpriseId: entId,
+            jobSheetId: newJobId,
+            customerId: custId,
+            vehicleId: vehId,
+            amount: actualPaid,
+            paymentMode,
+            paymentAccountId: selectedAccountId,
+            paymentAccountName: selectedAccountName,
+            date: new Date().toISOString(),
+            referenceNumber: `REC-${Date.now().toString().slice(-4)}`,
+            voided: false,
+            createdBy: 'Cool Car Manager',
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(doc(db, 'enterprises', entId, 'payments', payId), payData);
+        }
+      } catch (cloudErr) {
+        console.log('[CreateJob] Cloud sync notice:', cloudErr);
+      }
+
+      showAlert(
+        'Job Sheet Created!',
+        `Job Sheet #${jobNum} created for ${finalModel} (${cleanReg}).\nTotal Bill: ₹${totalBillDue.toLocaleString()}.\nSaved to Cloud Firestore.`,
+        'success',
+        [
+          {
+            text: 'View Job Sheets',
+            onPress: () => router.replace('/job-sheets'),
+          },
+        ]
+      );
+    } catch (err: any) {
+      console.log('[CreateJob] error:', err);
+      showAlert('Error', err?.message || 'Could not create job sheet. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const newJob = {
-      id: newJobId,
-      enterpriseId: entId,
-      jobNumber: jobNum,
-      customerId: `cust-${Date.now()}`,
-      customerName: finalCustName,
-      customerPhone: finalCustPhone,
-      vehicleId: `veh-${Date.now()}`,
-      vehicleNumber: cleanReg,
-      vehicleMake: finalModel.split(' ')[0],
-      vehicleModel: finalModel,
-      workCategory,
-      date: jobDate,
-      time: jobTime,
-      status: 'IN_PROGRESS' as any,
-      assignedMechanicId: selectedMechanic?.id || '',
-      assignedMechanicName: selectedMechanic ? `${selectedMechanic.name} (${selectedMechanic.role})` : 'Unassigned',
-      items: items.map((it) => ({
-        id: it.id,
-        name: it.name,
-        type: it.type,
-        quantity: 1,
-        unitPrice: it.price,
-        amount: it.price,
-      })),
-      subtotal: currentSubtotal,
-      discount: discountVal,
-      previousPendingAmount: prevPendingVal,
-      finalAmount: totalBillDue,
-      amountCollectedNow: 0,
-      totalPaid: 0,
-      pendingAmount: totalBillDue,
-      paymentStatus: 'PENDING' as any,
-      notes: `${workCategory} Work Order - Intaken at Cool Car`,
-      voided: false,
-      createdBy: 'Cool Car Manager',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    addJobSheet(newJob as any);
-
-    showAlert(
-      'Job Sheet Created!',
-      `Job Sheet #${jobNum} created for ${finalModel} (${cleanReg}).\nTotal Bill: ₹${totalBillDue.toLocaleString()}.\nStatus: In Progress.`,
-      'success',
-      [
-        {
-          text: 'View Job Sheets',
-          onPress: () => router.replace('/job-sheets'),
-        },
-      ]
-    );
   };
 
   const canvasBg = isDark ? '#000000' : '#153580';
