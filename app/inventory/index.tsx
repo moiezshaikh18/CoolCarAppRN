@@ -471,7 +471,7 @@ export default function InventoryScreen() {
                 No purchase chalans logged
               </Text>
               <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4, textAlign: 'center' }}>
-                Tap "+ Add" above to record an inward spare parts purchase chalan.
+                Tap &apos;+ Add&apos; above to record an inward spare parts purchase chalan.
               </Text>
             </View>
           }

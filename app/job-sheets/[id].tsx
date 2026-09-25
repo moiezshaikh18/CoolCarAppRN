@@ -113,12 +113,11 @@ export default function JobSheetDetailsScreen() {
     if (!params.id) return;
     const found = jobSheets.find((j) => j.id === params.id || j.jobNumber === params.id);
     if (found) {
-      setDbJob(found);
       return;
     }
     const fetchFromDb = async () => {
       try {
-        const entId = enterpriseId || 'enterprise-dev-001';
+        const entId = enterpriseId || 'enterprise-cool-car';
         const { doc, getDoc } = await import('firebase/firestore');
         const { db } = await import('../../src/services/firebase/firebase.config');
         const snap = await getDoc(doc(db, 'enterprises', entId, 'jobSheets', params.id as string));
@@ -138,9 +137,12 @@ export default function JobSheetDetailsScreen() {
 
   useEffect(() => {
     if (job?.routineCheckup) {
-      setRoutineValues(job.routineCheckup);
+      const timer = setTimeout(() => {
+        setRoutineValues(job.routineCheckup || {});
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [job?.id]);
+  }, [job?.id, job?.routineCheckup]);
 
   const handleUpdateRoutineItem = (key: string, value: string) => {
     setRoutineValues((prev) => ({ ...prev, [key]: value }));
@@ -269,7 +271,10 @@ export default function JobSheetDetailsScreen() {
   // Auto-open if query param openPayment === 'true'
   useEffect(() => {
     if (params.openPayment === 'true') {
-      handleOpenPayment();
+      const timer = setTimeout(() => {
+        handleOpenPayment();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [params.openPayment]);
 

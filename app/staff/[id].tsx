@@ -43,10 +43,6 @@ export default function StaffDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  if (id === 'pay') {
-    return <PayStaffScreen />;
-  }
-
   const { getEmployeeById, getPaymentsByEmployeeId, markEmployeeAsLeft, updateEmployee } = useEmployeeStore();
   const staff = id && id !== 'pay' ? getEmployeeById(id) : undefined;
   const paymentHistory = id && id !== 'pay' ? getPaymentsByEmployeeId(id) : [];
@@ -87,7 +83,7 @@ export default function StaffDetailScreen() {
   };
 
   if (id === 'pay') {
-    return null;
+    return <PayStaffScreen />;
   }
 
   if (!staff) {
