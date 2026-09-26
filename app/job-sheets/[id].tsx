@@ -1092,37 +1092,19 @@ export default function JobSheetDetailsScreen() {
                           </Text>
                         </TouchableOpacity>
 
-                        {item.defaultVal !== 'OK ✓' && (
-                          <TouchableOpacity
-                            onPress={() => handleUpdateRoutineItem(item.key, item.defaultVal)}
-                            style={{
-                              backgroundColor:
-                                currentVal === item.defaultVal
-                                  ? '#153580'
-                                  : isDark
-                                  ? '#1C2538'
-                                  : '#F1F5F9',
-                              paddingHorizontal: 8,
-                              paddingVertical: 7,
-                              borderRadius: 10,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 11,
-                                fontWeight: '800',
-                                color:
-                                  currentVal === item.defaultVal
-                                    ? '#FFFFFF'
-                                    : isDark
-                                    ? '#94A3B8'
-                                    : '#64748B',
-                              }}
-                            >
-                              {item.defaultVal}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
+                        <TouchableOpacity
+                          onPress={() => handleUpdateRoutineItem(item.key, item.defaultVal)}
+                          style={{
+                            backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                            paddingHorizontal: 8,
+                            paddingVertical: 7,
+                            borderRadius: 10,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B' }}>
+                            Std
+                          </Text>
+                        </TouchableOpacity>
 
                         {isChecked && (
                           <TouchableOpacity

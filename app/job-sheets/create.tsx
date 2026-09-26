@@ -1278,42 +1278,21 @@ export default function CreateJobSheetScreen() {
                           </Text>
                         </TouchableOpacity>
 
-                        {item.defaultVal !== 'OK ✓' && (
-                          <TouchableOpacity
-                            onPress={() => handleUpdateRoutineItem(item.key, item.defaultVal)}
-                            style={{
-                              backgroundColor:
-                                currentVal === item.defaultVal
-                                  ? '#153580'
-                                  : isDark
-                                  ? '#1C2538'
-                                  : '#FFFFFF',
-                              paddingHorizontal: 8,
-                              paddingVertical: 6,
-                              borderRadius: 8,
-                              borderWidth: 1,
-                              borderColor:
-                                currentVal === item.defaultVal
-                                  ? '#153580'
-                                  : cardBorder,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 10,
-                                fontWeight: '800',
-                                color:
-                                  currentVal === item.defaultVal
-                                    ? '#FFFFFF'
-                                    : isDark
-                                    ? '#94A3B8'
-                                    : '#64748B',
-                              }}
-                            >
-                              {item.defaultVal}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
+                        <TouchableOpacity
+                          onPress={() => handleUpdateRoutineItem(item.key, item.defaultVal)}
+                          style={{
+                            backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                            paddingHorizontal: 8,
+                            paddingVertical: 6,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: cardBorder,
+                          }}
+                        >
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B' }}>
+                            Std
+                          </Text>
+                        </TouchableOpacity>
 
                         {isChecked && (
                           <TouchableOpacity
