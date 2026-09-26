@@ -23,12 +23,15 @@ import {
   User,
   Phone,
   Wrench,
+  Printer,
+  Share2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { formatCurrency } from '../../src/utils/currency';
 import { JobSheet, JobStatus } from '../../src/types/jobSheet.types';
+import { printJobCard, generateAndShareJobCardPdf } from '../../src/utils/jobCardPdf';
 
 const STATUS_TABS: { label: string; value: JobStatus | 'ALL' }[] = [
   { label: 'All Jobs', value: 'ALL' },
@@ -47,7 +50,7 @@ export default function JobSheetsScreen() {
 
   // Firestore real-time listener
   useEffect(() => {
-    const entId = enterpriseId || 'enterprise-dev-001';
+    const entId = enterpriseId || 'enterprise-cool-car';
     let unsubscribe: () => void;
 
     async function subscribeJobSheets() {
@@ -108,6 +111,94 @@ export default function JobSheetsScreen() {
         return { bg: isDark ? '#450A0A' : '#FEE2E2', text: isDark ? '#F87171' : '#B91C1C', label: 'Cancelled' };
       default:
         return { bg: isDark ? '#1F2937' : '#F1F5F9', text: isDark ? '#94A3B8' : '#475569', label: status };
+    }
+  };
+
+  const handlePrintItem = async (item: JobSheet, e: any) => {
+    e?.stopPropagation?.();
+    const services = ((item as any)?.items || [])
+      .filter((it: any) => it.type === 'SERVICE')
+      .map((it: any) => it.name);
+
+    const parts = ((item as any)?.items || [])
+      .filter((it: any) => it.type === 'PART')
+      .map((it: any) => ({
+        name: it.name,
+        qty: it.quantity,
+        price: it.unitPrice,
+      }));
+
+    try {
+      await printJobCard({
+        jobNumber: item.jobNumber || item.id,
+        date: typeof item.date === 'string' ? item.date : new Date(item.date).toLocaleDateString('en-IN'),
+        time: item.time,
+        customerName: item.customerName,
+        customerPhone: item.customerPhone,
+        vehicleNumber: item.vehicleNumber,
+        vehicleMake: item.vehicleMake,
+        vehicleModel: item.vehicleModel,
+        workCategory: item.workCategory,
+        assignedMechanicName: item.assignedMechanicName,
+        demandedWork: services.length > 0 ? services : undefined,
+        workDone: services,
+        partsInUse: parts,
+        routineCheckup: (item as any).routineCheckup,
+        notes: (item as any).notes,
+        subtotal: item.subtotal,
+        discount: item.discount,
+        finalAmount: item.finalAmount,
+        totalPaid: item.totalPaid,
+        pendingAmount: item.pendingAmount,
+        paymentStatus: item.paymentStatus,
+        currencySymbol,
+      });
+    } catch (err) {
+      console.log('[PrintCard] error:', err);
+    }
+  };
+
+  const handleShareItem = async (item: JobSheet, e: any) => {
+    e?.stopPropagation?.();
+    const services = ((item as any)?.items || [])
+      .filter((it: any) => it.type === 'SERVICE')
+      .map((it: any) => it.name);
+
+    const parts = ((item as any)?.items || [])
+      .filter((it: any) => it.type === 'PART')
+      .map((it: any) => ({
+        name: it.name,
+        qty: it.quantity,
+        price: it.unitPrice,
+      }));
+
+    try {
+      await generateAndShareJobCardPdf({
+        jobNumber: item.jobNumber || item.id,
+        date: typeof item.date === 'string' ? item.date : new Date(item.date).toLocaleDateString('en-IN'),
+        time: item.time,
+        customerName: item.customerName,
+        customerPhone: item.customerPhone,
+        vehicleNumber: item.vehicleNumber,
+        vehicleMake: item.vehicleMake,
+        vehicleModel: item.vehicleModel,
+        workCategory: item.workCategory,
+        assignedMechanicName: item.assignedMechanicName,
+        demandedWork: services.length > 0 ? services : undefined,
+        workDone: services,
+        partsInUse: parts,
+        routineCheckup: (item as any).routineCheckup,
+        notes: (item as any).notes,
+        subtotal: item.subtotal,
+        discount: item.discount,
+        finalAmount: item.finalAmount,
+        totalPaid: item.totalPaid,
+        pendingAmount: item.pendingAmount,
+        paymentStatus: item.paymentStatus,
+        currencySymbol,
+      });
+    } catch (err) {
+      console.log('[ShareCard] error:', err);
     }
   };
 
@@ -298,6 +389,53 @@ export default function JobSheetsScreen() {
                 : 'Cleared ✓'}
             </Text>
           </View>
+        </View>
+
+        {/* Quick Actions Row: Print & Share */}
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }}>
+          <TouchableOpacity
+            onPress={(e) => handlePrintItem(item, e)}
+            activeOpacity={0.8}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              backgroundColor: isDark ? '#1E293B' : '#EFF6FF',
+              paddingVertical: 8,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#DBEAFE',
+            }}
+          >
+            <Printer size={13} color={isDark ? '#60A5FA' : '#1D4ED8'} />
+            <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#60A5FA' : '#1D4ED8' }}>
+              Print Card
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={(e) => handleShareItem(item, e)}
+            activeOpacity={0.8}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+              paddingVertical: 8,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+            }}
+          >
+            <Share2 size={13} color={isDark ? '#94A3B8' : '#475569'} />
+            <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#94A3B8' : '#475569' }}>
+              Share PDF
+            </Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );

@@ -520,40 +520,52 @@ export default function JobSheetDetailsScreen() {
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <TouchableOpacity
               onPress={handleDirectPrint}
               disabled={isPdfGenerating}
+              activeOpacity={0.8}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: 4,
+                backgroundColor: 'rgba(255, 255, 255, 0.28)',
+                paddingHorizontal: 10,
+                paddingVertical: 7,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.35)',
               }}
               accessibilityLabel="Print Job Card"
             >
-              <Printer size={18} color="#FFFFFF" />
+              <Printer size={15} color="#FFFFFF" strokeWidth={2.4} />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>Print</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={handleDownloadPdf}
               disabled={isPdfGenerating}
+              activeOpacity={0.8}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: 4,
+                backgroundColor: 'rgba(255, 255, 255, 0.28)',
+                paddingHorizontal: 10,
+                paddingVertical: 7,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.35)',
               }}
               accessibilityLabel="Share or Download Job Card PDF"
             >
               {isPdfGenerating ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Share2 size={18} color="#FFFFFF" />
+                <>
+                  <Share2 size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>PDF</Text>
+                </>
               )}
             </TouchableOpacity>
           </View>
@@ -711,6 +723,98 @@ export default function JobSheetDetailsScreen() {
 
           {activeTab === 'overview' ? (
             <View style={{ gap: 12 }}>
+              {/* ══ Prominent Job Card Actions Banner (Print & PDF) ══ */}
+              <View
+                style={{
+                  backgroundColor: isDark ? '#111827' : '#FFFFFF',
+                  borderRadius: 22,
+                  padding: 16,
+                  borderWidth: 1.5,
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 8,
+                  elevation: 3,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Printer size={18} color={isDark ? '#60A5FA' : '#153580'} strokeWidth={2.4} />
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#F1F5F9' : '#0F172A' }}>
+                      Job Card Actions
+                    </Text>
+                  </View>
+                  <View style={{ backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: isDark ? '#34D399' : '#15803D' }}>
+                      Official B&W Format ✓
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  {/* Direct Print Button */}
+                  <TouchableOpacity
+                    onPress={handleDirectPrint}
+                    disabled={isPdfGenerating}
+                    activeOpacity={0.85}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      backgroundColor: '#153580',
+                      paddingVertical: 14,
+                      borderRadius: 16,
+                      shadowColor: '#153580',
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowOpacity: 0.25,
+                      shadowRadius: 6,
+                      elevation: 3,
+                    }}
+                  >
+                    <Printer size={18} color="#FFFFFF" strokeWidth={2.2} />
+                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                      Print Job Card
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Share / Save PDF Button */}
+                  <TouchableOpacity
+                    onPress={handleDownloadPdf}
+                    disabled={isPdfGenerating}
+                    activeOpacity={0.85}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      backgroundColor: isDark ? '#1E293B' : '#334155',
+                      paddingVertical: 14,
+                      borderRadius: 16,
+                      shadowColor: '#000000',
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 6,
+                      elevation: 3,
+                    }}
+                  >
+                    {isPdfGenerating ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Share2 size={18} color="#FFFFFF" strokeWidth={2.2} />
+                        <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                          Share / PDF
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {/* Assigned Staff Card */}
               <GlassCard
                 variant={isDark ? 'navy' : 'sand'}
