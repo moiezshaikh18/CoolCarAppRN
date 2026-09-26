@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   ChevronDown,
+  ChevronUp,
   Car,
   Plus,
   Trash2,
@@ -37,6 +38,8 @@ import {
   Calendar as CalendarIcon,
   Clock,
   Search,
+  RotateCcw,
+  CheckSquare,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -56,6 +59,7 @@ import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/Theme
 import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 import { YEARS_LIST } from '../../src/utils/carDatabase';
+import { STANDARD_18_ROUTINE_ITEMS } from '../../src/constants/routineCheckup';
 
 // Presets for Car AC Work
 const AC_PRESETS = [
@@ -171,6 +175,33 @@ export default function CreateJobSheetScreen() {
   const [editName, setEditName] = useState('');
   const [editPrice, setEditPrice] = useState('');
   const [editType, setEditType] = useState<'SERVICE' | 'PART'>('SERVICE');
+
+  // Manual Routine Check-Up (18 checkpoints)
+  const [routineValues, setRoutineValues] = useState<Record<string, string>>({});
+  const [isRoutineSectionOpen, setIsRoutineSectionOpen] = useState(false);
+
+  const filledRoutineCount = useMemo(() => {
+    return STANDARD_18_ROUTINE_ITEMS.filter((it) => {
+      const v = routineValues[it.key];
+      return Boolean(v && v.trim() !== '');
+    }).length;
+  }, [routineValues]);
+
+  const handleUpdateRoutineItem = (key: string, value: string) => {
+    setRoutineValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleMarkAllRoutineOk = () => {
+    const allOk: Record<string, string> = {};
+    STANDARD_18_ROUTINE_ITEMS.forEach((it) => {
+      allOk[it.key] = it.defaultVal;
+    });
+    setRoutineValues(allOk);
+  };
+
+  const handleClearAllRoutine = () => {
+    setRoutineValues({});
+  };
 
   // Custom Themed Alert
   const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
@@ -381,6 +412,7 @@ export default function CreateJobSheetScreen() {
         totalPaid: actualPaid,
         pendingAmount: actualPending,
         paymentStatus: paymentStatus as any,
+        routineCheckup: routineValues,
         notes: `${workCategory} Work Order - Intaken at Cool Car`,
         voided: false,
         createdBy: 'Cool Car Manager',
@@ -1065,6 +1097,222 @@ export default function CreateJobSheetScreen() {
                 ₹{totalBillDue.toLocaleString()}
               </Text>
             </View>
+          </View>
+
+          {/* ══ STEP: 18-POINT ROUTINE AC CHECK-UP (MANUAL OPTION) ══ */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141926' : '#FFFFFF',
+              borderRadius: 20,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
+          >
+            {/* Header / Toggle Button */}
+            <TouchableOpacity
+              onPress={() => setIsRoutineSectionOpen((prev) => !prev)}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                    18-Point Routine AC Check-Up
+                  </Text>
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 8,
+                      backgroundColor:
+                        filledRoutineCount > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontWeight: '800',
+                        color: filledRoutineCount > 0 ? '#10B981' : '#64748B',
+                      }}
+                    >
+                      {filledRoutineCount > 0 ? `${filledRoutineCount}/18 Recorded` : 'Optional / Manual'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 3 }}>
+                  {isRoutineSectionOpen
+                    ? 'Enter manual readings, tap OK ✓, or leave blank for pen writing'
+                    : 'Tap to fill checkpoints now or print blank for manual pen entry'}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {isRoutineSectionOpen ? (
+                  <ChevronUp size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+                ) : (
+                  <ChevronDown size={16} color={isDark ? '#94A3B8' : '#64748B'} />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {/* Expanded Content */}
+            {isRoutineSectionOpen && (
+              <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: cardBorder, gap: 10 }}>
+                {/* Action Buttons: Clear All & All OK */}
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginBottom: 4 }}>
+                  <TouchableOpacity
+                    onPress={handleClearAllRoutine}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <RotateCcw size={12} color={isDark ? '#94A3B8' : '#64748B'} />
+                    <Text style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: 11, fontWeight: '800' }}>
+                      Clear All
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleMarkAllRoutineOk}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      backgroundColor: '#153580',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Sparkles size={12} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>All OK ✓</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 18 Checkpoints */}
+                {STANDARD_18_ROUTINE_ITEMS.map((item) => {
+                  const currentVal = routineValues[item.key] ?? '';
+                  const isChecked = Boolean(currentVal && currentVal.trim() !== '');
+                  return (
+                    <View
+                      key={item.key}
+                      style={{
+                        backgroundColor: isDark ? '#0D111A' : '#F8FAFC',
+                        borderRadius: 12,
+                        padding: 10,
+                        borderWidth: 1,
+                        borderColor: cardBorder,
+                        gap: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A', flex: 1 }}>
+                          {item.label}
+                        </Text>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: isChecked ? '#10B981' : '#64748B' }}>
+                          {currentVal || 'Blank'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <TextInput
+                          value={currentVal}
+                          onChangeText={(t) => handleUpdateRoutineItem(item.key, t)}
+                          placeholder={item.placeholder}
+                          placeholderTextColor="#94A3B8"
+                          style={{
+                            flex: 1,
+                            backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                            borderRadius: 8,
+                            paddingHorizontal: 8,
+                            paddingVertical: 6,
+                            fontSize: 11,
+                            fontWeight: '700',
+                            color: isDark ? '#FFFFFF' : '#0F172A',
+                            borderWidth: 1,
+                            borderColor: cardBorder,
+                          }}
+                        />
+                        <TouchableOpacity
+                          onPress={() => handleUpdateRoutineItem(item.key, 'OK ✓')}
+                          style={{
+                            backgroundColor: currentVal === 'OK ✓' ? '#10B981' : isDark ? '#1C2538' : '#FFFFFF',
+                            paddingHorizontal: 9,
+                            paddingVertical: 6,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: currentVal === 'OK ✓' ? '#10B981' : cardBorder,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              fontWeight: '800',
+                              color: currentVal === 'OK ✓' ? '#FFFFFF' : isDark ? '#94A3B8' : '#64748B',
+                            }}
+                          >
+                            OK ✓
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => handleUpdateRoutineItem(item.key, item.defaultVal)}
+                          style={{
+                            backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                            paddingHorizontal: 8,
+                            paddingVertical: 6,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: cardBorder,
+                          }}
+                        >
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B' }}>
+                            Std
+                          </Text>
+                        </TouchableOpacity>
+
+                        {isChecked && (
+                          <TouchableOpacity
+                            onPress={() => handleUpdateRoutineItem(item.key, '')}
+                            style={{
+                              backgroundColor: isDark ? '#2D1F2D' : '#FEE2E2',
+                              paddingHorizontal: 7,
+                              paddingVertical: 6,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#EF4444' }}>✕</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
 
           {/* SUBMIT BUTTON */}

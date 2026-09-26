@@ -23,7 +23,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
-  Share2,
   Clock,
   Wrench,
   Package,
@@ -40,6 +39,7 @@ import {
   Sparkles,
   Sliders,
   Check,
+  RotateCcw,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -51,28 +51,8 @@ import { formatCurrency } from '../../src/utils/currency';
 import { JobSheet, JobStatus } from '../../src/types/jobSheet.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
-import { generateAndShareJobCardPdf, printJobCard } from '../../src/utils/jobCardPdf';
-
-export const STANDARD_18_ROUTINE_ITEMS = [
-  { key: 'actualPressure', label: '1. Actual Pressure', placeholder: 'e.g. 35 psi', defaultVal: 'OK ✓' },
-  { key: 'airMode', label: '2. Air Mode / Circulation', placeholder: 'e.g. Recirculation OK', defaultVal: 'OK ✓' },
-  { key: 'condenserFan', label: '3. Condenser / Fan', placeholder: 'e.g. High Speed OK', defaultVal: 'OK ✓' },
-  { key: 'coolingCoil', label: '4. Cooling Coil', placeholder: 'e.g. Cleaned / Tested', defaultVal: 'OK ✓' },
-  { key: 'beltCheck', label: '5. Belt / Noise Check', placeholder: 'e.g. Tight & Silent', defaultVal: 'OK ✓' },
-  { key: 'leakTesting', label: '6. Leak testing in Vaccum', placeholder: 'e.g. Held 30 min', defaultVal: 'OK ✓' },
-  { key: 'autoCutoff', label: '7. Auto Cut-off On ___ °C', placeholder: 'e.g. 4.5 °C', defaultVal: '4.5 °C' },
-  { key: 'heater', label: '8. Heater', placeholder: 'e.g. Checked / Blocked', defaultVal: 'OK ✓' },
-  { key: 'drainPipe', label: '9. Drain Pipe / Water Leak', placeholder: 'e.g. Flow Clear', defaultVal: 'OK ✓' },
-  { key: 'nitrogenPressure', label: '10. Nitrogen Pressure ___ psi', placeholder: 'e.g. 250 psi', defaultVal: '250 psi' },
-  { key: 'crimping', label: '11. All Crimping / Joints', placeholder: 'e.g. Soap Tested', defaultVal: 'OK ✓' },
-  { key: 'oilCharge', label: '12. Oil Charge', placeholder: 'e.g. 60 ml PAG 46', defaultVal: 'OK ✓' },
-  { key: 'blowerSpeed', label: '13. Blower Speed', placeholder: 'e.g. 1-2-3-4 OK', defaultVal: 'OK ✓' },
-  { key: 'pressurePin', label: '14. Pressure Pin', placeholder: 'e.g. Replaced / OK', defaultVal: 'OK ✓' },
-  { key: 'electricalCheck', label: '15. Electrical Check-up', placeholder: 'e.g. Relay & Fuse OK', defaultVal: 'OK ✓' },
-  { key: 'spannerCheck', label: '16. Spanner Check', placeholder: 'e.g. Tightened', defaultVal: 'OK ✓' },
-  { key: 'fullCharge', label: '17. Full Charge / Top up', placeholder: 'e.g. 450g R134a', defaultVal: 'Full Charge' },
-  { key: 'sticker', label: '18. Sticker', placeholder: 'e.g. Pasted On Door', defaultVal: 'Pasted ✓' },
-];
+import { printJobCard } from '../../src/utils/jobCardPdf';
+import { STANDARD_18_ROUTINE_ITEMS } from '../../src/constants/routineCheckup';
 
 export default function JobSheetDetailsScreen() {
   const { isDark } = useTheme();
@@ -144,6 +124,13 @@ export default function JobSheetDetailsScreen() {
     }
   }, [job?.id, job?.routineCheckup]);
 
+  const filledRoutineCount = useMemo(() => {
+    return STANDARD_18_ROUTINE_ITEMS.filter((it) => {
+      const v = routineValues[it.key] ?? job?.routineCheckup?.[it.key];
+      return Boolean(v && v.trim() !== '');
+    }).length;
+  }, [routineValues, job?.routineCheckup]);
+
   const handleUpdateRoutineItem = (key: string, value: string) => {
     setRoutineValues((prev) => ({ ...prev, [key]: value }));
   };
@@ -157,6 +144,15 @@ export default function JobSheetDetailsScreen() {
     Alert.alert('18 Standard Checks Updated', 'All 18 Routine AC checkpoints populated with standard OK values. Tap "Save Checkup" to save.');
   };
 
+  const handleClearAllRoutine = () => {
+    const cleared: Record<string, string> = {};
+    STANDARD_18_ROUTINE_ITEMS.forEach((it) => {
+      cleared[it.key] = '';
+    });
+    setRoutineValues(cleared);
+    Alert.alert('Checkpoints Cleared', 'All 18 Routine Checkpoints cleared. They will print as blank lines for manual pen writing.');
+  };
+
   const handleSaveRoutineCheckup = async () => {
     if (!job) return;
     setIsSavingRoutine(true);
@@ -164,7 +160,7 @@ export default function JobSheetDetailsScreen() {
       updateJobSheet(job.id, {
         routineCheckup: routineValues,
       });
-      const entId = enterpriseId || 'enterprise-dev-001';
+      const entId = enterpriseId || 'enterprise-cool-car';
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
       await setDoc(
@@ -196,6 +192,12 @@ export default function JobSheetDetailsScreen() {
         price: it.unitPrice,
       }));
 
+    // Dynamic routine checkup: strictly manual values without forcing fake OK defaults
+    const rc: Record<string, string> = {};
+    STANDARD_18_ROUTINE_ITEMS.forEach((it) => {
+      rc[it.key] = routineValues[it.key] ?? job.routineCheckup?.[it.key] ?? '';
+    });
+
     return {
       jobNumber: job.jobNumber || job.id,
       date: typeof job.date === 'string' ? job.date : new Date(job.date).toLocaleDateString('en-IN'),
@@ -210,26 +212,7 @@ export default function JobSheetDetailsScreen() {
       demandedWork: services.length > 0 ? services : undefined,
       workDone: services,
       partsInUse: parts,
-      routineCheckup: {
-        actualPressure: routineValues.actualPressure || job.routineCheckup?.actualPressure || 'OK ✓',
-        airMode: routineValues.airMode || job.routineCheckup?.airMode || 'OK ✓',
-        condenserFan: routineValues.condenserFan || job.routineCheckup?.condenserFan || 'OK ✓',
-        coolingCoil: routineValues.coolingCoil || job.routineCheckup?.coolingCoil || 'OK ✓',
-        beltCheck: routineValues.beltCheck || job.routineCheckup?.beltCheck || 'OK ✓',
-        leakTesting: routineValues.leakTesting || job.routineCheckup?.leakTesting || 'OK ✓',
-        autoCutoff: routineValues.autoCutoff || job.routineCheckup?.autoCutoff || '4.5 °C',
-        heater: routineValues.heater || job.routineCheckup?.heater || 'OK ✓',
-        drainPipe: routineValues.drainPipe || job.routineCheckup?.drainPipe || 'OK ✓',
-        nitrogenPressure: routineValues.nitrogenPressure || job.routineCheckup?.nitrogenPressure || '250 psi',
-        crimping: routineValues.crimping || job.routineCheckup?.crimping || 'OK ✓',
-        oilCharge: routineValues.oilCharge || job.routineCheckup?.oilCharge || 'OK ✓',
-        blowerSpeed: routineValues.blowerSpeed || job.routineCheckup?.blowerSpeed || 'OK ✓',
-        pressurePin: routineValues.pressurePin || job.routineCheckup?.pressurePin || 'OK ✓',
-        electricalCheck: routineValues.electricalCheck || job.routineCheckup?.electricalCheck || 'OK ✓',
-        spannerCheck: routineValues.spannerCheck || job.routineCheckup?.spannerCheck || 'OK ✓',
-        fullCharge: routineValues.fullCharge || job.routineCheckup?.fullCharge || 'Full Charge',
-        sticker: routineValues.sticker || job.routineCheckup?.sticker || 'Pasted ✓',
-      },
+      routineCheckup: rc as any,
       notes: (job as any).notes,
       subtotal: job.subtotal,
       discount: job.discount,
@@ -239,21 +222,6 @@ export default function JobSheetDetailsScreen() {
       paymentStatus: job.paymentStatus,
       currencySymbol,
     };
-  };
-
-  // ── Share / Save PDF ─────────────────────────────────────────
-  const handleDownloadPdf = async () => {
-    const data = getJobCardData();
-    if (!data) return;
-    setIsPdfGenerating(true);
-    try {
-      await generateAndShareJobCardPdf(data);
-    } catch (err) {
-      console.error('[JobCardPDF] Error generating PDF:', err);
-      Alert.alert('PDF Error', `Could not generate Job Card PDF.\nDetails: ${String(err)}`);
-    } finally {
-      setIsPdfGenerating(false);
-    }
   };
 
   // ── Direct Native Print ──────────────────────────────────────
@@ -520,7 +488,7 @@ export default function JobSheetDetailsScreen() {
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
               onPress={handleDirectPrint}
               disabled={isPdfGenerating}
@@ -528,9 +496,9 @@ export default function JobSheetDetailsScreen() {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 4,
+                gap: 5,
                 backgroundColor: 'rgba(255, 255, 255, 0.28)',
-                paddingHorizontal: 10,
+                paddingHorizontal: 12,
                 paddingVertical: 7,
                 borderRadius: 12,
                 borderWidth: 1,
@@ -538,33 +506,12 @@ export default function JobSheetDetailsScreen() {
               }}
               accessibilityLabel="Print Job Card"
             >
-              <Printer size={15} color="#FFFFFF" strokeWidth={2.4} />
-              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>Print</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleDownloadPdf}
-              disabled={isPdfGenerating}
-              activeOpacity={0.8}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: 'rgba(255, 255, 255, 0.28)',
-                paddingHorizontal: 10,
-                paddingVertical: 7,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.35)',
-              }}
-              accessibilityLabel="Share or Download Job Card PDF"
-            >
               {isPdfGenerating ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Share2 size={15} color="#FFFFFF" strokeWidth={2.4} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>PDF</Text>
+                  <Printer size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>Print</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -752,67 +699,111 @@ export default function JobSheetDetailsScreen() {
                   </View>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  {/* Direct Print Button */}
-                  <TouchableOpacity
-                    onPress={handleDirectPrint}
-                    disabled={isPdfGenerating}
-                    activeOpacity={0.85}
-                    style={{
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      backgroundColor: '#153580',
-                      paddingVertical: 14,
-                      borderRadius: 16,
-                      shadowColor: '#153580',
-                      shadowOffset: { width: 0, height: 3 },
-                      shadowOpacity: 0.25,
-                      shadowRadius: 6,
-                      elevation: 3,
-                    }}
-                  >
-                    <Printer size={18} color="#FFFFFF" strokeWidth={2.2} />
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
-                      Print Job Card
-                    </Text>
-                  </TouchableOpacity>
+                {/* Full-Width Print Job Card Button */}
+                <TouchableOpacity
+                  onPress={handleDirectPrint}
+                  disabled={isPdfGenerating}
+                  activeOpacity={0.85}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    backgroundColor: '#153580',
+                    paddingVertical: 15,
+                    borderRadius: 16,
+                    shadowColor: '#153580',
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 6,
+                    elevation: 3,
+                  }}
+                >
+                  {isPdfGenerating ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Printer size={18} color="#FFFFFF" strokeWidth={2.4} />
+                      <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '900' }}>
+                        Print Job Card
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
 
-                  {/* Share / Save PDF Button */}
-                  <TouchableOpacity
-                    onPress={handleDownloadPdf}
-                    disabled={isPdfGenerating}
-                    activeOpacity={0.85}
+              {/* ══ Routine AC Check-Up (Manual Option) Card in Overview ══ */}
+              <View
+                style={{
+                  backgroundColor: cardBg,
+                  borderRadius: 20,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: cardBorder,
+                  gap: 12,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                      18-Point Routine AC Check-Up
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                      {filledRoutineCount > 0
+                        ? `${filledRoutineCount} of 18 checkpoints recorded`
+                        : 'Manual Option: Not filled yet (Prints blank lines for pen fill)'}
+                    </Text>
+                  </View>
+                  <View
                     style={{
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      backgroundColor: isDark ? '#1E293B' : '#334155',
-                      paddingVertical: 14,
-                      borderRadius: 16,
-                      shadowColor: '#000000',
-                      shadowOffset: { width: 0, height: 3 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 6,
-                      elevation: 3,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 8,
+                      backgroundColor:
+                        filledRoutineCount === 18
+                          ? 'rgba(16, 185, 129, 0.15)'
+                          : filledRoutineCount > 0
+                          ? 'rgba(59, 130, 246, 0.15)'
+                          : 'rgba(100, 116, 139, 0.15)',
                     }}
                   >
-                    {isPdfGenerating ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <>
-                        <Share2 size={18} color="#FFFFFF" strokeWidth={2.2} />
-                        <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
-                          Share / PDF
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color:
+                          filledRoutineCount === 18
+                            ? '#10B981'
+                            : filledRoutineCount > 0
+                            ? '#3B82F6'
+                            : '#64748B',
+                      }}
+                    >
+                      {filledRoutineCount === 18 ? 'Complete 18/18' : `${filledRoutineCount}/18 Done`}
+                    </Text>
+                  </View>
                 </View>
+
+                <TouchableOpacity
+                  onPress={() => setActiveTab('inspection')}
+                  activeOpacity={0.85}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    backgroundColor: isDark ? '#1C2538' : '#EFF6FF',
+                    paddingVertical: 12,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#DBEAFE',
+                  }}
+                >
+                  <CheckSquare size={16} color={isDark ? '#60A5FA' : '#1D4ED8'} />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#60A5FA' : '#1D4ED8' }}>
+                    {filledRoutineCount > 0 ? 'Edit Routine Check-Up (18 Items)' : 'Fill Routine Check-Up Manually'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               {/* Assigned Staff Card */}
@@ -963,22 +954,41 @@ export default function JobSheetDetailsScreen() {
                       Exact 18 physical job card inspection checkpoints
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={handleMarkAllOk}
-                    activeOpacity={0.8}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                      backgroundColor: '#153580',
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 14,
-                    }}
-                  >
-                    <Sparkles size={13} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>All OK ✓</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <TouchableOpacity
+                      onPress={handleClearAllRoutine}
+                      activeOpacity={0.8}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+                        paddingHorizontal: 10,
+                        paddingVertical: 8,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <RotateCcw size={12} color={isDark ? '#94A3B8' : '#64748B'} />
+                      <Text style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: 11, fontWeight: '800' }}>Clear</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={handleMarkAllOk}
+                      activeOpacity={0.8}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        backgroundColor: '#153580',
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Sparkles size={13} color="#FFFFFF" />
+                      <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>All OK ✓</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Save Button */}
@@ -1012,8 +1022,8 @@ export default function JobSheetDetailsScreen() {
               {/* 18 Routine Checkpoints List */}
               <View style={{ gap: 8 }}>
                 {STANDARD_18_ROUTINE_ITEMS.map((item) => {
-                  const currentVal = routineValues[item.key] ?? item.defaultVal;
-                  const isChecked = Boolean(currentVal && currentVal !== '');
+                  const currentVal = routineValues[item.key] ?? '';
+                  const isChecked = Boolean(currentVal && currentVal.trim() !== '');
                   return (
                     <View
                       key={item.key}
@@ -1039,7 +1049,7 @@ export default function JobSheetDetailsScreen() {
                           }}
                         >
                           <Text style={{ fontSize: 11, fontWeight: '800', color: isChecked ? '#10B981' : '#64748B' }}>
-                            {currentVal || 'Pending'}
+                            {currentVal || 'Blank (Pen Fill)'}
                           </Text>
                         </View>
                       </View>
@@ -1086,7 +1096,7 @@ export default function JobSheetDetailsScreen() {
                           onPress={() => handleUpdateRoutineItem(item.key, item.defaultVal)}
                           style={{
                             backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
-                            paddingHorizontal: 10,
+                            paddingHorizontal: 8,
                             paddingVertical: 7,
                             borderRadius: 10,
                           }}
@@ -1095,6 +1105,22 @@ export default function JobSheetDetailsScreen() {
                             Std
                           </Text>
                         </TouchableOpacity>
+
+                        {isChecked && (
+                          <TouchableOpacity
+                            onPress={() => handleUpdateRoutineItem(item.key, '')}
+                            style={{
+                              backgroundColor: isDark ? '#2D1F2D' : '#FEE2E2',
+                              paddingHorizontal: 8,
+                              paddingVertical: 7,
+                              borderRadius: 10,
+                            }}
+                          >
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444' }}>
+                              ✕
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </View>
                   );
