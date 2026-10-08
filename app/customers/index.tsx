@@ -33,7 +33,6 @@ export default function CustomerListScreen() {
   const [search, setSearch] = useState('');
   const [localCustomers, setLocalCustomers] = useState<any[]>([]);
 
-  // Live Firestore Listener
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     const fetchCustomers = async () => {
@@ -75,7 +74,6 @@ export default function CustomerListScreen() {
     <View style={[styles.container, { backgroundColor: pageBg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={pageBg} />
 
-      {/* Top Header: Back Arrow, Title "Customer List" (Screen 11 in Ref Photo) */}
       <View style={[styles.topHeader, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTitleRow}>
           <TouchableOpacity
@@ -83,7 +81,7 @@ export default function CustomerListScreen() {
             style={styles.headerBackButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <ArrowLeft size={22} color={isDark ? '#FFFFFF' : '#0F172A'} />
+            <ArrowLeft size={24} color={isDark ? '#FFFFFF' : '#0F172A'} />
           </TouchableOpacity>
 
           <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
@@ -93,9 +91,8 @@ export default function CustomerListScreen() {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Search Bar matching Screen 11 */}
         <View style={[styles.searchBar, { backgroundColor: isDark ? '#141926' : '#F8FAFC' }]}>
-          <Search size={16} color="#94A3B8" />
+          <Search size={18} color="#94A3B8" />
           <TextInput
             value={search}
             onChangeText={setSearch}
@@ -111,7 +108,6 @@ export default function CustomerListScreen() {
         </View>
       </View>
 
-      {/* Customer List */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
@@ -119,7 +115,7 @@ export default function CustomerListScreen() {
           { paddingBottom: insets.bottom + 90 },
         ]}
       >
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 12 }}>
           {filtered.map((item: any, idx: number) => {
             const initials = item.name
               ? item.name
@@ -141,11 +137,10 @@ export default function CustomerListScreen() {
                   styles.cardContainer,
                   {
                     backgroundColor: isDark ? '#101927' : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
                   },
                 ]}
               >
-                {/* Left Side: Avatar with Initials + Customer Name & Phone */}
                 <View style={styles.cardLeft}>
                   <View style={[styles.avatarCircle, { backgroundColor: avatarBg }]}>
                     <Text style={styles.avatarInitials}>{initials}</Text>
@@ -161,14 +156,13 @@ export default function CustomerListScreen() {
                   </View>
                 </View>
 
-                {/* Right Side: Pending Pill if any + Chevron */}
                 <View style={styles.cardRight}>
                   {hasPending && (
                     <View style={styles.pendingBadge}>
                       <Text style={styles.pendingText}>₹{item.pendingAmount}</Text>
                     </View>
                   )}
-                  <ChevronRight size={18} color="#94A3B8" />
+                  <ChevronRight size={20} color="#64748B" />
                 </View>
               </TouchableOpacity>
             );
@@ -189,14 +183,13 @@ export default function CustomerListScreen() {
         </View>
       </ScrollView>
 
-      {/* Floating Bottom Button: "+ Add Customer" (Screen 11 in Ref Photo) */}
       <View style={[styles.bottomButtonWrapper, { bottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           onPress={() => router.push('/customers/add' as any)}
           activeOpacity={0.88}
           style={styles.floatingAddButton}
         >
-          <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+          <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
           <Text style={styles.floatingAddButtonText}>+ Add Customer</Text>
         </TouchableOpacity>
       </View>
@@ -221,34 +214,34 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   headerBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.4,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 44,
+    height: 46,
     borderRadius: 14,
     paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    gap: 8,
+    gap: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   searchClearText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '700',
   },
@@ -260,47 +253,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 18,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    elevation: 2,
   },
   cardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     flex: 1,
   },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     letterSpacing: 0.5,
   },
   cardInfo: {
     flex: 1,
   },
   customerName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
   },
   customerPhone: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#64748B',
     marginTop: 2,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   cardRight: {
     flexDirection: 'row',
@@ -309,14 +302,14 @@ const styles = StyleSheet.create({
   },
   pendingBadge: {
     backgroundColor: '#FEF2F2',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   pendingText: {
     color: '#DC2626',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -324,15 +317,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     marginBottom: 6,
   },
   emptySubtitle: {
-    fontSize: 13,
-    color: '#94A3B8',
+    fontSize: 14,
+    color: '#64748B',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   bottomButtonWrapper: {
     position: 'absolute',
@@ -340,9 +333,9 @@ const styles = StyleSheet.create({
     right: 20,
   },
   floatingAddButton: {
-    backgroundColor: '#0C1829', // Exact Midnight Navy from Screen 11
-    paddingVertical: 15,
-    borderRadius: 30,
+    backgroundColor: '#0C1829',
+    paddingVertical: 16,
+    borderRadius: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -355,8 +348,8 @@ const styles = StyleSheet.create({
   },
   floatingAddButtonText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.2,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.3,
   },
 });

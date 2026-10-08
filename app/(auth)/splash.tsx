@@ -27,7 +27,6 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { useAuthStore } from '../../src/store/authStore';
 
 const { width } = Dimensions.get('window');
 
@@ -35,45 +34,21 @@ const { width } = Dimensions.get('window');
 function GarageShelterIcon({ size = 68, color = '#FFFFFF' }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size * 0.9} viewBox="0 0 68 60" fill="none">
-      {/* Garage Roof / Shelter */}
-      <Path
-        d="M34 4L62 20V24H6V20L34 4Z"
-        fill={color}
-      />
-      {/* Pillars */}
-      <Path
-        d="M10 24V54H16V24H10Z"
-        fill={color}
-      />
-      <Path
-        d="M52 24V54H58V24H52Z"
-        fill={color}
-      />
-      {/* Car Silhouette Inside Garage */}
+      <Path d="M34 4L62 20V24H6V20L34 4Z" fill={color} />
+      <Path d="M10 24V54H16V24H10Z" fill={color} />
+      <Path d="M52 24V54H58V24H52Z" fill={color} />
       <Path
         d="M26 34C28 30 31 27 34 27C37 27 40 30 42 34L45 38C47 39 48 41 48 43V48C48 49 47 50 46 50H45C44 50 43 49 43 48V46H25V48C25 49 24 50 23 50H22C21 50 20 49 20 48V43C20 41 21 39 23 38L26 34Z"
         fill={color}
       />
-      {/* Headlights */}
-      <Path
-        d="M24 41H27V43H24V41Z"
-        fill="#0C1829"
-      />
-      <Path
-        d="M41 41H44V43H41V41Z"
-        fill="#0C1829"
-      />
-      {/* Windshield */}
-      <Path
-        d="M28 34H40L38 31H30L28 34Z"
-        fill="#0C1829"
-      />
+      <Path d="M24 41H27V43H24V41Z" fill="#0C1829" />
+      <Path d="M41 41H44V43H41V41Z" fill="#0C1829" />
+      <Path d="M28 34H40L38 31H30L28 34Z" fill="#0C1829" />
     </Svg>
   );
 }
 
 export default function SplashScreen() {
-  // Reanimated shared values
   const iconScale = useSharedValue(0.75);
   const iconOpacity = useSharedValue(0);
   const iconFloat = useSharedValue(0);
@@ -88,11 +63,9 @@ export default function SplashScreen() {
   const footerOpacity = useSharedValue(0);
 
   useEffect(() => {
-    // 1. Garage Icon entrance
     iconScale.value = withSpring(1, { damping: 14, stiffness: 90 });
     iconOpacity.value = withTiming(1, { duration: 600 });
 
-    // Idle float
     iconFloat.value = withDelay(
       600,
       withRepeat(
@@ -105,27 +78,18 @@ export default function SplashScreen() {
       )
     );
 
-    // 2. Logo entrance
     logoScale.value = withDelay(250, withSpring(1, { damping: 14, stiffness: 90 }));
     logoOpacity.value = withDelay(250, withTiming(1, { duration: 700 }));
 
-    // 3. Typography entrance
     textTranslateY.value = withDelay(400, withSpring(0, { damping: 15, stiffness: 95 }));
     textOpacity.value = withDelay(400, withTiming(1, { duration: 700 }));
 
-    // 4. Progress bar fill
     progress.value = withDelay(450, withTiming(1, { duration: 1800, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
     footerOpacity.value = withDelay(500, withTiming(1, { duration: 700 }));
 
-    // 5. Navigate
     const timer = setTimeout(() => {
-      const currentAuth = useAuthStore.getState().authState;
-      if (currentAuth === 'authenticated') {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/welcome');
-      }
-    }, 2600);
+      router.replace('/(auth)/welcome');
+    }, 2400);
 
     return () => clearTimeout(timer);
   }, []);
@@ -157,25 +121,20 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Deep Dark Garage Workshop Gradient & Atmosphere */}
       <LinearGradient
         colors={['#050811', '#0B1326', '#080E1C', '#030509']}
         locations={[0, 0.38, 0.72, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Ambient Workshop Lighting Halo */}
       <View style={styles.ambientHalo} />
       <View style={styles.innerHalo} />
 
-      {/* Main Center Branding Hero (Screen 1 in Ref Photo) */}
       <View style={styles.centerHero}>
-        {/* Top Garage Shelter Icon */}
         <Animated.View style={[styles.shelterContainer, iconAnimatedStyle]}>
           <GarageShelterIcon size={64} color="#FFFFFF" />
         </Animated.View>
 
-        {/* Seamless Cool Car Official Logo */}
         <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
           <Image
             source={require('../../assets/cool_car_logo_white.png')}
@@ -184,16 +143,13 @@ export default function SplashScreen() {
           />
         </Animated.View>
 
-        {/* Subtitle / App Title */}
         <Animated.View style={[styles.titleSection, textAnimatedStyle]}>
           <Text style={styles.brandTitle}>COOL CAR</Text>
           <Text style={styles.brandSubtitle}>GARAGE WORKSHOP OS</Text>
         </Animated.View>
       </View>
 
-      {/* Bottom Footer: "Track. Manage. Grow." (Screen 1 in Ref Photo) */}
       <Animated.View style={[styles.bottomSection, footerAnimatedStyle]}>
-        {/* Animated Progress Bar */}
         <View style={styles.progressTrack}>
           <Animated.View style={[styles.progressBar, progressAnimatedStyle]}>
             <LinearGradient
@@ -205,7 +161,6 @@ export default function SplashScreen() {
           </Animated.View>
         </View>
 
-        {/* Exact Tagline from Reference Screen 1 */}
         <Text style={styles.taglineText}>Track. Manage. Grow.</Text>
       </Animated.View>
     </View>
