@@ -46,7 +46,17 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!identifier.trim()) {
-      Alert.alert('Required', 'Please enter your email or phone.');
+      Alert.alert('Required', 'Please enter your email or phone number.');
+      return;
+    }
+
+    if (!password.trim()) {
+      Alert.alert('Password Required', 'Please enter your account password.');
+      return;
+    }
+
+    if (password.trim().length < 6) {
+      Alert.alert('Invalid Password', 'Password must be at least 6 characters.');
       return;
     }
 
@@ -54,12 +64,39 @@ export default function LoginScreen() {
     const userPhone = !isEmail ? identifier.trim() : '9876543210';
     let savedEmail = isEmail ? identifier.trim() : `${identifier.trim()}@coolcar.in`;
     let savedName = 'Workshop Owner';
+    let userRole = 'OWNER';
 
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const savedPass = await AsyncStorage.getItem('cool_car_saved_owner_password');
+      if (savedPass && savedPass !== password.trim()) {
+        Alert.alert('Incorrect Password', 'The password you entered is incorrect. Please try again.');
+        return;
+      }
+      if (!savedPass) {
+        await AsyncStorage.setItem('cool_car_saved_owner_password', password.trim());
+      }
+
       const n = await AsyncStorage.getItem('cool_car_saved_owner_name');
       if (n) savedName = n;
       await AsyncStorage.setItem('cool_car_saved_owner_email', identifier.trim());
+    } catch {}
+
+    // Check if logging in as an employee / staff member
+    try {
+      const { useEmployeeStore } = await import('../../src/store/employeeStore');
+      const employees = useEmployeeStore.getState().employees;
+      const cleanInput = identifier.trim().replace(/\D/g, '');
+      const matchedEmployee = employees.find(
+        (emp) =>
+          (cleanInput && emp.phone.replace(/\D/g, '') === cleanInput) ||
+          emp.name.toLowerCase() === identifier.trim().toLowerCase()
+      );
+
+      if (matchedEmployee) {
+        userRole = 'STAFF';
+        savedName = matchedEmployee.name;
+      }
     } catch {}
 
     try {
@@ -90,7 +127,7 @@ export default function LoginScreen() {
     setActiveMember({
       userId: currentUid,
       enterpriseId: MOCK_ENTERPRISE.id,
-      role: 'OWNER',
+      role: userRole as any,
       displayName: savedName,
       phone: userPhone,
       isActive: true,

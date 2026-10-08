@@ -15,10 +15,11 @@ import {
   ScrollView,
   Alert,
   Image,
+  Modal,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, X } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
@@ -34,12 +35,14 @@ export default function OTPScreen() {
   const { setUser, setAuthState } = useAuthStore();
   const { setActiveEnterprise, setActiveMember } = useEnterpriseStore();
 
+  const [currentPhone, setCurrentPhone] = useState(params.phone || '+91 98765 43210');
+  const [showChangeModal, setShowChangeModal] = useState(false);
+  const [newPhoneInput, setNewPhoneInput] = useState('');
+
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [resendTimer, setResendTimer] = useState(RESEND_SECONDS);
   const [canResend, setCanResend] = useState(false);
   const inputs = useRef<(TextInput | null)[]>([]);
-
-  const phone = params.phone || '+91 98765 43210';
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -94,7 +97,10 @@ export default function OTPScreen() {
     }
 
     let ownerName = 'Workshop Owner';
-    let ownerEmail = `${phone.replace(/\D/g, '')}@coolcar.in`;
+    const cleanDigits = currentPhone.replace(/\D/g, '');
+    let ownerEmail = `${cleanDigits}@coolcar.in`;
+    let userRole = 'OWNER';
+
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const n = await AsyncStorage.getItem('cool_car_saved_owner_name');
@@ -103,9 +109,22 @@ export default function OTPScreen() {
       if (e) ownerEmail = e;
     } catch {}
 
+    // Check if phone matches any registered employee / staff member
+    try {
+      const { useEmployeeStore } = await import('../../src/store/employeeStore');
+      const employees = useEmployeeStore.getState().employees;
+      const matchedEmployee = employees.find(
+        (emp) => emp.phone.replace(/\D/g, '') === cleanDigits
+      );
+      if (matchedEmployee) {
+        userRole = 'STAFF';
+        ownerName = matchedEmployee.name;
+      }
+    } catch {}
+
     const mockUser = {
       uid: 'user-phone-' + Date.now(),
-      phone: phone,
+      phone: currentPhone,
       displayName: ownerName,
       email: ownerEmail,
       enterpriseIds: [MOCK_ENTERPRISE.id],
@@ -120,15 +139,32 @@ export default function OTPScreen() {
     setActiveMember({
       userId: mockUser.uid,
       enterpriseId: MOCK_ENTERPRISE.id,
-      role: 'OWNER',
+      role: userRole as any,
       displayName: ownerName,
-      phone: phone,
+      phone: currentPhone,
       isActive: true,
       joinedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
     setAuthState('authenticated');
     router.replace('/(tabs)');
+  };
+
+  const handleUpdatePhoneNumber = () => {
+    const clean = newPhoneInput.replace(/\D/g, '');
+    if (clean.length !== 10) {
+      Alert.alert('Invalid Number', 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    const formatted = `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
+    setCurrentPhone(formatted);
+    setOtp(Array(OTP_LENGTH).fill(''));
+    setResendTimer(RESEND_SECONDS);
+    setCanResend(false);
+    setShowChangeModal(false);
+    setNewPhoneInput('');
+    setTimeout(() => inputs.current[0]?.focus(), 250);
+    Alert.alert('OTP Sent', `A fresh verification code has been sent to ${formatted}`);
   };
 
   const bg = isDark ? '#0C1829' : '#FFFFFF';
@@ -179,9 +215,26 @@ export default function OTPScreen() {
               Verification Code
             </Text>
             <Text style={{ fontSize: 14, color: textMuted, fontWeight: '500', marginTop: 6, textAlign: 'center' }}>
-              We sent a verification code to{'\n'}
-              <Text style={{ fontWeight: '700', color: textPrimary }}>{phone}</Text>
+              We sent a verification code to
             </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 8 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: textPrimary }}>{currentPhone}</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setNewPhoneInput('');
+                  setShowChangeModal(true);
+                }}
+                activeOpacity={0.7}
+                style={{
+                  backgroundColor: isDark ? 'rgba(59,130,246,0.15)' : '#EFF6FF',
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB' }}>Change</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* 6 Digit Input Boxes */}
@@ -263,14 +316,132 @@ export default function OTPScreen() {
 
         {/* Change Number Option */}
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => {
+            setNewPhoneInput('');
+            setShowChangeModal(true);
+          }}
           style={{ alignItems: 'center', marginTop: 24 }}
         >
           <Text style={{ fontSize: 13, color: textMuted, fontWeight: '600' }}>
-            Wrong number? <Text style={{ color: '#0C1829', fontWeight: '800' }}>Change</Text>
+            Wrong number? <Text style={{ color: '#2563EB', fontWeight: '800' }}>Change Phone Number</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Change Phone Number Modal */}
+      <Modal
+        visible={showChangeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowChangeModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 380,
+              backgroundColor: isDark ? '#111E33' : '#FFFFFF',
+              borderRadius: 20,
+              padding: 24,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.3,
+              shadowRadius: 20,
+              elevation: 10,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 19, fontWeight: '800', color: textPrimary }}>
+                Change Mobile Number
+              </Text>
+              <TouchableOpacity onPress={() => setShowChangeModal(false)} hitSlop={12}>
+                <X size={20} color={textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 13, color: textMuted, marginBottom: 18, lineHeight: 18 }}>
+              Enter your 10-digit mobile number to receive a new verification code.
+            </Text>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: isDark ? '#0C1829' : '#F8FAFC',
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderColor: borderColor,
+                paddingHorizontal: 14,
+                height: 52,
+                marginBottom: 20,
+              }}
+            >
+              <Text style={{ fontSize: 15, fontWeight: '700', color: textPrimary, marginRight: 8 }}>
+                +91
+              </Text>
+              <TextInput
+                value={newPhoneInput}
+                onChangeText={(t) => setNewPhoneInput(t.replace(/\D/g, '').slice(0, 10))}
+                placeholder="98765 43210"
+                placeholderTextColor={textMuted}
+                keyboardType="phone-pad"
+                autoFocus
+                maxLength={10}
+                style={{
+                  flex: 1,
+                  fontSize: 16,
+                  fontWeight: '700',
+                  color: textPrimary,
+                }}
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setShowChangeModal(false)}
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: textMuted }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleUpdatePhoneNumber}
+                style={{
+                  flex: 2,
+                  height: 48,
+                  backgroundColor: '#0C1829',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF' }}>
+                  Send New OTP
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

@@ -45,6 +45,7 @@ export default function SignupScreen() {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       await AsyncStorage.setItem('cool_car_saved_owner_name', fullName.trim());
       await AsyncStorage.setItem('cool_car_saved_owner_email', identifier.trim());
+      await AsyncStorage.setItem('cool_car_saved_owner_password', password.trim());
     } catch {}
 
     const { auth } = await import('../../src/services/firebase/firebase.config');
