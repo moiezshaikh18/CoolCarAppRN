@@ -1,28 +1,28 @@
 // ============================================================
-// Tabs Layout — Midnight Navy Capsule Dock
-// Directly matching media_1790189780212.png & media_1790189816628.png
+// Tabs Layout — Clean White Bottom Navigation Bar with Center Floating Circle Button
+// Directly matching Screen 5 & Screen 6 in reference design
 // ============================================================
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, router } from 'expo-router';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import {
-  Wallet,
-  TrendingUp,
-  LayoutGrid,
-  Settings,
+  Home,
+  FileText,
+  BarChart3,
+  Menu,
   Plus,
   Car,
   Receipt,
-  FileText,
   AlertCircle,
+  Wallet,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/hooks/useTheme';
 import { GlassBottomSheet } from '../../src/components/common/GlassBottomSheet';
 import { useTabBarStore } from '../../src/store/tabBarStore';
 
-function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
+function ReferenceBottomTabBar({ state, navigation }: any) {
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [addSheetOpen, setAddSheetOpen] = useState(false);
@@ -39,71 +39,79 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
   }, [isTabBarVisible]);
 
   const tabConfig = [
-    { name: 'index', label: 'Home', icon: Wallet },
-    { name: 'entries', label: 'Tracking', icon: TrendingUp },
+    { name: 'index', label: 'Home', icon: Home },
+    { name: 'entries', label: 'Entries', icon: FileText },
     { name: 'add', label: '', icon: Plus, isAction: true },
-    { name: 'reports', label: 'Report', icon: LayoutGrid },
-    { name: 'more', label: 'Settings', icon: Settings },
+    { name: 'reports', label: 'Reports', icon: BarChart3 },
+    { name: 'more', label: 'More', icon: Menu },
   ];
 
-  const dockBg = isDark ? '#101927' : '#0C1829';
-  const dockBorder = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.08)';
+  const barBg = isDark ? '#0C1829' : '#FFFFFF';
+  const barBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0';
+  const activeColor = isDark ? '#FFFFFF' : '#0C1829';
+  const inactiveColor = '#94A3B8';
+  const bottomPadding = Math.max(insets.bottom, 8);
 
   return (
     <>
-      {/* Floating Midnight Navy Capsule Dock with Hide-on-Scroll */}
+      {/* Clean Full-Width Bottom Navigation Bar */}
       <Animated.View
         style={{
           position: 'absolute',
-          bottom: insets.bottom > 0 ? insets.bottom + 8 : 18,
-          left: 20,
-          right: 20,
-          height: 68,
-          borderRadius: 34,
-          backgroundColor: dockBg,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 60 + bottomPadding,
+          paddingBottom: bottomPadding,
+          backgroundColor: barBg,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-around',
-          paddingHorizontal: 8,
-          shadowColor: '#0C1829',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.35,
-          shadowRadius: 20,
+          borderTopWidth: 1,
+          borderTopColor: barBorder,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: isDark ? 0.3 : 0.06,
+          shadowRadius: 10,
           elevation: 12,
-          borderWidth: 1,
-          borderColor: dockBorder,
           transform: [{ translateY }],
         }}
       >
-
         {state.routes.map((route: any, index: number) => {
-          const config = tabConfig[index] || { label: route.name, icon: Wallet };
+          const config = tabConfig[index] || { label: route.name, icon: Home };
           const isFocused = state.index === index;
           const isAction = config.isAction;
 
           if (isAction) {
             return (
-              <TouchableOpacity
-                key={route.key}
-                onPress={() => setAddSheetOpen(true)}
-                activeOpacity={0.8}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255, 255, 255, 0.16)',
-                }}
-              >
-                <Plus size={22} color="#FFFFFF" strokeWidth={2.5} />
-              </TouchableOpacity>
+              <View key={route.key} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <TouchableOpacity
+                  onPress={() => setAddSheetOpen(true)}
+                  activeOpacity={0.85}
+                  style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    backgroundColor: isDark ? '#2563EB' : '#0C1829',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: -16,
+                    borderWidth: 3,
+                    borderColor: barBg,
+                    shadowColor: '#0C1829',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}
+                >
+                  <Plus size={24} color="#FFFFFF" strokeWidth={2.8} />
+                </TouchableOpacity>
+              </View>
             );
           }
 
           const Icon = config.icon;
-          const activeColor = '#FFFFFF';
-          const inactiveColor = 'rgba(255, 255, 255, 0.5)';
 
           return (
             <TouchableOpacity
@@ -114,15 +122,19 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
                   navigation.navigate(route.name);
                 }
               }}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
               style={{
+                flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: 6,
-                paddingHorizontal: 12,
+                paddingVertical: 4,
               }}
             >
-              <Icon size={20} color={isFocused ? activeColor : inactiveColor} strokeWidth={isFocused ? 2.4 : 1.8} />
+              <Icon
+                size={21}
+                color={isFocused ? activeColor : inactiveColor}
+                strokeWidth={isFocused ? 2.4 : 1.8}
+              />
               <Text
                 style={{
                   fontSize: 10,
@@ -138,8 +150,7 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
         })}
       </Animated.View>
 
-
-      {/* Quick Action Bottom Sheet */}
+      {/* Quick Operations Bottom Sheet */}
       <GlassBottomSheet
         visible={addSheetOpen}
         onClose={() => setAddSheetOpen(false)}
@@ -158,8 +169,10 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
               flexDirection: 'row',
               alignItems: 'center',
               padding: 16,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              borderRadius: 20,
+              backgroundColor: isDark ? '#141926' : '#F8FAFC',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
               gap: 14,
             }}
           >
@@ -196,8 +209,10 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
               flexDirection: 'row',
               alignItems: 'center',
               padding: 16,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              borderRadius: 20,
+              backgroundColor: isDark ? '#141926' : '#F8FAFC',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
               gap: 14,
             }}
           >
@@ -206,7 +221,7 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
                 width: 44,
                 height: 44,
                 borderRadius: 22,
-                backgroundColor: '#0C1829',
+                backgroundColor: '#EF4444',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
@@ -220,7 +235,6 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
               <Text style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}>
                 Reason, Spent By & Bank Ledger
               </Text>
-
             </View>
           </TouchableOpacity>
 
@@ -235,8 +249,10 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
               flexDirection: 'row',
               alignItems: 'center',
               padding: 16,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              borderRadius: 20,
+              backgroundColor: isDark ? '#141926' : '#F8FAFC',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
               gap: 14,
             }}
           >
@@ -273,8 +289,10 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
               flexDirection: 'row',
               alignItems: 'center',
               padding: 16,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              borderRadius: 20,
+              backgroundColor: isDark ? '#141926' : '#F8FAFC',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
               gap: 14,
             }}
           >
@@ -311,8 +329,10 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
               flexDirection: 'row',
               alignItems: 'center',
               padding: 16,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              borderRadius: 20,
+              backgroundColor: isDark ? '#141926' : '#F8FAFC',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
               gap: 14,
             }}
           >
@@ -338,7 +358,7 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
             </View>
           </TouchableOpacity>
 
-          {/* 5. Add Bank Account */}
+          {/* 6. Add Bank Account */}
           <TouchableOpacity
             onPress={() => {
               setAddSheetOpen(false);
@@ -349,8 +369,10 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
               flexDirection: 'row',
               alignItems: 'center',
               padding: 16,
-              borderRadius: 22,
-              backgroundColor: isDark ? '#141926' : '#F4F7FC',
+              borderRadius: 20,
+              backgroundColor: isDark ? '#141926' : '#F8FAFC',
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
               gap: 14,
             }}
           >
@@ -384,7 +406,7 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
 export default function TabLayout() {
   return (
     <Tabs
-      tabBar={(props) => <MidnightNavyTabBar {...props} />}
+      tabBar={(props) => <ReferenceBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -396,10 +418,10 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Home' }} />
-      <Tabs.Screen name="entries" options={{ title: 'Tracking' }} />
-      <Tabs.Screen name="add" options={{ title: 'Action' }} />
-      <Tabs.Screen name="reports" options={{ title: 'Report' }} />
-      <Tabs.Screen name="more" options={{ title: 'Settings' }} />
+      <Tabs.Screen name="entries" options={{ title: 'Entries' }} />
+      <Tabs.Screen name="add" options={{ title: '' }} />
+      <Tabs.Screen name="reports" options={{ title: 'Reports' }} />
+      <Tabs.Screen name="more" options={{ title: 'More' }} />
     </Tabs>
   );
 }
