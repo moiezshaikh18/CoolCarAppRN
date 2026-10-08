@@ -14,6 +14,7 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -121,8 +122,17 @@ export default function LoginScreen() {
         }}
       >
         <View>
+          {/* Official Brand Logo */}
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <Image
+              source={isDark ? require('../../assets/cool_car_logo_white.png') : require('../../assets/cool_car_logo.png')}
+              style={{ width: 170, height: 56 }}
+              resizeMode="contain"
+            />
+          </View>
+
           {/* Header Typography matching Screen 3 */}
-          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+          <View style={{ alignItems: 'center', marginBottom: 28 }}>
             <Text style={{ fontSize: 26, fontWeight: '800', color: textPrimary, letterSpacing: -0.5 }}>
               Welcome Back
             </Text>
