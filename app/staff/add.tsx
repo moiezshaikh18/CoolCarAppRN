@@ -99,6 +99,17 @@ export default function AddStaffScreen() {
 
     addEmployee(newStaff);
 
+    // Cloud Firestore Sync
+    const entId = enterpriseId || 'enterprise-cool-car';
+    import('firebase/firestore').then(async ({ doc, setDoc }) => {
+      try {
+        const { db } = await import('../../src/services/firebase/firebase.config');
+        await setDoc(doc(db, 'enterprises', entId, 'employees', newStaff.id), newStaff);
+      } catch (err) {
+        console.log('[AddStaff] Firestore sync error/offline:', err);
+      }
+    }).catch(() => {});
+
     Alert.alert('Staff Added', `${newStaff.name} registered as ${newStaff.role}!`, [
       { text: 'Done', onPress: () => router.back() },
     ]);

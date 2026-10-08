@@ -153,6 +153,16 @@ export default function AddExpenseScreen() {
 
     addExpense(newExpense);
 
+    // Cloud Firestore Sync
+    import('firebase/firestore').then(async ({ doc, setDoc }) => {
+      try {
+        const { db } = await import('../../src/services/firebase/firebase.config');
+        await setDoc(doc(db, 'enterprises', entId, 'expenses', expenseId), newExpense);
+      } catch (err) {
+        console.log('[AddExpense] Firestore sync error/offline:', err);
+      }
+    }).catch(() => {});
+
     showAlert(
       'Expense Logged!',
       `Recorded ${currencySymbol}${num} for "${effectiveReason}"\nSpent by: ${effectiveSpentBy}\nPaid from: ${selectedAccountName}`,

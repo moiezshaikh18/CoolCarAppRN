@@ -62,7 +62,7 @@ export default function AddBankAccountScreen() {
     }
 
     setLoading(true);
-    const entId = enterpriseId || 'enterprise-dev-001';
+    const entId = enterpriseId || 'enterprise-cool-car';
     const accId = `acc_${Date.now()}`;
     const balanceNum = parseFloat(openingBalance.replace(/[^0-9.]/g, '')) || 0;
 

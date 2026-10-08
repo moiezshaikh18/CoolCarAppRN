@@ -11,6 +11,7 @@ export const APP_CONFIG = {
   otpResendSeconds: 60,
   searchDebounceMs: 300,
   paginationLimit: 20,
+  defaultEnterpriseId: 'enterprise-cool-car',
   maxVehiclesPerCustomer: 20,
   maxItemsPerJobSheet: 50,
 } as const;

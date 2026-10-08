@@ -41,7 +41,7 @@ const MODE_TABS: { label: string; value: PaymentMode | 'ALL'; icon: any }[] = [
 const DEFAULT_PAYMENTS: Payment[] = [
   {
     id: 'pay-001',
-    enterpriseId: 'enterprise-dev-001',
+    enterpriseId: 'enterprise-cool-car',
     jobSheetId: 'JS-2026-001',
     customerId: 'cust-001',
     vehicleId: 'veh-001',
@@ -56,7 +56,7 @@ const DEFAULT_PAYMENTS: Payment[] = [
   },
   {
     id: 'pay-002',
-    enterpriseId: 'enterprise-dev-001',
+    enterpriseId: 'enterprise-cool-car',
     jobSheetId: 'JS-2026-002',
     customerId: 'cust-002',
     vehicleId: 'veh-002',
@@ -72,7 +72,7 @@ const DEFAULT_PAYMENTS: Payment[] = [
   },
   {
     id: 'pay-003',
-    enterpriseId: 'enterprise-dev-001',
+    enterpriseId: 'enterprise-cool-car',
     jobSheetId: 'JS-2026-003',
     customerId: 'cust-003',
     vehicleId: 'veh-003',
@@ -101,7 +101,7 @@ export default function PaymentsScreen() {
 
   // Real-time Firestore sync
   useEffect(() => {
-    const entId = enterpriseId || 'enterprise-dev-001';
+    const entId = enterpriseId || 'enterprise-cool-car';
     let unsubscribe: () => void;
 
     async function subscribePayments() {
@@ -135,6 +135,8 @@ export default function PaymentsScreen() {
                 };
               });
               setPayments(fetched);
+            } else {
+              setPayments([]);
             }
           },
           () => {
@@ -150,7 +152,7 @@ export default function PaymentsScreen() {
     return () => unsubscribe && unsubscribe();
   }, [enterpriseId, setPayments]);
 
-  const allPayments = payments.length > 0 ? payments : DEFAULT_PAYMENTS;
+  const allPayments = payments;
 
   const filteredPayments = useMemo(() => {
     return allPayments.filter((p) => {

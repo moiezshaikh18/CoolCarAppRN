@@ -44,7 +44,7 @@ export default function VehiclesListScreen() {
     let unsubscribe: (() => void) | undefined;
     const fetchVehicles = async () => {
       try {
-        const entId = enterpriseId || 'enterprise-dev-001';
+        const entId = enterpriseId || 'enterprise-cool-car';
         const { collection, onSnapshot } = await import('firebase/firestore');
         const { db } = await import('../../src/services/firebase/firebase.config');
 

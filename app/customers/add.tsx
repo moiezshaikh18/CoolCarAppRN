@@ -47,7 +47,7 @@ export default function AddCustomerScreen() {
 
     setLoading(true);
     const newCustId = `cust-${Date.now()}`;
-    const entId = enterpriseId || 'enterprise-dev-001';
+    const entId = enterpriseId || 'enterprise-cool-car';
 
     const customerObj = {
       id: newCustId,

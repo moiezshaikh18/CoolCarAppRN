@@ -296,7 +296,7 @@ export default function JobSheetDetailsScreen() {
       // 1. Record in Payment Store
       addPayment({
         id: `pay-${Date.now()}`,
-        enterpriseId: enterpriseId || 'enterprise-dev-001',
+        enterpriseId: enterpriseId || 'enterprise-cool-car',
         jobSheetId: job.id,
         customerId: (job as any).customerId || 'cust-walkin',
         vehicleId: (job as any).vehicleId || 'veh-generic',
@@ -344,7 +344,7 @@ export default function JobSheetDetailsScreen() {
       if (cashAmt > 0) {
         addPayment({
           id: `pay-${now}-cash`,
-          enterpriseId: enterpriseId || 'enterprise-dev-001',
+          enterpriseId: enterpriseId || 'enterprise-cool-car',
           jobSheetId: job.id,
           customerId: (job as any).customerId || 'cust-walkin',
           vehicleId: (job as any).vehicleId || 'veh-generic',
@@ -363,7 +363,7 @@ export default function JobSheetDetailsScreen() {
       if (upiAmt > 0) {
         addPayment({
           id: `pay-${now + 1}-upi`,
-          enterpriseId: enterpriseId || 'enterprise-dev-001',
+          enterpriseId: enterpriseId || 'enterprise-cool-car',
           jobSheetId: job.id,
           customerId: (job as any).customerId || 'cust-walkin',
           vehicleId: (job as any).vehicleId || 'veh-generic',
@@ -383,7 +383,7 @@ export default function JobSheetDetailsScreen() {
       if (swipeAmt > 0) {
         addPayment({
           id: `pay-${now + 2}-swipe`,
-          enterpriseId: enterpriseId || 'enterprise-dev-001',
+          enterpriseId: enterpriseId || 'enterprise-cool-car',
           jobSheetId: job.id,
           customerId: (job as any).customerId || 'cust-walkin',
           vehicleId: (job as any).vehicleId || 'veh-generic',

@@ -66,7 +66,7 @@ export default function EntriesScreen() {
 
     const syncEntries = async () => {
       try {
-        const entId = enterprise?.id || 'enterprise-dev-001';
+        const entId = enterprise?.id || 'enterprise-cool-car';
         const { collection, onSnapshot } = await import('firebase/firestore');
         const { db } = await import('../../src/services/firebase/firebase.config');
 

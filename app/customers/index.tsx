@@ -32,7 +32,7 @@ export default function CustomerListScreen() {
     let unsubscribe: (() => void) | undefined;
     const fetchCustomers = async () => {
       try {
-        const entId = enterpriseId || 'enterprise-dev-001';
+        const entId = enterpriseId || 'enterprise-cool-car';
         const { collection, onSnapshot } = await import('firebase/firestore');
         const { db } = await import('../../src/services/firebase/firebase.config');
 

@@ -17,7 +17,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const ENTERPRISE_ID = 'enterprise-dev-001';
+const ENTERPRISE_ID = 'enterprise-cool-car';
 const USER_ID = 'user-owner-001';
 
 async function seedDatabase() {

@@ -112,7 +112,7 @@ export default function AddVehicleScreen() {
 
     setLoading(true);
     const newVehId = `veh-${Date.now()}`;
-    const entId = enterpriseId || 'enterprise-dev-001';
+    const entId = enterpriseId || 'enterprise-cool-car';
 
     const vehicleObj: Vehicle = {
       id: newVehId,

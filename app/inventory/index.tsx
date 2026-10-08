@@ -135,7 +135,7 @@ export default function InventoryScreen() {
       updateChalan(selectedChalan.id, updates);
 
       // Cloud Firestore sync
-      const entId = enterpriseId || 'enterprise-dev-001';
+      const entId = enterpriseId || 'enterprise-cool-car';
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
       await setDoc(doc(db, 'enterprises', entId, 'chalans', selectedChalan.id), updates, { merge: true });

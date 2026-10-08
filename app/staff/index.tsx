@@ -3,7 +3,7 @@
 // Plain Simple English Terms & Advance Tracking
 // ============================================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -34,11 +34,39 @@ import { Employee } from '../../src/types/employee.types';
 
 export default function StaffListScreen() {
   const { theme, isDark } = useTheme();
-  const { currencySymbol } = useEnterprise();
+  const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { employees } = useEmployeeStore();
+  const { employees, setEmployees } = useEmployeeStore();
 
   const [search, setSearch] = useState('');
+
+  // Live Firestore Sync
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    const fetchStaff = async () => {
+      try {
+        const entId = enterpriseId || 'enterprise-cool-car';
+        const { collection, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+
+        const staffRef = collection(db, 'enterprises', entId, 'employees');
+        unsubscribe = onSnapshot(staffRef, (snap) => {
+          if (!snap.empty) {
+            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Employee));
+            setEmployees(list);
+          } else {
+            setEmployees([]);
+          }
+        });
+      } catch (err) {
+        console.log('[StaffList] Firestore sync error/offline:', err);
+      }
+    };
+    fetchStaff();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [enterpriseId, setEmployees]);
 
   // Calculations
   const totalStaff = employees.filter((e) => e.isActive).length;

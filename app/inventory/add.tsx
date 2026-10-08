@@ -57,7 +57,7 @@ export default function AddSparePartScreen() {
 
     setLoading(true);
     const newPartId = `part-${Date.now()}`;
-    const entId = enterpriseId || 'enterprise-dev-001';
+    const entId = enterpriseId || 'enterprise-cool-car';
 
     const partObj: SparePart = {
       id: newPartId,
