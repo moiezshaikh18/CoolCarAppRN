@@ -1,9 +1,9 @@
 // ============================================================
 // Screen 2: Welcome Screen — Cool Car Garage Expense Tracker
-// Matches HD Reference Mockup 100%:
+// Matches HD Reference Mockup:
 // Ultra-HD 3D Blue Car + Thumbs-Up Mechanic with Tool Chest & Tires,
 // "Welcome to Cool Car Garage Expense Tracker" typography,
-// "Get Started →" Button, Skip button & 3 Pagination Dots
+// Single Wide "Get Started →" Button (NO 3 Dots, NO Skip button)
 // ============================================================
 
 import React from 'react';
@@ -30,16 +30,8 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 22 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 28 }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      {/* Top Header: Skip Button (Top Right) */}
-      <View style={styles.topBar}>
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity onPress={handleNext} activeOpacity={0.7} style={styles.skipButton}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Main Content Area */}
       <View style={styles.contentArea}>
@@ -65,7 +57,7 @@ export default function WelcomeScreen() {
         </View>
       </View>
 
-      {/* Bottom Section: "Get Started →" Button & 3 Pagination Dots */}
+      {/* Bottom Section: Single Wide "Get Started →" Button (NO 3 Dots, NO Skip) */}
       <View style={styles.bottomSection}>
         <TouchableOpacity
           onPress={handleNext}
@@ -77,13 +69,6 @@ export default function WelcomeScreen() {
             <ArrowRight size={20} color="#FFFFFF" strokeWidth={2.8} />
           </View>
         </TouchableOpacity>
-
-        {/* 3 Pagination Dots below button matching Screen 2 */}
-        <View style={styles.dotsRow}>
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={[styles.dot, styles.dotInactive]} />
-          <View style={[styles.dot, styles.dotInactive]} />
-        </View>
       </View>
     </View>
   );
@@ -95,21 +80,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 26,
     justifyContent: 'space-between',
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    height: 36,
-  },
-  skipButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  skipText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0B2564',
   },
   contentArea: {
     flex: 1,
@@ -150,7 +120,6 @@ const styles = StyleSheet.create({
   bottomSection: {
     width: '100%',
     alignItems: 'center',
-    gap: 18,
   },
   primaryButton: {
     width: '100%',
@@ -176,25 +145,5 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     letterSpacing: 0.3,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  dotActive: {
-    backgroundColor: '#0B2564',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  dotInactive: {
-    backgroundColor: '#CBD5E1',
   },
 });
