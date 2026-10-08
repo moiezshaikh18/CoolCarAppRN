@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Eye, EyeOff, Phone, Chrome } from 'lucide-react-native';
+import { Eye, EyeOff, Phone, Chrome } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
@@ -121,15 +121,6 @@ export default function LoginScreen() {
         }}
       >
         <View>
-          {/* Top Back Navigation Arrow */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-            style={{ width: 40, height: 40, justifyContent: 'center', marginBottom: 20 }}
-          >
-            <ArrowLeft size={22} color={textPrimary} strokeWidth={2.4} />
-          </TouchableOpacity>
-
           {/* Header Typography matching Screen 3 */}
           <View style={{ alignItems: 'center', marginBottom: 32 }}>
             <Text style={{ fontSize: 26, fontWeight: '800', color: textPrimary, letterSpacing: -0.5 }}>
