@@ -1,9 +1,9 @@
 // ============================================================
-// Screen 2: Welcome Screen — Garage Expense Tracker
-// Matches Reference Design 100%:
-// Exact 3D Blue Car + Mechanic with Diagnostic Machine Graphic,
-// "Welcome to Garage Expense Tracker" typography, Skip button,
-// Dark Navy "Get Started" Button & 3 Pagination Dots
+// Screen 2: Welcome Screen — Cool Car Garage Expense Tracker
+// Matches HD Reference Mockup 100%:
+// Ultra-HD 3D Blue Car + Thumbs-Up Mechanic with Tool Chest & Tires,
+// "Welcome to Cool Car Garage Expense Tracker" typography,
+// "Get Started →" Button, Skip button & 3 Pagination Dots
 // ============================================================
 
 import React from 'react';
@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowRight } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -29,7 +30,7 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 22 }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Top Header: Skip Button (Top Right) */}
@@ -42,33 +43,39 @@ export default function WelcomeScreen() {
 
       {/* Main Content Area */}
       <View style={styles.contentArea}>
-        {/* Exact Typography matching Screen 2 */}
+        {/* Exact Typography matching Screen 2 in HD Reference */}
         <View style={styles.headerTextGroup}>
           <Text style={styles.welcomeLabel}>Welcome to</Text>
-          <Text style={styles.mainTitle}>Garage Expense{'\n'}Tracker</Text>
+          <Text style={styles.mainTitle}>
+            <Text style={{ color: '#0B2564' }}>Cool Car Garage</Text>{'\n'}
+            <Text style={{ color: '#0C1829' }}>Expense Tracker</Text>
+          </Text>
           <Text style={styles.subtitle}>
             Track daily income, expenses,{'\n'}customers and more. All in one place.
           </Text>
         </View>
 
-        {/* Exact 3D Blue Car & Mechanic Graphic from User's Reference Photo */}
+        {/* Ultra-HD 3D Blue Car + Mechanic with Tool Chest Graphic */}
         <View style={styles.graphicWrapper}>
           <Image
-            source={require('../../assets/welcome_3d_car_mechanic.png')}
+            source={require('../../assets/welcome_3d_car_mechanic_hd.png')}
             style={styles.graphicImage}
             resizeMode="contain"
           />
         </View>
       </View>
 
-      {/* Bottom Section: "Get Started" Button & 3 Pagination Dots */}
+      {/* Bottom Section: "Get Started →" Button & 3 Pagination Dots */}
       <View style={styles.bottomSection}>
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.88}
           style={styles.primaryButton}
         >
-          <Text style={styles.primaryButtonText}>Get Started</Text>
+          <View style={styles.buttonContent}>
+            <Text style={styles.primaryButtonText}>Get Started</Text>
+            <ArrowRight size={20} color="#FFFFFF" strokeWidth={2.8} />
+          </View>
         </TouchableOpacity>
 
         {/* 3 Pagination Dots below button matching Screen 2 */}
@@ -102,25 +109,24 @@ const styles = StyleSheet.create({
   skipText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#334155',
+    color: '#0B2564',
   },
   contentArea: {
     flex: 1,
     justifyContent: 'center',
   },
   headerTextGroup: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   welcomeLabel: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#0C1829',
+    fontWeight: '600',
+    color: '#334155',
     letterSpacing: -0.3,
   },
   mainTitle: {
     fontSize: 34,
     fontWeight: '900',
-    color: '#0C1829',
     letterSpacing: -0.8,
     marginTop: 4,
     lineHeight: 40,
@@ -130,34 +136,40 @@ const styles = StyleSheet.create({
     color: '#64748B',
     lineHeight: 23,
     fontWeight: '500',
-    marginTop: 14,
+    marginTop: 12,
   },
   graphicWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 18,
+    marginVertical: 14,
   },
   graphicImage: {
-    width: Math.min(width * 0.88, 330),
-    height: Math.min(width * 0.88, 330) * (175 / 245),
+    width: Math.min(width * 0.94, 380),
+    height: Math.min(width * 0.94, 380) * (332 / 460),
   },
   bottomSection: {
     width: '100%',
     alignItems: 'center',
-    gap: 20,
+    gap: 18,
   },
   primaryButton: {
     width: '100%',
-    backgroundColor: '#0C1829',
+    backgroundColor: '#0B2564',
     height: 56,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0C1829',
-    shadowOpacity: 0.25,
+    shadowColor: '#0B2564',
+    shadowOpacity: 0.3,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    elevation: 5,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   primaryButtonText: {
     color: '#FFFFFF',
@@ -177,7 +189,7 @@ const styles = StyleSheet.create({
     borderRadius: 3.5,
   },
   dotActive: {
-    backgroundColor: '#0C1829',
+    backgroundColor: '#0B2564',
     width: 8,
     height: 8,
     borderRadius: 4,
