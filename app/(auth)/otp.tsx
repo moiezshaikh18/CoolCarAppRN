@@ -86,18 +86,28 @@ export default function OTPScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const code = otp.join('');
     if (code.length < 4) {
       Alert.alert('Incomplete Code', 'Please enter the verification code.');
       return;
     }
 
+    let ownerName = 'Workshop Owner';
+    let ownerEmail = `${phone.replace(/\D/g, '')}@coolcar.in`;
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const n = await AsyncStorage.getItem('cool_car_saved_owner_name');
+      const e = await AsyncStorage.getItem('cool_car_saved_owner_email');
+      if (n) ownerName = n;
+      if (e) ownerEmail = e;
+    } catch {}
+
     const mockUser = {
       uid: 'user-phone-' + Date.now(),
       phone: phone,
-      displayName: 'Workshop Owner',
-      email: 'owner@coolcar.com',
+      displayName: ownerName,
+      email: ownerEmail,
       enterpriseIds: [MOCK_ENTERPRISE.id],
       activeEnterpriseId: MOCK_ENTERPRISE.id,
       isActive: true,
@@ -111,7 +121,7 @@ export default function OTPScreen() {
       userId: mockUser.uid,
       enterpriseId: MOCK_ENTERPRISE.id,
       role: 'OWNER',
-      displayName: 'Workshop Owner',
+      displayName: ownerName,
       phone: phone,
       isActive: true,
       joinedAt: new Date().toISOString(),

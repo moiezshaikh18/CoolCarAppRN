@@ -30,9 +30,19 @@ export default function LoginScreen() {
   const { setUser, setAuthState } = useAuthStore();
   const { setActiveEnterprise, setActiveMember } = useEnterpriseStore();
 
-  const [identifier, setIdentifier] = useState('demo@garage.com');
-  const [password, setPassword] = useState('password123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const saved = await AsyncStorage.getItem('cool_car_saved_owner_email');
+        if (saved) setIdentifier(saved);
+      } catch {}
+    })();
+  }, []);
 
   const handleLogin = async () => {
     if (!identifier.trim()) {
@@ -40,14 +50,16 @@ export default function LoginScreen() {
       return;
     }
 
-    let savedName = 'Manish Kumar';
-    let savedEmail = identifier.includes('@') ? identifier : 'manish@garage.com';
+    const isEmail = identifier.includes('@');
+    const userPhone = !isEmail ? identifier.trim() : '9876543210';
+    let savedEmail = isEmail ? identifier.trim() : `${identifier.trim()}@coolcar.in`;
+    let savedName = 'Workshop Owner';
+
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const n = await AsyncStorage.getItem('cool_car_saved_owner_name');
-      const e = await AsyncStorage.getItem('cool_car_saved_owner_email');
       if (n) savedName = n;
-      if (e) savedEmail = e;
+      await AsyncStorage.setItem('cool_car_saved_owner_email', identifier.trim());
     } catch {}
 
     try {
@@ -63,7 +75,7 @@ export default function LoginScreen() {
 
     const mockUser = {
       uid: currentUid,
-      phone: '9876543210',
+      phone: userPhone,
       displayName: savedName,
       email: savedEmail,
       enterpriseIds: [MOCK_ENTERPRISE.id],
@@ -80,7 +92,7 @@ export default function LoginScreen() {
       enterpriseId: MOCK_ENTERPRISE.id,
       role: 'OWNER',
       displayName: savedName,
-      phone: '9876543210',
+      phone: userPhone,
       isActive: true,
       joinedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
