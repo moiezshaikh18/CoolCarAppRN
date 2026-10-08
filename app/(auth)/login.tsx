@@ -1,7 +1,10 @@
 // ============================================================
-// Login Screen — Authentication Portal
-// Clean Unified Layout, Vertically Centered Content
-// Zero Cut-off Divs & Full Light/Dark Consistency
+// Screen 3: Login Screen ("Welcome Back") — Cool Car Workshop OS
+// Matches Reference Design:
+// Back Arrow Button, "Welcome Back", "Login to continue",
+// Email/Phone Input, Password Input with Eye Toggle, "Forgot Password?",
+// Midnight Navy "Login" Button, "or continue with" (Google & Phone),
+// "Don't have an account? Sign Up" Footer
 // ============================================================
 
 import React, { useState } from 'react';
@@ -13,20 +16,43 @@ import {
   ScrollView,
   Alert,
   StatusBar,
-  Image,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Eye, EyeOff, Phone, Lock, Mail } from 'lucide-react-native';
-import { useTheme } from '../../src/hooks/useTheme';
+import { ArrowLeft, Eye, EyeOff, Phone } from 'lucide-react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE } from '../../src/features/enterprise/mockEnterprise';
 
+// Google 'G' Colorful Vector Icon
+function GoogleIcon({ size = 18 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        fill="#4285F4"
+      />
+      <Path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        fill="#34A853"
+      />
+      <Path
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+        fill="#FBBC05"
+      />
+      <Path
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+        fill="#EA4335"
+      />
+    </Svg>
+  );
+}
+
 export default function LoginScreen() {
-  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { setUser, setAuthState } = useAuthStore();
   const { setActiveEnterprise, setActiveMember } = useEnterpriseStore();
@@ -51,7 +77,7 @@ export default function LoginScreen() {
       if (e) savedEmail = e;
     } catch {}
 
-    // Attempt Firebase anonymous auth session if allowed in console
+    // Anonymous auth session
     try {
       const { signInAnonymously } = await import('firebase/auth');
       const { auth } = await import('../../src/services/firebase/firebase.config');
@@ -100,233 +126,278 @@ export default function LoginScreen() {
     });
   };
 
-  const pageBg = isDark ? '#181A20' : '#F4F6F9';
-  const cardBg = isDark ? '#242834' : '#FFFFFF';
-  const inputBg = isDark ? '#1E232F' : '#F8FAFC';
-  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: pageBg }}
+      style={{ flex: 1, backgroundColor: '#FFFFFF' }}
     >
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={pageBg} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: 'center',
-          paddingHorizontal: 22,
-          paddingTop: insets.top + 20,
-          paddingBottom: insets.bottom + 20,
-        }}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 },
+        ]}
       >
-        {/* Centered Brand Logo & Typography */}
-        <View style={{ alignItems: 'center', marginBottom: 26 }}>
-          <Image
-            source={require('../../assets/cool_car_logo.png')}
-            style={{ width: 190, height: 65, marginBottom: 12 }}
-            resizeMode="contain"
-          />
-          <Text
-            style={{
-              color: isDark ? '#FFFFFF' : '#0F172A',
-              fontSize: 26,
-              fontWeight: '900',
-              letterSpacing: -0.5,
-              textAlign: 'center',
-            }}
+        {/* Top Header: Back Arrow Button (Screen 3 in Ref Photo) */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            Welcome Back
-          </Text>
-          <Text
-            style={{
-              color: isDark ? '#94A3B8' : '#64748B',
-              fontSize: 14,
-              marginTop: 4,
-              fontWeight: '600',
-              textAlign: 'center',
-            }}
-          >
-            Sign in to manage your workshop operations
-          </Text>
+            <ArrowLeft size={22} color="#0F172A" />
+          </TouchableOpacity>
         </View>
 
-        {/* Centered Main Form Card */}
-        <View
-          style={{
-            backgroundColor: cardBg,
-            borderRadius: 24,
-            padding: 22,
-            borderWidth: 1,
-            borderColor: borderColor,
-            gap: 16,
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: isDark ? 0.25 : 0.06,
-            shadowRadius: 12,
-            elevation: 3,
-          }}
-        >
-          {/* Email or Phone Input */}
-          <View>
-            <Text
-              style={{
-                color: isDark ? '#CBD5E1' : '#475569',
-                fontSize: 11,
-                fontWeight: '800',
-                marginBottom: 8,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-              }}
-            >
-              Email or Phone Number
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: inputBg,
-                borderRadius: 16,
-                paddingHorizontal: 16,
-                height: 52,
-                gap: 12,
-                borderWidth: 1,
-                borderColor: borderColor,
-              }}
-            >
-              <Mail size={18} color={theme.textMuted} />
-              <TextInput
-                value={identifier}
-                onChangeText={setIdentifier}
-                placeholder="Enter email or 10-digit mobile"
-                placeholderTextColor={theme.textMuted}
-                autoCapitalize="none"
-                style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-              />
-            </View>
+        {/* Title Group: "Welcome Back" & "Login to continue" */}
+        <View style={styles.titleGroup}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Login to continue</Text>
+        </View>
+
+        {/* Form Fields */}
+        <View style={styles.form}>
+          {/* Email / Phone Field */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Email / Phone</Text>
+            <TextInput
+              value={identifier}
+              onChangeText={setIdentifier}
+              placeholder="Enter email or phone"
+              placeholderTextColor="#94A3B8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={styles.inputField}
+            />
           </View>
 
-          {/* Password Input */}
-          <View>
-            <Text
-              style={{
-                color: isDark ? '#CBD5E1' : '#475569',
-                fontSize: 11,
-                fontWeight: '800',
-                marginBottom: 8,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-              }}
-            >
-              Password
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: inputBg,
-                borderRadius: 16,
-                paddingHorizontal: 16,
-                height: 52,
-                gap: 12,
-                borderWidth: 1,
-                borderColor: borderColor,
-              }}
-            >
-              <Lock size={18} color={theme.textMuted} />
+          {/* Password Field with Eye Toggle */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Password</Text>
+            <View style={styles.passwordWrapper}>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor={theme.textMuted}
+                placeholder="Enter password"
+                placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
-                style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
+                style={[styles.inputField, { paddingRight: 44 }]}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+              >
                 {showPassword ? (
-                  <EyeOff size={18} color={theme.textMuted} />
+                  <EyeOff size={18} color="#94A3B8" />
                 ) : (
-                  <Eye size={18} color={theme.textMuted} />
+                  <Eye size={18} color="#94A3B8" />
                 )}
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Sign In Button */}
+          {/* Forgot Password Right-Aligned Link */}
+          <View style={styles.forgotRow}>
+            <TouchableOpacity onPress={() => Alert.alert('Reset Password', 'Enter your registered mobile/email to receive password reset link.')}>
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Primary Midnight Navy "Login" Button */}
           <TouchableOpacity
             onPress={handleLogin}
             activeOpacity={0.88}
-            style={{
-              backgroundColor: '#153580',
-              paddingVertical: 16,
-              borderRadius: 30,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginTop: 4,
-              shadowColor: '#153580',
-              shadowOpacity: 0.35,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 4,
-            }}
+            style={styles.loginButton}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              Sign In
-            </Text>
+            <Text style={styles.loginButtonText}>Login</Text>
           </TouchableOpacity>
+
+          {/* "or continue with" Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or continue with</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Side-by-Side Alternate Buttons: Google & Phone */}
+          <View style={styles.altButtonsRow}>
+            <TouchableOpacity
+              onPress={handleLogin}
+              style={styles.altButton}
+              activeOpacity={0.8}
+            >
+              <GoogleIcon size={18} />
+              <Text style={styles.altButtonText}>Google</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handlePhoneOTPFlow}
+              style={styles.altButton}
+              activeOpacity={0.8}
+            >
+              <Phone size={16} color="#0F172A" />
+              <Text style={styles.altButtonText}>Phone</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Divider */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 12 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: borderColor }} />
-          <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>
-            OR CONTINUE WITH
-          </Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: borderColor }} />
-        </View>
-
-        {/* OTP Quick Login Button */}
-        <TouchableOpacity
-          onPress={handlePhoneOTPFlow}
-          activeOpacity={0.88}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            backgroundColor: cardBg,
-            borderWidth: 1,
-            borderColor: borderColor,
-            borderRadius: 30,
-            paddingVertical: 15,
-            marginBottom: 20,
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: isDark ? 0.2 : 0.04,
-            shadowRadius: 8,
-            elevation: 2,
-          }}
-        >
-          <Phone size={18} color="#153580" />
-          <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 15, fontWeight: '800' }}>
-            Sign in with OTP
-          </Text>
-        </TouchableOpacity>
-
-        {/* Sign Up Link */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-          <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: '500' }}>
-            {"Don't have a garage account?"}
-          </Text>
+        {/* Footer Link: "Don't have an account? Sign Up" */}
+        <View style={styles.footerRow}>
+          <Text style={styles.footerText}>{"Don't have an account? "}</Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Text style={{ color: '#153580', fontSize: 14, fontWeight: '800' }}>
-              Create Account
-            </Text>
+            <Text style={styles.footerLinkBold}>Sign Up</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'space-between',
+  },
+  topHeader: {
+    marginBottom: 20,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleGroup: {
+    marginBottom: 28,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  form: {
+    flex: 1,
+  },
+  inputGroup: {
+    marginBottom: 18,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  inputField: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  passwordWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 14,
+    padding: 6,
+  },
+  forgotRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 22,
+  },
+  forgotText: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  loginButton: {
+    backgroundColor: '#0C1829', // Exact Midnight Navy from Screen 3
+    paddingVertical: 16,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0C1829',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    marginBottom: 26,
+  },
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  altButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  altButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  altButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  footerLinkBold: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+});

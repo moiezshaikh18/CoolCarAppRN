@@ -1,6 +1,9 @@
 // ============================================================
-// Job Sheets Screen — Master Job Cards, Status Filters & Search
-// Signature Sky Blue Header & Mega-Curved Lower Sheet
+// Screen 9: Daily Job Sheet — Master Job Cards & Date Slider
+// Matches Reference Design:
+// Back Arrow, Daily Date Slider (< 15 May 2025 >),
+// Clean Job Cards (Car Icon, Job Number, Make/Model, Customer, Amount, Paid/Pending Badge),
+// Midnight Navy Floating Button "+ New Job Sheet"
 // ============================================================
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -12,6 +15,7 @@ import {
   FlatList,
   Linking,
   StatusBar,
+  StyleSheet,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,10 +24,11 @@ import {
   Search,
   Plus,
   Car,
-  User,
-  Phone,
-  Wrench,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
   Printer,
+  Phone,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -46,6 +51,32 @@ export default function JobSheetsScreen() {
 
   const [activeTab, setActiveTab] = useState<JobStatus | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Daily Date Navigation (< 15 May 2025 >) matching Screen 9
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isDailyFilterActive, setIsDailyFilterActive] = useState<boolean>(false);
+
+  const formattedDateStr = useMemo(() => {
+    return selectedDate.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, [selectedDate]);
+
+  const handlePrevDay = () => {
+    setSelectedDate((prev) => new Date(prev.getTime() - 86400000));
+    setIsDailyFilterActive(true);
+  };
+
+  const handleNextDay = () => {
+    setSelectedDate((prev) => new Date(prev.getTime() + 86400000));
+    setIsDailyFilterActive(true);
+  };
+
+  const handleToggleDailyFilter = () => {
+    setIsDailyFilterActive(!isDailyFilterActive);
+  };
 
   // Firestore real-time listener
   useEffect(() => {
@@ -86,6 +117,13 @@ export default function JobSheetsScreen() {
   // Filtered jobs
   const filteredJobs = useMemo(() => {
     return jobSheets.filter((job) => {
+      // Date filter if active
+      if (isDailyFilterActive) {
+        const jobDateStr = typeof job.date === 'string' ? job.date.slice(0, 10) : '';
+        const curDateStr = selectedDate.toISOString().slice(0, 10);
+        if (jobDateStr && jobDateStr !== curDateStr) return false;
+      }
+
       const matchesTab = activeTab === 'ALL' || job.status === activeTab;
       if (!matchesTab) return false;
 
@@ -96,22 +134,7 @@ export default function JobSheetsScreen() {
       const custMatch = job.customerName?.toLowerCase().includes(q) || job.customerPhone?.includes(q);
       return Boolean(numMatch || vehMatch || custMatch);
     });
-  }, [jobSheets, activeTab, searchQuery]);
-
-  const getStatusBadge = (status: JobStatus) => {
-    switch (status) {
-      case 'OPEN':
-        return { bg: isDark ? '#3B2F04' : '#FEF3C7', text: isDark ? '#FBBF24' : '#B45309', label: 'Open' };
-      case 'IN_PROGRESS':
-        return { bg: isDark ? '#1E293B' : '#DBEAFE', text: isDark ? '#60A5FA' : '#1D4ED8', label: 'In Progress' };
-      case 'COMPLETED':
-        return { bg: isDark ? '#064E3B' : '#DCFCE7', text: isDark ? '#34D399' : '#15803D', label: 'Completed' };
-      case 'CANCELLED':
-        return { bg: isDark ? '#450A0A' : '#FEE2E2', text: isDark ? '#F87171' : '#B91C1C', label: 'Cancelled' };
-      default:
-        return { bg: isDark ? '#1F2937' : '#F1F5F9', text: isDark ? '#94A3B8' : '#475569', label: status };
-    }
-  };
+  }, [jobSheets, activeTab, searchQuery, isDailyFilterActive, selectedDate]);
 
   const handlePrintItem = async (item: JobSheet, e: any) => {
     e?.stopPropagation?.();
@@ -157,393 +180,541 @@ export default function JobSheetsScreen() {
     }
   };
 
+  // Render Job Card exactly styled like Screen 9 in Ref Photo
   const renderJobCard = ({ item }: { item: JobSheet }) => {
-    const statusStyle = getStatusBadge(item.status);
-    const hasPending = (item.pendingAmount ?? 0) > 0;
+    const isPaid = (item.pendingAmount ?? 0) === 0 && (item.totalPaid ?? 0) > 0;
+    const isPending = (item.pendingAmount ?? 0) > 0;
 
     return (
       <TouchableOpacity
         activeOpacity={0.88}
         onPress={() => router.push(`/job-sheets/${item.id}` as any)}
-        style={{
-          backgroundColor: isDark ? '#101927' : '#FFFFFF',
-          borderRadius: 24,
-          padding: 16,
-          marginBottom: 12,
-          borderWidth: 1,
-          borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-          shadowColor: '#000',
-          shadowOpacity: isDark ? 0.3 : 0.04,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 2,
-        }}
+        style={[
+          styles.cardContainer,
+          {
+            backgroundColor: isDark ? '#101927' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
+          },
+        ]}
       >
-        {/* Top Row: Job Number & Status Badge */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={styles.cardContentRow}>
+          {/* Left Avatar Icon & Job Details */}
+          <View style={styles.cardLeftGroup}>
+            {/* Circular Car Badge */}
             <View
-              style={{
-                backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 10,
-              }}
+              style={[
+                styles.cardAvatar,
+                { backgroundColor: isDark ? '#1E293B' : '#EFF6FF' },
+              ]}
             >
-              <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 13, fontWeight: '800' }}>
-                {item.jobNumber || '#CCG-0000'}
+              <Car size={20} color={isDark ? '#60A5FA' : '#2563EB'} />
+            </View>
+
+            {/* Information Texts */}
+            <View style={styles.cardInfo}>
+              <View style={styles.jobNumberRow}>
+                <Text style={[styles.cardJobNumber, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+                  {item.jobNumber || '#CCG-0000'}
+                </Text>
+                {item.workCategory && (
+                  <View style={styles.miniCategoryBadge}>
+                    <Text style={styles.miniCategoryText}>
+                      {item.workCategory === 'AC' ? 'AC' : 'Mech'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <Text style={[styles.cardVehicleName, { color: isDark ? '#CBD5E1' : '#334155' }]} numberOfLines={1}>
+                {item.vehicleModel || item.vehicleMake || 'Vehicle'}
+              </Text>
+
+              <Text style={styles.cardCustomerName} numberOfLines={1}>
+                Customer: {item.customerName || 'Walk-in'}
               </Text>
             </View>
-            <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '500' }}>
-              {typeof item.date === 'string' ? item.date.slice(0, 10) : 'Today'}
-            </Text>
           </View>
 
-          <View
-            style={{
-              backgroundColor: statusStyle.bg,
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 10,
-            }}
-          >
-            <Text style={{ color: statusStyle.text, fontSize: 12, fontWeight: '700' }}>
-              {statusStyle.label}
-            </Text>
-          </View>
-        </View>
-
-        {/* Vehicle Info */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <View
-            style={{
-              backgroundColor: isDark ? '#141926' : '#F8FAFC',
-              borderRadius: 8,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderWidth: 1,
-              borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-            }}
-          >
-            <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
-              {item.vehicleNumber || 'NO PLATE'}
-            </Text>
-          </View>
-          <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', flex: 1 }} numberOfLines={1}>
-            {item.vehicleMake ? `${item.vehicleMake} ${item.vehicleModel || ''}` : item.vehicleModel || 'Vehicle'}
-          </Text>
-          {item.workCategory && (
-            <View
-              style={{
-                backgroundColor: item.workCategory === 'AC' ? (isDark ? 'rgba(107,159,232,0.2)' : '#EFF6FF') : (isDark ? 'rgba(245,158,11,0.2)' : '#FEF3C7'),
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: item.workCategory === 'AC' ? (isDark ? '#60A5FA' : '#1D4ED8') : (isDark ? '#FBBF24' : '#B45309'),
-                  fontSize: 10,
-                  fontWeight: '800',
-                }}
-              >
-                {item.workCategory === 'AC' ? '❄️ AC' : item.workCategory === 'MECHANICAL' ? '🔧 Mech' : '⚙️ Both'}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Customer & Call */}
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingVertical: 10,
-            borderTopWidth: 1,
-            borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-            marginBottom: 6,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-            <User size={14} color={theme.textMuted} />
-            <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
-              {item.customerName || 'Walk-in Customer'}
-            </Text>
-          </View>
-          {item.customerPhone ? (
-            <TouchableOpacity
-              onPress={() => Linking.openURL(`tel:${item.customerPhone}`)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 10,
-                backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : '#DCFCE7',
-              }}
-            >
-              <Phone size={12} color={isDark ? '#34D399' : '#15803D'} />
-              <Text style={{ color: isDark ? '#34D399' : '#15803D', fontSize: 11, fontWeight: '700' }}>
-                Call
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {/* Assigned Mechanic */}
-        {item.assignedMechanicName ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <Wrench size={13} color={isDark ? '#60A5FA' : '#153580'} />
-            <Text style={{ color: isDark ? '#94A3B8' : '#64748B', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
-              Staff: <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontWeight: '700' }}>{item.assignedMechanicName}</Text>
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Financial Breakdown: Final Amount, Paid, Pending */}
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            backgroundColor: isDark ? '#141926' : '#F8FAFC',
-            borderRadius: 16,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-          }}
-        >
-          <View>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Total Bill</Text>
-            <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800', marginTop: 2 }}>
+          {/* Right Amount & Status Badge (Screen 9 in Ref Photo) */}
+          <View style={styles.cardRightGroup}>
+            <Text style={[styles.cardAmount, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
               {formatCurrency(item.finalAmount || 0, currencySymbol)}
             </Text>
-          </View>
 
-          <View style={{ alignItems: 'center' }}>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Paid</Text>
-            <Text style={{ color: isDark ? '#34D399' : '#15803D', fontSize: 14, fontWeight: '700', marginTop: 2 }}>
-              {formatCurrency(item.totalPaid || 0, currencySymbol)}
-            </Text>
-          </View>
-
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Balance</Text>
-            <Text
-              style={{
-                color: hasPending ? (isDark ? '#F87171' : '#DC2626') : (isDark ? '#34D399' : '#15803D'),
-                fontSize: 14,
-                fontWeight: '800',
-                marginTop: 2,
-              }}
+            {/* Soft Status Pill Badge */}
+            <View
+              style={[
+                styles.cardStatusBadge,
+                isPaid
+                  ? styles.statusPaid
+                  : isPending
+                  ? styles.statusPending
+                  : styles.statusNeutral,
+              ]}
             >
-              {hasPending
-                ? formatCurrency(item.pendingAmount || 0, currencySymbol)
-                : 'Cleared ✓'}
-            </Text>
-          </View>
-        </View>
+              <Text
+                style={[
+                  styles.cardStatusText,
+                  isPaid
+                    ? styles.statusTextPaid
+                    : isPending
+                    ? styles.statusTextPending
+                    : styles.statusTextNeutral,
+                ]}
+              >
+                {isPaid ? 'Paid' : isPending ? 'Pending' : 'Open'}
+              </Text>
+            </View>
 
-        {/* Quick Action: Print Job Card */}
-        <View style={{ marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }}>
-          <TouchableOpacity
-            onPress={(e) => handlePrintItem(item, e)}
-            activeOpacity={0.8}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              backgroundColor: isDark ? '#1E293B' : '#EFF6FF',
-              paddingVertical: 10,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#DBEAFE',
-            }}
-          >
-            <Printer size={15} color={isDark ? '#60A5FA' : '#1D4ED8'} />
-            <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#60A5FA' : '#1D4ED8' }}>
-              Print Job Card
-            </Text>
-          </TouchableOpacity>
+            {/* Quick Print Button */}
+            <TouchableOpacity
+              onPress={(e) => handlePrintItem(item, e)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.cardPrintButton}
+            >
+              <Printer size={13} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );
   };
 
-  const skyBg = isDark ? '#070A0F' : '#153580';
-  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const pageBg = isDark ? '#070A0F' : '#FFFFFF';
 
   return (
-    <View style={{ flex: 1, backgroundColor: sheetBg }}>
-      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
+    <View style={[styles.container, { backgroundColor: pageBg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={pageBg} />
 
-      {/* Symmetrical Sky Blue Top Header */}
-      <View
-        style={{
-          backgroundColor: skyBg,
-          paddingTop: insets.top + 10,
-          paddingHorizontal: 20,
-          paddingBottom: 22,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: 'rgba(255,255,255,0.22)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ArrowLeft size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-            <View>
-              <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
-                Job Sheets
-              </Text>
-              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
-                Cool Car AC Repair • {filteredJobs.length} active orders
-              </Text>
-            </View>
-          </View>
+      {/* Top Header: Back Arrow, Title "Daily Job Sheet" (Screen 9 in Ref Photo) */}
+      <View style={[styles.topHeader, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.headerTitleRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.headerBackButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <ArrowLeft size={22} color={isDark ? '#FFFFFF' : '#0F172A'} />
+          </TouchableOpacity>
+
+          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+            Daily Job Sheet
+          </Text>
+
+          <View style={{ width: 40 }} />
         </View>
 
-        {/* Search Pill */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: isDark ? '#141926' : 'rgba(255,255,255,0.24)',
-            borderRadius: 22,
-            paddingHorizontal: 16,
-            height: 48,
-            gap: 10,
-            marginBottom: 12,
-          }}
-        >
-          <Search size={18} color={isDark ? '#94A3B8' : 'rgba(255,255,255,0.85)'} />
+        {/* Date Navigator Slider (< 15 May 2025 >) matching Screen 9 */}
+        <View style={styles.dateNavigatorContainer}>
+          <TouchableOpacity
+            onPress={handlePrevDay}
+            style={[styles.dateArrowButton, { backgroundColor: isDark ? '#141926' : '#F8FAFC' }]}
+          >
+            <ChevronLeft size={18} color={isDark ? '#FFFFFF' : '#0F172A'} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleToggleDailyFilter}
+            style={[
+              styles.dateCenterBadge,
+              { backgroundColor: isDailyFilterActive ? (isDark ? '#1E293B' : '#EFF6FF') : (isDark ? '#141926' : '#F8FAFC') },
+            ]}
+          >
+            <Calendar size={14} color={isDailyFilterActive ? '#2563EB' : '#64748B'} />
+            <Text
+              style={[
+                styles.dateCenterText,
+                { color: isDailyFilterActive ? '#2563EB' : (isDark ? '#FFFFFF' : '#0F172A') },
+              ]}
+            >
+              {formattedDateStr}
+            </Text>
+            {isDailyFilterActive ? (
+              <Text style={styles.dateFilterLabel}>• Active</Text>
+            ) : null}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleNextDay}
+            style={[styles.dateArrowButton, { backgroundColor: isDark ? '#141926' : '#F8FAFC' }]}
+          >
+            <ChevronRight size={18} color={isDark ? '#FFFFFF' : '#0F172A'} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Input Bar */}
+        <View style={[styles.searchBar, { backgroundColor: isDark ? '#141926' : '#F8FAFC' }]}>
+          <Search size={16} color="#94A3B8" />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search job #, vehicle reg, owner..."
-            placeholderTextColor={isDark ? '#64748B' : 'rgba(255,255,255,0.7)'}
-            style={{ flex: 1, color: '#FFFFFF', fontSize: 14, fontWeight: '500' }}
+            placeholder="Search job #, vehicle, customer..."
+            placeholderTextColor="#94A3B8"
+            style={[styles.searchInput, { color: isDark ? '#FFFFFF' : '#0F172A' }]}
           />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Text style={styles.searchClearText}>Clear</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
-        {/* Filter Tabs */}
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={STATUS_TABS}
-          keyExtractor={(item) => item.value}
-          contentContainerStyle={{ gap: 8 }}
-          renderItem={({ item }) => {
-            const isSelected = activeTab === item.value;
+        {/* Status Filter Tabs (All, In Progress, Completed) */}
+        <View style={styles.tabsRow}>
+          {STATUS_TABS.map((tab) => {
+            const isSelected = activeTab === tab.value;
             return (
               <TouchableOpacity
-                onPress={() => setActiveTab(item.value)}
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 7,
-                  borderRadius: 20,
-                  backgroundColor: isSelected
-                    ? '#0C1829'
-                    : 'rgba(255,255,255,0.2)',
-                }}
+                key={tab.value}
+                onPress={() => setActiveTab(tab.value)}
+                style={[
+                  styles.tabButton,
+                  isSelected && styles.tabButtonActive,
+                ]}
               >
                 <Text
-                  style={{
-                    color: '#FFFFFF',
-                    fontSize: 12,
-                    fontWeight: isSelected ? '800' : '600',
-                  }}
+                  style={[
+                    styles.tabButtonText,
+                    isSelected ? styles.tabTextActive : styles.tabTextInactive,
+                  ]}
                 >
-                  {item.label}
+                  {tab.label}
                 </Text>
               </TouchableOpacity>
             );
-          }}
-        />
+          })}
+        </View>
       </View>
 
-      {/* Signature Lower Content Sheet with ZERO Blue Bleed */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: sheetBg,
-          marginTop: -14,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          overflow: 'hidden',
-        }}
-      >
-        <FlatList
-          data={filteredJobs}
-          keyExtractor={(item) => item.id}
-          renderItem={renderJobCard}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 + insets.bottom, paddingTop: 16 }}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 }}>
-              <View
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 32,
-                  backgroundColor: isDark ? '#141926' : '#EFF6FF',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Car size={30} color={isDark ? '#FFFFFF' : '#3B82F6'} />
-              </View>
-              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>
-                No Job Sheets Found
-              </Text>
-              <Text style={{ color: theme.textMuted, fontSize: 13, textAlign: 'center', maxWidth: 280 }}>
-                {searchQuery
-                  ? 'Try adjusting your search criteria'
-                  : 'Create your first job sheet to track services, spare parts, and customer payments'}
-              </Text>
+      {/* Job Sheet List */}
+      <FlatList
+        data={filteredJobs}
+        keyExtractor={(item) => item.id}
+        renderItem={renderJobCard}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 90 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <View style={[styles.emptyAvatar, { backgroundColor: isDark ? '#141926' : '#F1F5F9' }]}>
+              <Car size={32} color="#94A3B8" />
             </View>
-          }
-        />
-
-        {/* Bottom Floating Midnight Navy CTA */}
-        <View style={{ position: 'absolute', bottom: Math.max(insets.bottom + 10, 20), left: 20, right: 20 }}>
-          <TouchableOpacity
-            onPress={() => router.push('/job-sheets/create')}
-            activeOpacity={0.88}
-            style={{
-              backgroundColor: '#0C1829',
-              paddingVertical: 16,
-              borderRadius: 32,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              shadowColor: '#000',
-              shadowOpacity: 0.35,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 5 },
-              elevation: 6,
-            }}
-          >
-            <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              Create New Job Sheet
+            <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+              No Job Sheets Found
             </Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery || isDailyFilterActive
+                ? 'No matching job sheets for this date or search.'
+                : 'Create your first job sheet to track services, spare parts and customer billing.'}
+            </Text>
+            {isDailyFilterActive ? (
+              <TouchableOpacity
+                onPress={() => setIsDailyFilterActive(false)}
+                style={styles.showAllDatesBtn}
+              >
+                <Text style={styles.showAllDatesText}>Show All Dates</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        }
+      />
+
+      {/* Floating Bottom Button: "+ New Job Sheet" (Screen 9 in Ref Photo) */}
+      <View style={[styles.bottomButtonWrapper, { bottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          onPress={() => router.push('/job-sheets/create')}
+          activeOpacity={0.88}
+          style={styles.floatingNewButton}
+        >
+          <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+          <Text style={styles.floatingNewButtonText}>+ New Job Sheet</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  topHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  headerBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  dateNavigatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 12,
+  },
+  dateArrowButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dateCenterBadge: {
+    flex: 1,
+    height: 38,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dateCenterText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  dateFilterLabel: {
+    fontSize: 11,
+    color: '#2563EB',
+    fontWeight: '800',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 42,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 8,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  searchClearText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '700',
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tabButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tabButtonActive: {
+    backgroundColor: '#0C1829',
+    borderColor: '#0C1829',
+  },
+  tabButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+  },
+  tabTextInactive: {
+    color: '#64748B',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+  },
+  cardContainer: {
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  cardContentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  cardAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  jobNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  cardJobNumber: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  miniCategoryBadge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  miniCategoryText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#1D4ED8',
+  },
+  cardVehicleName: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  cardCustomerName: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  cardRightGroup: {
+    alignItems: 'flex-end',
+    gap: 4,
+    marginLeft: 8,
+  },
+  cardAmount: {
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  cardStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusPaid: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusPending: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusNeutral: {
+    backgroundColor: '#F1F5F9',
+  },
+  cardStatusText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  statusTextPaid: {
+    color: '#15803D',
+  },
+  statusTextPending: {
+    color: '#B45309',
+  },
+  statusTextNeutral: {
+    color: '#475569',
+  },
+  cardPrintButton: {
+    padding: 3,
+    marginTop: 2,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+  },
+  emptyAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 18,
+  },
+  showAllDatesBtn: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+  },
+  showAllDatesText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  bottomButtonWrapper: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+  },
+  floatingNewButton: {
+    backgroundColor: '#0C1829', // Exact Midnight Navy from Screen 9
+    paddingVertical: 15,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#0C1829',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  floatingNewButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+});

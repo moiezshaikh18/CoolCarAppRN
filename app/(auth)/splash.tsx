@@ -1,8 +1,8 @@
 // ============================================================
-// Modern Animated Splash Screen — Cool Car Workshop
-// Fluid Reanimated Animations, Glowing Ambient Aura,
-// Floating Seamless Logo (No Box/Border), No Phone Numbers,
-// Modern Sleek Typography & Progress Indicator
+// Screen 1: Splash Screen — Cool Car Workshop OS
+// Matches Reference Design:
+// Dark Garage Workshop Atmosphere, Workshop Shelter Icon,
+// Cool Car Official Branding, and Bottom Tagline: "Track. Manage. Grow."
 // ============================================================
 
 import React, { useEffect } from 'react';
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Snowflake, Wrench } from 'lucide-react-native';
+import Svg, { Path } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -31,86 +31,93 @@ import { useAuthStore } from '../../src/store/authStore';
 
 const { width } = Dimensions.get('window');
 
+// Garage Shelter with Car SVG Icon matching reference Screen 1
+function GarageShelterIcon({ size = 68, color = '#FFFFFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size * 0.9} viewBox="0 0 68 60" fill="none">
+      {/* Garage Roof / Shelter */}
+      <Path
+        d="M34 4L62 20V24H6V20L34 4Z"
+        fill={color}
+      />
+      {/* Pillars */}
+      <Path
+        d="M10 24V54H16V24H10Z"
+        fill={color}
+      />
+      <Path
+        d="M52 24V54H58V24H52Z"
+        fill={color}
+      />
+      {/* Car Silhouette Inside Garage */}
+      <Path
+        d="M26 34C28 30 31 27 34 27C37 27 40 30 42 34L45 38C47 39 48 41 48 43V48C48 49 47 50 46 50H45C44 50 43 49 43 48V46H25V48C25 49 24 50 23 50H22C21 50 20 49 20 48V43C20 41 21 39 23 38L26 34Z"
+        fill={color}
+      />
+      {/* Headlights */}
+      <Path
+        d="M24 41H27V43H24V41Z"
+        fill="#0C1829"
+      />
+      <Path
+        d="M41 41H44V43H41V41Z"
+        fill="#0C1829"
+      />
+      {/* Windshield */}
+      <Path
+        d="M28 34H40L38 31H30L28 34Z"
+        fill="#0C1829"
+      />
+    </Svg>
+  );
+}
+
 export default function SplashScreen() {
-  const authState = useAuthStore((s) => s.authState);
-
   // Reanimated shared values
-  const logoScale = useSharedValue(0.8);
+  const iconScale = useSharedValue(0.75);
+  const iconOpacity = useSharedValue(0);
+  const iconFloat = useSharedValue(0);
+
   const logoOpacity = useSharedValue(0);
-  const logoFloat = useSharedValue(0);
+  const logoScale = useSharedValue(0.9);
 
-  const glowScale = useSharedValue(0.9);
-  const glowOpacity = useSharedValue(0.3);
+  const textTranslateY = useSharedValue(20);
+  const textOpacity = useSharedValue(0);
 
-  const contentTranslateY = useSharedValue(24);
-  const contentOpacity = useSharedValue(0);
-
-  const progressBarWidth = useSharedValue(0);
+  const progress = useSharedValue(0);
   const footerOpacity = useSharedValue(0);
 
   useEffect(() => {
-    // 1. Logo blooming spring entrance
-    logoScale.value = withSpring(1, {
-      damping: 12,
-      stiffness: 85,
-    });
-    logoOpacity.value = withTiming(1, {
-      duration: 800,
-      easing: Easing.out(Easing.cubic),
-    });
+    // 1. Garage Icon entrance
+    iconScale.value = withSpring(1, { damping: 14, stiffness: 90 });
+    iconOpacity.value = withTiming(1, { duration: 600 });
 
-    // 2. Idle subtle float (luxury automotive breathing feel)
-    logoFloat.value = withDelay(
-      800,
+    // Idle float
+    iconFloat.value = withDelay(
+      600,
       withRepeat(
         withSequence(
-          withTiming(-4, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
-          withTiming(4, { duration: 1600, easing: Easing.inOut(Easing.quad) })
+          withTiming(-4, { duration: 1500, easing: Easing.inOut(Easing.quad) }),
+          withTiming(4, { duration: 1500, easing: Easing.inOut(Easing.quad) })
         ),
         -1,
         true
       )
     );
 
-    // 3. Ambient aura glow pulse
-    glowScale.value = withRepeat(
-      withSequence(
-        withTiming(1.18, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.95, { duration: 2000, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      true
-    );
-    glowOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.65, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.35, { duration: 2000, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      true
-    );
+    // 2. Logo entrance
+    logoScale.value = withDelay(250, withSpring(1, { damping: 14, stiffness: 90 }));
+    logoOpacity.value = withDelay(250, withTiming(1, { duration: 700 }));
 
-    // 4. Staggered Content slide up & fade in
-    contentTranslateY.value = withDelay(
-      350,
-      withSpring(0, { damping: 14, stiffness: 90 })
-    );
-    contentOpacity.value = withDelay(
-      350,
-      withTiming(1, { duration: 700, easing: Easing.out(Easing.quad) })
-    );
+    // 3. Typography entrance
+    textTranslateY.value = withDelay(400, withSpring(0, { damping: 15, stiffness: 95 }));
+    textOpacity.value = withDelay(400, withTiming(1, { duration: 700 }));
 
-    // 5. Sleek modern progress bar fill (0% -> 100%)
-    progressBarWidth.value = withDelay(
-      400,
-      withTiming(1, { duration: 1800, easing: Easing.bezier(0.25, 0.1, 0.25, 1) })
-    );
-    footerOpacity.value = withDelay(
-      500,
-      withTiming(1, { duration: 800 })
-    );
+    // 4. Progress bar fill
+    progress.value = withDelay(450, withTiming(1, { duration: 1800, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
+    footerOpacity.value = withDelay(500, withTiming(1, { duration: 700 }));
 
-    // 6. Seamless Navigation transition
+    // 5. Navigate
     const timer = setTimeout(() => {
       const currentAuth = useAuthStore.getState().authState;
       if (currentAuth === 'authenticated') {
@@ -123,27 +130,23 @@ export default function SplashScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Animated Styles
+  const iconAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale.value }, { translateY: iconFloat.value }],
+    opacity: iconOpacity.value,
+  }));
+
   const logoAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: logoScale.value },
-      { translateY: logoFloat.value },
-    ],
+    transform: [{ scale: logoScale.value }],
     opacity: logoOpacity.value,
   }));
 
-  const glowAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: glowScale.value }],
-    opacity: glowOpacity.value,
-  }));
-
-  const contentAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: contentTranslateY.value }],
-    opacity: contentOpacity.value,
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: textTranslateY.value }],
+    opacity: textOpacity.value,
   }));
 
   const progressAnimatedStyle = useAnimatedStyle(() => ({
-    width: `${progressBarWidth.value * 100}%`,
+    width: `${progress.value * 100}%`,
   }));
 
   const footerAnimatedStyle = useAnimatedStyle(() => ({
@@ -154,20 +157,25 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Deep Automotive Midnight Gradient */}
+      {/* Deep Dark Garage Workshop Gradient & Atmosphere */}
       <LinearGradient
-        colors={['#050811', '#0B132B', '#070C1B', '#04060C']}
-        locations={[0, 0.4, 0.75, 1]}
+        colors={['#050811', '#0B1326', '#080E1C', '#030509']}
+        locations={[0, 0.38, 0.72, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Ambient Radial Glowing Halos */}
-      <Animated.View style={[styles.outerGlow, glowAnimatedStyle]} />
-      <View style={styles.innerGlow} />
+      {/* Ambient Workshop Lighting Halo */}
+      <View style={styles.ambientHalo} />
+      <View style={styles.innerHalo} />
 
-      {/* Center Branding Hero — No container box, floating seamlessly */}
+      {/* Main Center Branding Hero (Screen 1 in Ref Photo) */}
       <View style={styles.centerHero}>
-        {/* Floating Official White & Cyan Logo */}
+        {/* Top Garage Shelter Icon */}
+        <Animated.View style={[styles.shelterContainer, iconAnimatedStyle]}>
+          <GarageShelterIcon size={64} color="#FFFFFF" />
+        </Animated.View>
+
+        {/* Seamless Cool Car Official Logo */}
         <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
           <Image
             source={require('../../assets/cool_car_logo_white.png')}
@@ -176,28 +184,16 @@ export default function SplashScreen() {
           />
         </Animated.View>
 
-        {/* Staggered Modern Typography Section */}
-        <Animated.View style={[styles.textSection, contentAnimatedStyle]}>
-          {/* Frosted Modern Badge Pill */}
-          <View style={styles.badgePill}>
-            <Snowflake size={13} color="#60A5FA" />
-            <Text style={styles.badgeText}>CAR A/C SPECIALIST & WORKSHOP</Text>
-            <Wrench size={13} color="#F59E0B" />
-          </View>
-
-          {/* Marathi Calligraphy Brand Subtitle */}
-          <Text style={styles.marathiSubtitle}>कूल कार ए. सी. रिपेअर्स</Text>
-
-          {/* Elegant Automotive Tagline */}
-          <Text style={styles.tagline}>
-            {"'Our Perfection... Your Satisfaction'"}
-          </Text>
+        {/* Subtitle / App Title */}
+        <Animated.View style={[styles.titleSection, textAnimatedStyle]}>
+          <Text style={styles.brandTitle}>COOL CAR</Text>
+          <Text style={styles.brandSubtitle}>GARAGE WORKSHOP OS</Text>
         </Animated.View>
       </View>
 
-      {/* Modern Minimalist Loading Footer */}
-      <Animated.View style={[styles.footer, footerAnimatedStyle]}>
-        {/* Sleek Progress Track & Fill Bar */}
+      {/* Bottom Footer: "Track. Manage. Grow." (Screen 1 in Ref Photo) */}
+      <Animated.View style={[styles.bottomSection, footerAnimatedStyle]}>
+        {/* Animated Progress Bar */}
         <View style={styles.progressTrack}>
           <Animated.View style={[styles.progressBar, progressAnimatedStyle]}>
             <LinearGradient
@@ -209,10 +205,8 @@ export default function SplashScreen() {
           </Animated.View>
         </View>
 
-        {/* Micro Subtitle */}
-        <Text style={styles.footerText}>
-          PUNE • ESTD 2004 • WORKSHOP OS
-        </Text>
+        {/* Exact Tagline from Reference Screen 1 */}
+        <Text style={styles.taglineText}>Track. Manage. Grow.</Text>
       </Animated.View>
     </View>
   );
@@ -224,106 +218,81 @@ const styles = StyleSheet.create({
     backgroundColor: '#050811',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  outerGlow: {
+  ambientHalo: {
     position: 'absolute',
-    width: Math.min(width * 1.1, 460),
-    height: Math.min(width * 1.1, 460),
-    borderRadius: Math.min(width * 0.55, 230),
-    backgroundColor: 'rgba(21, 53, 128, 0.38)',
+    width: Math.min(width * 1.1, 440),
+    height: Math.min(width * 1.1, 440),
+    borderRadius: Math.min(width * 0.55, 220),
+    backgroundColor: 'rgba(21, 53, 128, 0.35)',
   },
-  innerGlow: {
+  innerHalo: {
     position: 'absolute',
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(56, 189, 248, 0.16)',
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
   },
   centerHero: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
     paddingHorizontal: 24,
     zIndex: 10,
   },
-  // Seamless logo floating — No white box, no border
+  shelterContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   logoWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 22,
-    shadowColor: '#38BDF8',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 28,
-    elevation: 10,
+    marginBottom: 10,
   },
   logoImage: {
-    width: Math.min(width * 0.84, 340),
-    height: Math.min(width * 0.84, 340) * (384 / 1024),
+    width: 220,
+    height: 72,
   },
-  textSection: {
+  titleSection: {
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
+    marginTop: 4,
   },
-  badgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.07)',
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
-    marginBottom: 14,
-  },
-  badgeText: {
-    color: '#93C5FD',
-    fontSize: 10.5,
+  brandTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
     fontWeight: '900',
-    letterSpacing: 1.2,
+    letterSpacing: 3,
   },
-  marathiSubtitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: 'rgba(255, 255, 255, 0.82)',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  tagline: {
-    fontSize: 13,
-    fontWeight: '600',
-    fontStyle: 'italic',
+  brandSubtitle: {
     color: '#94A3B8',
-    letterSpacing: 0.4,
-    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 2.5,
+    marginTop: 4,
   },
-  footer: {
+  bottomSection: {
     position: 'absolute',
-    bottom: 44,
+    bottom: 50,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
+    width: '100%',
+    paddingHorizontal: 40,
   },
   progressTrack: {
     width: 140,
-    height: 3.5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 2,
     overflow: 'hidden',
+    marginBottom: 18,
   },
   progressBar: {
     height: '100%',
-    borderRadius: 3,
-    overflow: 'hidden',
+    borderRadius: 2,
   },
-  footerText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: 'rgba(255, 255, 255, 0.45)',
-    letterSpacing: 1.8,
+  taglineText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 1.5,
   },
 });
