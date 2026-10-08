@@ -19,6 +19,7 @@ import { ArrowLeft, TrendingUp, Calendar, Download, Sparkles } from 'lucide-reac
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { formatCurrency } from '../../src/utils/currency';
+import { useJobSheetStore } from '../../src/store/jobSheetStore';
 
 const { width } = Dimensions.get('window');
 
@@ -37,6 +38,12 @@ export default function IncomeReportScreen() {
   const { currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
+  const { jobSheets } = useJobSheetStore();
+
+  const totalIncome = jobSheets.reduce((sum, j) => sum + (j.finalAmount || 0), 0);
+  const totalJobsCount = jobSheets.length;
+  const serviceIncome = Math.round(totalIncome * 0.7);
+  const partsIncome = totalIncome - serviceIncome;
 
   const skyBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
@@ -176,7 +183,7 @@ export default function IncomeReportScreen() {
             </View>
 
             <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -1, marginTop: 8 }}>
-              {formatCurrency(145600, currencySymbol)}
+              {formatCurrency(totalIncome, currencySymbol)}
             </Text>
 
             {/* Bar Chart Representation */}
@@ -247,12 +254,12 @@ export default function IncomeReportScreen() {
                     Mechanical & Labor Charges
                   </Text>
                   <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                    48 Completed Job Sheets
+                    {totalJobsCount} Completed Job Sheets
                   </Text>
                 </View>
               </View>
               <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                {formatCurrency(85000, currencySymbol)}
+                {formatCurrency(serviceIncome, currencySymbol)}
               </Text>
             </View>
 
@@ -283,7 +290,7 @@ export default function IncomeReportScreen() {
                 </View>
               </View>
               <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
-                {formatCurrency(60600, currencySymbol)}
+                {formatCurrency(partsIncome, currencySymbol)}
               </Text>
             </View>
           </View>

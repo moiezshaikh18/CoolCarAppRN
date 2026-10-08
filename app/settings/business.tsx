@@ -19,16 +19,28 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Building2, User, Phone, MapPin, Edit3, Check } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
+import { useAuthStore } from '../../src/store/authStore';
 
 export default function BusinessInfoScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { activeEnterprise, setActiveEnterprise } = useEnterpriseStore();
+  const { user } = useAuthStore();
 
-  const [businessName, setBusinessName] = useState(activeEnterprise?.name || 'Super Auto Garage');
-  const [ownerName, setOwnerName] = useState('Manish Kumar');
-  const [phone, setPhone] = useState(activeEnterprise?.phone || '9876543210');
-  const [address, setAddress] = useState(activeEnterprise?.address || '123, Auto Nagar, New Delhi - 110015');
+  const [businessName, setBusinessName] = useState(activeEnterprise?.name || 'Cool Car Garage');
+  const [ownerName, setOwnerName] = useState(user?.displayName || 'Workshop Owner');
+  const [phone, setPhone] = useState(activeEnterprise?.phone || user?.phone || '+91 ');
+  const [address, setAddress] = useState(activeEnterprise?.address || '');
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const n = await AsyncStorage.getItem('cool_car_saved_owner_name');
+        if (n) setOwnerName(n);
+      } catch {}
+    })();
+  }, []);
 
   const [editModal, setEditModal] = useState(false);
   const [tempName, setTempName] = useState(businessName);
@@ -199,7 +211,9 @@ export default function BusinessInfoScreen() {
                 <MapPin size={18} color={theme.textMuted} style={{ marginTop: 2 }} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '600' }}>Workshop Address</Text>
-                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600', marginTop: 2 }}>{address}</Text>
+                  <Text style={{ color: address ? theme.text : theme.textMuted, fontSize: 14, fontWeight: '600', marginTop: 2 }}>
+                    {address || 'Add workshop address (Click Edit)'}
+                  </Text>
                 </View>
               </View>
             </View>

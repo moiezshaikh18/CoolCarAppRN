@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Plus, User, Bell } from 'lucide-react-native';
+import { ArrowLeft, Plus, User, Bell, CheckCircle } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useJobSheetStore } from '../../src/store/jobSheetStore';
 
 interface ReminderItem {
   id: string;
@@ -24,16 +25,21 @@ interface ReminderItem {
   dueInfo: string;
 }
 
-const SAMPLE_REMINDERS: ReminderItem[] = [
-  { id: '1', name: 'Ramesh Kumar (Honda City)', type: 'Next Periodic Service', dueInfo: 'Due 10 Aug 2025' },
-  { id: '2', name: 'Ajay Singh (Creta)', type: 'Pending Outstanding Balance', dueInfo: '₹3,200 Due' },
-  { id: '3', name: 'Neha Sharma (Swift)', type: 'Brake Fluid Inspection', dueInfo: 'Due 18 Aug 2025' },
-];
-
 export default function RemindersScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const [reminders, setReminders] = useState(SAMPLE_REMINDERS);
+  const { jobSheets } = useJobSheetStore();
+
+  const reminders = React.useMemo<ReminderItem[]>(() => {
+    return jobSheets
+      .filter((j) => (j.pendingAmount || 0) > 0)
+      .map((j) => ({
+        id: j.id,
+        name: `${j.customerName || 'Customer'} (${j.vehicleModel || 'Vehicle'})`,
+        type: 'Pending Payment Due',
+        dueInfo: `₹${j.pendingAmount} Due`,
+      }));
+  }, [jobSheets]);
 
   const handleAdd = () => {
     Alert.alert('New Reminder', 'Create custom follow-up reminder.');
@@ -112,7 +118,18 @@ export default function RemindersScreen() {
           </Text>
 
           <View style={{ gap: 12 }}>
-            {reminders.map((item) => {
+            {reminders.length === 0 ? (
+              <View style={{ padding: 32, alignItems: 'center' }}>
+                <CheckCircle size={32} color="#10B981" />
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800', marginTop: 10 }}>
+                  All Clear! No Pending Reminders
+                </Text>
+                <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 4, textAlign: 'center' }}>
+                  Customer pending payment follow-ups will appear here automatically.
+                </Text>
+              </View>
+            ) : (
+              reminders.map((item) => {
               const isPayment = item.type.includes('Balance') || item.type.includes('Payment');
               return (
                 <View
@@ -180,7 +197,7 @@ export default function RemindersScreen() {
                   </View>
                 </View>
               );
-            })}
+            }))}
           </View>
         </ScrollView>
 

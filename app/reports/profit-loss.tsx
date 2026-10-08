@@ -18,6 +18,8 @@ import { ArrowLeft, TrendingUp, Calendar, Download } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { formatCurrency } from '../../src/utils/currency';
+import { useJobSheetStore } from '../../src/store/jobSheetStore';
+import { useExpenseStore } from '../../src/store/expenseStore';
 
 const PERIODS = ['This Month', 'Last Month', 'This Quarter', 'FY 24-25'];
 
@@ -27,10 +29,13 @@ export default function ProfitLossScreen() {
   const insets = useSafeAreaInsets();
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
 
-  const income = 145600;
-  const expense = 95300;
+  const { jobSheets } = useJobSheetStore();
+  const { expenses } = useExpenseStore();
+
+  const income = jobSheets.reduce((sum, j) => sum + (j.finalAmount || 0), 0);
+  const expense = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const netProfit = income - expense;
-  const profitMargin = Math.round((netProfit / income) * 100);
+  const profitMargin = income > 0 ? Math.round((netProfit / income) * 100) : 0;
 
   const skyBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
@@ -176,8 +181,8 @@ export default function ProfitLossScreen() {
             {/* Income vs Expense Horizontal Proportional Bar */}
             <View style={{ marginTop: 22, marginBottom: 10 }}>
               <View style={{ height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.15)', flexDirection: 'row', overflow: 'hidden' }}>
-                <View style={{ flex: income, backgroundColor: '#00C896' }} />
-                <View style={{ flex: expense, backgroundColor: '#EF4444' }} />
+                <View style={{ flex: income > 0 ? income : 1, backgroundColor: '#00C896' }} />
+                <View style={{ flex: expense > 0 ? expense : (income > 0 ? 0 : 1), backgroundColor: '#EF4444' }} />
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
