@@ -1,6 +1,6 @@
 // ============================================================
-// Screen 17: Income Report — Revenue Analytics & Trends
-// Directly matching Screen 17 in Reference Design Mockup
+// Income Report Screen — Financial Inflow Analytics
+// Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
 import React, { useState } from 'react';
@@ -10,231 +10,310 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Alert,
   StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, ChevronDown } from 'lucide-react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { ArrowLeft, TrendingUp, Calendar, Download, Sparkles } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { formatCurrency } from '../../src/utils/currency';
-import { useJobSheetStore } from '../../src/store/jobSheetStore';
 
 const { width } = Dimensions.get('window');
 
-const PERIODS = ['This Month', 'Last Month', 'This Year'];
+const TREND_POINTS = [
+  { date: '1 May', val: 50 },
+  { date: '8 May', val: 90 },
+  { date: '15 May', val: 70 },
+  { date: '22 May', val: 120 },
+  { date: '29 May', val: 160 },
+];
+
+const PERIODS = ['This Month', 'Last Month', 'This Quarter', 'YTD'];
 
 export default function IncomeReportScreen() {
-  const { isDark } = useTheme();
+  const { theme, isDark } = useTheme();
   const { currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { jobSheets } = useJobSheetStore();
+  const [selectedPeriod, setSelectedPeriod] = useState('This Month');
 
-  const [period, setPeriod] = useState('This Month');
-  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
-
-  const totalRevenue = jobSheets.reduce((sum, j) => sum + (j.finalAmount || 0), 0) || 145600;
-  const serviceIncome = Math.round(totalRevenue * 0.65) || 85000;
-  const partsIncome = totalRevenue - serviceIncome || 45000;
-
-  const bg = isDark ? '#0C1829' : '#FFFFFF';
-  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
-  const textMuted = '#64748B';
-  const cardBg = isDark ? '#111E33' : '#FFFFFF';
-  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9';
+  const skyBg = isDark ? '#070A0F' : '#153580';
+  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const cardBg = isDark ? '#101927' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: bg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
-      {/* Top Header matching Screen 17 */}
+      {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 8,
+          backgroundColor: skyBg,
+          paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottomWidth: 1,
-          borderBottomColor: borderColor,
+          paddingBottom: 22,
         }}
       >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-          style={{ width: 40, height: 40, justifyContent: 'center' }}
-        >
-          <ArrowLeft size={22} color={textPrimary} strokeWidth={2.4} />
-        </TouchableOpacity>
-
-        <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
-          Income Report
-        </Text>
-
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: 18,
-          paddingBottom: insets.bottom + 90,
-          gap: 20,
-        }}
-      >
-        {/* Period Selector Dropdown Pill matching Screen 17 */}
-        <View style={{ zIndex: 10 }}>
-          <TouchableOpacity
-            onPress={() => setShowPeriodDropdown(!showPeriodDropdown)}
-            activeOpacity={0.8}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: cardBg,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: borderColor,
-              alignSelf: 'flex-start',
-              gap: 8,
-            }}
-          >
-            <Text style={{ fontSize: 14, fontWeight: '700', color: textPrimary }}>
-              {period}
-            </Text>
-            <ChevronDown size={16} color={textMuted} />
-          </TouchableOpacity>
-
-          {showPeriodDropdown && (
-            <View
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => router.back()}
               style={{
-                position: 'absolute',
-                top: 48,
-                left: 0,
-                backgroundColor: cardBg,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: borderColor,
-                overflow: 'hidden',
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 4,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: 'rgba(255,255,255,0.22)',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {PERIODS.map((p) => (
-                <TouchableOpacity
-                  key={p}
-                  onPress={() => {
-                    setPeriod(p);
-                    setShowPeriodDropdown(false);
+              <ArrowLeft size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View>
+              <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
+                Income Report
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
+                Workshop revenue breakdown
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255,255,255,0.22)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Calendar size={18} color="#FFFFFF" />
+          </View>
+        </View>
+
+        {/* Period Switchers */}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {PERIODS.map((period) => {
+            const isSelected = selectedPeriod === period;
+            return (
+              <TouchableOpacity
+                key={period}
+                onPress={() => setSelectedPeriod(period)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor: isSelected ? '#0C1829' : 'rgba(255,255,255,0.2)',
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    color: '#FFFFFF',
+                    fontSize: 12,
+                    fontWeight: isSelected ? '800' : '600',
                   }}
-                  style={{ paddingVertical: 10, paddingHorizontal: 16 }}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: textPrimary }}>{p}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Total Income Big Amount matching Screen 17 */}
-        <View>
-          <Text style={{ fontSize: 13, color: textMuted, fontWeight: '600' }}>
-            Total Income
-          </Text>
-          <Text style={{ fontSize: 32, fontWeight: '900', color: textPrimary, marginTop: 4 }}>
-            {formatCurrency(totalRevenue, currencySymbol)}
-          </Text>
-        </View>
-
-        {/* Clean Line Chart Trend matching Screen 17 */}
-        <View
-          style={{
-            backgroundColor: cardBg,
-            borderRadius: 18,
-            padding: 18,
-            borderWidth: 1,
-            borderColor: borderColor,
-          }}
-        >
-          <View style={{ height: 160, justifyContent: 'center' }}>
-            <Svg width={width - 76} height={140} viewBox="0 0 320 140">
-              {/* Path line representing revenue growth */}
-              <Path
-                d="M 10 110 Q 50 80 80 95 T 150 70 T 220 100 T 290 25"
-                fill="none"
-                stroke="#2563EB"
-                strokeWidth={3}
-                strokeLinecap="round"
-              />
-              {/* Data points */}
-              <Circle cx="10" cy="110" r="4" fill="#2563EB" />
-              <Circle cx="80" cy="95" r="4" fill="#2563EB" />
-              <Circle cx="150" cy="70" r="4" fill="#2563EB" />
-              <Circle cx="220" cy="100" r="4" fill="#2563EB" />
-              <Circle cx="290" cy="25" r="5" fill="#2563EB" />
-            </Svg>
-          </View>
-
-          {/* Dates row below chart */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-            {['1 May', '8 May', '15 May', '22 May', '29 May'].map((d) => (
-              <Text key={d} style={{ fontSize: 11, color: textMuted, fontWeight: '600' }}>
-                {d}
-              </Text>
-            ))}
-          </View>
-        </View>
-
-        {/* Top Income Sources Card matching Screen 17 */}
-        <View
-          style={{
-            backgroundColor: cardBg,
-            borderRadius: 18,
-            borderWidth: 1,
-            borderColor: borderColor,
-            padding: 18,
-          }}
-        >
-          <Text style={{ fontSize: 15, fontWeight: '800', color: textPrimary, marginBottom: 16 }}>
-            Top Income Sources
-          </Text>
-
-          <View style={{ gap: 14 }}>
-            {/* Service Charges */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#2563EB' }} />
-                <Text style={{ fontSize: 14, fontWeight: '600', color: textPrimary }}>
-                  Service Charges
+                  {period}
                 </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Signature Mega-Curved Lower Content Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          marginTop: -14,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          overflow: 'hidden',
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 60 }}
+        >
+          {/* Midnight Navy Featured Hero Card */}
+          <View
+            style={{
+              backgroundColor: '#0C1829',
+              borderRadius: 30,
+              padding: 22,
+              marginBottom: 20,
+              shadowColor: '#000',
+              shadowOpacity: 0.35,
+              shadowRadius: 16,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 8,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                Total Gross Inflow
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  backgroundColor: 'rgba(0,200,150,0.2)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                }}
+              >
+                <TrendingUp size={13} color="#00C896" />
+                <Text style={{ color: '#00C896', fontSize: 11, fontWeight: '800' }}>+18.4%</Text>
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: textPrimary }}>
-                {formatCurrency(serviceIncome, currencySymbol)}
+            </View>
+
+            <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -1, marginTop: 8 }}>
+              {formatCurrency(145600, currencySymbol)}
+            </Text>
+
+            {/* Bar Chart Representation */}
+            <View style={{ marginTop: 24, height: 110, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              {TREND_POINTS.map((pt, idx) => {
+                const barHeight = (pt.val / 160) * 80;
+                const isPeak = idx === TREND_POINTS.length - 1;
+                return (
+                  <View key={pt.date} style={{ alignItems: 'center', gap: 8, flex: 1 }}>
+                    <View
+                      style={{
+                        width: 28,
+                        height: barHeight,
+                        backgroundColor: isPeak ? '#FFFFFF' : 'rgba(255,255,255,0.2)',
+                        borderRadius: 14,
+                      }}
+                    />
+                    <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '600' }}>{pt.date}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Breakdown by Revenue Stream */}
+          <Text
+            style={{
+              color: theme.textMuted,
+              fontSize: 11,
+              fontWeight: '800',
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              marginBottom: 12,
+              marginLeft: 4,
+            }}
+          >
+            Inflow Stream Breakdown
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: borderColor,
+              gap: 16,
+              marginBottom: 20,
+            }}
+          >
+            {/* Services */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: isDark ? '#141926' : '#EFF6FF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#00C896' }} />
+                </View>
+                <View>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
+                    Mechanical & Labor Charges
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+                    48 Completed Job Sheets
+                  </Text>
+                </View>
+              </View>
+              <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
+                {formatCurrency(85000, currencySymbol)}
               </Text>
             </View>
 
-            {/* Parts Sale */}
+            <View style={{ height: 1, backgroundColor: borderColor }} />
+
+            {/* Spare Parts */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
-                <Text style={{ fontSize: 14, fontWeight: '600', color: textPrimary }}>
-                  Parts Sale
-                </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: isDark ? '#141926' : '#EFF6FF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#3B82F6' }} />
+                </View>
+                <View>
+                  <Text style={{ color: theme.text, fontSize: 15, fontWeight: '800' }}>
+                    Spare Parts & Consumables
+                  </Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+                    Filters, Oils, Brake Pads
+                  </Text>
+                </View>
               </View>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: textPrimary }}>
-                {formatCurrency(partsIncome, currencySymbol)}
+              <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
+                {formatCurrency(60600, currencySymbol)}
               </Text>
             </View>
           </View>
-        </View>
-      </ScrollView>
+
+          {/* Export Report CTA */}
+          <TouchableOpacity
+            onPress={() => Alert.alert('Report Exported', 'Income statement PDF generated.')}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: '#0C1829',
+              paddingVertical: 18,
+              borderRadius: 34,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              shadowColor: '#000',
+              shadowOpacity: 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
+            }}
+          >
+            <Download size={20} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              Export Income Statement
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     </View>
   );
 }

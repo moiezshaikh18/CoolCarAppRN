@@ -1,8 +1,3 @@
-// ============================================================
-// Screen 24: Export Data — Excel, CSV & PDF Export Hub
-// Directly matching Screen 24 in Reference Design Mockup
-// ============================================================
-
 import React, { useState } from 'react';
 import {
   View,
@@ -15,7 +10,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Download, ChevronDown, Check } from 'lucide-react-native';
+import { ArrowLeft, Download, FileSpreadsheet, Check, Share2 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { useExpenseStore } from '../../src/store/expenseStore';
@@ -26,13 +21,11 @@ import { useVehicleStore } from '../../src/store/vehicleStore';
 import { generateAndShareFinancialPdf, generateAndShareCsv } from '../../src/utils/pdfReport';
 
 export default function ExportDataScreen() {
-  const { isDark } = useTheme();
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [selectedData, setSelectedData] = useState('All Data');
   const [selectedFormat, setSelectedFormat] = useState('Excel (.xlsx)');
-  const [showDataPicker, setShowDataPicker] = useState(false);
-  const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const { jobSheets } = useJobSheetStore();
@@ -42,8 +35,8 @@ export default function ExportDataScreen() {
   const { customers } = useCustomerStore();
   const { vehicles } = useVehicleStore();
 
-  const DATA_OPTIONS = ['All Data', 'Job Sheets Only', 'Expenses Only', 'Customer List', 'Vehicle Fleet'];
-  const FORMAT_OPTIONS = ['Excel (.xlsx)', 'CSV (.csv)', 'PDF Report (.pdf)'];
+  const dataOptions = ['All Data', 'Job Sheets Only', 'Expenses Only', 'Customer List', 'Vehicle Fleet'];
+  const formatOptions = ['Excel (.xlsx)', 'CSV (.csv)', 'PDF Report (.pdf)'];
 
   const handleExport = async () => {
     try {
@@ -155,246 +148,200 @@ export default function ExportDataScreen() {
     }
   };
 
-  const bg = isDark ? '#0C1829' : '#FFFFFF';
-  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
-  const textMuted = '#64748B';
-  const cardBg = isDark ? '#111E33' : '#FFFFFF';
-  const fieldBg = isDark ? '#1E293B' : '#F8FAFC';
-  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9';
+  const skyBg = isDark ? '#181A20' : '#153580';
+  const sheetBg = isDark ? '#181A20' : '#F4F6F9';
+  const cardBg = isDark ? '#242834' : '#FFFFFF';
+  const inputBg = isDark ? '#141926' : '#F8FAFC';
+  const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
   return (
-    <View style={{ flex: 1, backgroundColor: bg }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
 
-      {/* Top Header matching Screen 24 */}
+      {/* Symmetrical Sky Blue Top Header */}
       <View
         style={{
-          paddingTop: insets.top + 8,
+          backgroundColor: skyBg,
+          paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: 14,
+          paddingBottom: 22,
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottomWidth: 1,
-          borderBottomColor: borderColor,
+          gap: 12,
         }}
       >
         <TouchableOpacity
           onPress={() => router.back()}
-          activeOpacity={0.7}
-          style={{ width: 40, height: 40, justifyContent: 'center' }}
-        >
-          <ArrowLeft size={22} color={textPrimary} strokeWidth={2.4} />
-        </TouchableOpacity>
-
-        <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
-          Export Data
-        </Text>
-
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: 24,
-          paddingBottom: insets.bottom + 90,
-          gap: 20,
-        }}
-      >
-        {/* Select Data Dropdown Card matching Screen 24 */}
-        <View style={{ zIndex: 20 }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: textMuted, marginBottom: 8, marginLeft: 2 }}>
-            Select Data
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              setShowDataPicker(!showDataPicker);
-              setShowFormatPicker(false);
-            }}
-            activeOpacity={0.8}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: cardBg,
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: borderColor,
-            }}
-          >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: textPrimary }}>
-              {selectedData}
-            </Text>
-            <ChevronDown size={18} color={textMuted} />
-          </TouchableOpacity>
-
-          {showDataPicker && (
-            <View
-              style={{
-                position: 'absolute',
-                top: 75,
-                left: 0,
-                right: 0,
-                backgroundColor: cardBg,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: borderColor,
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-                elevation: 6,
-                zIndex: 30,
-                overflow: 'hidden',
-              }}
-            >
-              {DATA_OPTIONS.map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  onPress={() => {
-                    setSelectedData(item);
-                    setShowDataPicker(false);
-                  }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
-                    borderBottomWidth: 1,
-                    borderBottomColor: borderColor,
-                    backgroundColor: item === selectedData ? fieldBg : 'transparent',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: item === selectedData ? '800' : '600',
-                      color: item === selectedData ? textPrimary : textMuted,
-                    }}
-                  >
-                    {item}
-                  </Text>
-                  {item === selectedData && <Check size={16} color="#0C1829" />}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Select Format Dropdown Card matching Screen 24 */}
-        <View style={{ zIndex: 10 }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: textMuted, marginBottom: 8, marginLeft: 2 }}>
-            Select Format
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              setShowFormatPicker(!showFormatPicker);
-              setShowDataPicker(false);
-            }}
-            activeOpacity={0.8}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: cardBg,
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: borderColor,
-            }}
-          >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: textPrimary }}>
-              {selectedFormat}
-            </Text>
-            <ChevronDown size={18} color={textMuted} />
-          </TouchableOpacity>
-
-          {showFormatPicker && (
-            <View
-              style={{
-                position: 'absolute',
-                top: 75,
-                left: 0,
-                right: 0,
-                backgroundColor: cardBg,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: borderColor,
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-                elevation: 6,
-                zIndex: 25,
-                overflow: 'hidden',
-              }}
-            >
-              {FORMAT_OPTIONS.map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  onPress={() => {
-                    setSelectedFormat(item);
-                    setShowFormatPicker(false);
-                  }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
-                    borderBottomWidth: 1,
-                    borderBottomColor: borderColor,
-                    backgroundColor: item === selectedFormat ? fieldBg : 'transparent',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: item === selectedFormat ? '800' : '600',
-                      color: item === selectedFormat ? textPrimary : textMuted,
-                    }}
-                  >
-                    {item}
-                  </Text>
-                  {item === selectedFormat && <Check size={16} color="#0C1829" />}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Export Now Button matching Screen 24 */}
-        <TouchableOpacity
-          onPress={handleExport}
-          disabled={isExporting}
-          activeOpacity={0.88}
           style={{
-            backgroundColor: '#0C1829',
-            paddingVertical: 16,
-            borderRadius: 16,
-            flexDirection: 'row',
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: 'rgba(255,255,255,0.22)',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10,
-            marginTop: 10,
           }}
         >
-          {isExporting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <>
-              <Download size={18} color="#FFFFFF" strokeWidth={2.4} />
-              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>
-                Export Now
-              </Text>
-            </>
-          )}
+          <ArrowLeft size={20} color="#FFFFFF" />
         </TouchableOpacity>
-      </ScrollView>
+        <View>
+          <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
+            Export Data
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
+            Portability & fiscal backups
+          </Text>
+        </View>
+      </View>
+
+      {/* Signature Lower Content Sheet with ZERO Blue Bleed */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          marginTop: -14,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          overflow: 'hidden',
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 60 }}
+        >
+          {/* Data Category Selection */}
+          <Text
+            style={{
+              color: theme.textMuted,
+              fontSize: 11,
+              fontWeight: '800',
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              marginBottom: 10,
+              paddingLeft: 4,
+            }}
+          >
+            Select Dataset
+          </Text>
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: borderColor,
+              gap: 8,
+              marginBottom: 20,
+            }}
+          >
+            {dataOptions.map((opt) => {
+              const isSelected = selectedData === opt;
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  onPress={() => setSelectedData(opt)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 16,
+                    backgroundColor: isSelected ? '#0C1829' : inputBg,
+                  }}
+                >
+                  <Text style={{ color: isSelected ? '#FFFFFF' : theme.text, fontSize: 15, fontWeight: '700' }}>
+                    {opt}
+                  </Text>
+                  {isSelected && <Check size={18} color="#FFFFFF" strokeWidth={2.5} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Format Selection */}
+          <Text
+            style={{
+              color: theme.textMuted,
+              fontSize: 11,
+              fontWeight: '800',
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              marginBottom: 10,
+              paddingLeft: 4,
+            }}
+          >
+            File Format
+          </Text>
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 24,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: borderColor,
+              gap: 8,
+              marginBottom: 24,
+            }}
+          >
+            {formatOptions.map((fmt) => {
+              const isSelected = selectedFormat === fmt;
+              return (
+                <TouchableOpacity
+                  key={fmt}
+                  onPress={() => setSelectedFormat(fmt)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 16,
+                    backgroundColor: isSelected ? '#0C1829' : inputBg,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <FileSpreadsheet size={18} color={isSelected ? '#FFFFFF' : theme.textMuted} />
+                    <Text style={{ color: isSelected ? '#FFFFFF' : theme.text, fontSize: 15, fontWeight: '700' }}>
+                      {fmt}
+                    </Text>
+                  </View>
+                  {isSelected && <Check size={18} color="#FFFFFF" strokeWidth={2.5} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Midnight Navy CTA */}
+          <TouchableOpacity
+            onPress={handleExport}
+            disabled={isExporting}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: '#0C1829',
+              paddingVertical: 18,
+              borderRadius: 34,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+              shadowColor: '#000',
+              shadowOpacity: 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
+            }}
+          >
+            {isExporting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Download size={20} color="#FFFFFF" strokeWidth={2.5} />
+            )}
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              {isExporting ? 'Generating Report...' : `Export ${selectedData}`}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
     </View>
   );
 }

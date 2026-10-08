@@ -1,6 +1,7 @@
 // ============================================================
-// Screen 8: Expense Entry — Add Daily Expense
-// Directly matching Screen 8 in Reference Design Mockup
+// Add Daily Expense Screen — Cool Car Workshop
+// Reason, Kisne Liya (Spent By), Exact Time & Date, Bank/Cash Binding
+// Signboard Royal Blue (#153580) & Midnight Navy (#0C1829) Luxury Aesthetic
 // ============================================================
 
 import React, { useState } from 'react';
@@ -10,41 +11,46 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  StatusBar,
-  KeyboardAvoidingView,
-  Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Wallet, ChevronDown, Check } from 'lucide-react-native';
-import { router } from 'expo-router';
+import {
+  ChevronLeft,
+  User,
+  Calendar,
+  Clock,
+  Tag,
+  FileText,
+} from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
+import { GlassCard } from '../../src/components/common/GlassCard';
+import { BankPaymentSelector } from '../../src/components/common/BankPaymentSelector';
+import { router } from 'expo-router';
+import { PaymentMode } from '../../src/types/payment.types';
 import { useExpenseStore } from '../../src/store/expenseStore';
 import { useEmployeeStore } from '../../src/store/employeeStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
+import { formatCurrency } from '../../src/utils/currency';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
-import { PaymentMode } from '../../src/types/payment.types';
+import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
 
-const CATEGORIES = [
+const COMMON_EXPENSE_REASONS = [
+  'Staff Salary / Advance',
+  'Tea & Snacks for Staff',
+  'Workshop Electricity Bill',
   'Shop Rent',
-  'Electricity Bill',
-  'Salary',
-  'Tools & Equipment',
-  'Tea & Snacks',
-  'Hardware & Fasteners',
-  'Nitrogen & Gases',
-  'Lubricants & Oil',
-  'Miscellaneous',
-];
-
-const PAYMENT_MODES: { label: string; value: PaymentMode }[] = [
-  { label: 'Cash', value: 'CASH' },
-  { label: 'UPI', value: 'UPI' },
-  { label: 'Card Swipe', value: 'CARD_SWIPE' },
+  'Petrol / Diesel for Test Drive',
+  'Hardware & Fasteners / Screws',
+  'Nitrogen Cylinder Refill',
+  'Oxygen / Gas Welding Rods',
+  'Compressor Oil & Lubricants',
+  'Cleaning Detergent & Acid Wash',
+  'Miscellaneous Workshop Expense',
 ];
 
 export default function AddExpenseScreen() {
-  const { isDark } = useTheme();
+  const { theme, isDark } = useTheme();
   const { currencySymbol, enterpriseId } = useEnterprise();
   const insets = useSafeAreaInsets();
 
@@ -55,19 +61,32 @@ export default function AddExpenseScreen() {
   const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
   const debitAccount = useBankAccountStore((s) => s.debitAccount);
 
-  const [amount, setAmount] = useState('2350');
-  const [category, setCategory] = useState(CATEGORIES[0]);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState(COMMON_EXPENSE_REASONS[0]);
+  const [customReason, setCustomReason] = useState('');
 
+  // Spent By / Logged By
+  const [spentBy, setSpentBy] = useState(employees[0]?.name || 'Irfan Khan');
+  const [customSpentBy, setCustomSpentBy] = useState('');
+
+  // Date and Time
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [time, setTime] = useState(
+    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  );
+
+  // Payment Mode & Bank Account
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
-  const [showPaymentPicker, setShowPaymentPicker] = useState(false);
-
-  const [note, setNote] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || 'bank-cash');
+  const [selectedAccountName, setSelectedAccountName] = useState<string>(accounts[0]?.accountName || 'Cash Counter');
+  const [notes, setNotes] = useState('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
     visible: false,
     title: '',
     message: '',
   });
+
 
   const showAlert = (
     title: string,
@@ -85,6 +104,9 @@ export default function AddExpenseScreen() {
     });
   };
 
+  const effectiveReason = customReason.trim() || reason;
+  const effectiveSpentBy = customSpentBy.trim() || spentBy;
+
   const handleSave = () => {
     const num = parseFloat(amount.replace(/[^0-9.]/g, ''));
     if (isNaN(num) || num <= 0) {
@@ -92,29 +114,37 @@ export default function AddExpenseScreen() {
       return;
     }
 
-    const defaultAccount = accounts[0];
-    if (defaultAccount) {
-      debitAccount(defaultAccount.id, num);
+    if (!effectiveReason) {
+      showAlert('Reason Required', 'Please specify what the money was spent for.', 'warning');
+      return;
+    }
+
+    if (!effectiveSpentBy) {
+      showAlert('Person Required', 'Please specify who took or spent the money.', 'warning');
+      return;
+    }
+
+    // Debit the selected bank account / cash drawer
+    if (selectedAccountId) {
+      debitAccount(selectedAccountId, num);
     }
 
     const entId = enterpriseId || 'enterprise-cool-car';
     const expenseId = `exp-${Date.now()}`;
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const newExpense = {
       id: expenseId,
       enterpriseId: entId,
-      categoryId: `cat-${category.toLowerCase().replace(/\s+/g, '-')}`,
-      categoryName: category,
+      categoryId: 'cat-general-expense',
+      categoryName: effectiveReason,
       amount: num,
       paymentMode,
-      paymentAccountId: defaultAccount?.id || 'bank-cash',
-      paymentAccountName: defaultAccount?.accountName || 'Cash Drawer',
-      date: dateStr,
-      time: timeStr,
-      spentBy: employees[0]?.name || 'Workshop Staff',
-      description: `${category}${note ? ` (${note})` : ''}`,
+      paymentAccountId: selectedAccountId,
+      paymentAccountName: selectedAccountName,
+      date,
+      time,
+      spentBy: effectiveSpentBy,
+      description: `${effectiveReason} — Spent by: ${effectiveSpentBy}${notes ? ` (${notes})` : ''}`,
       voided: false,
       createdBy: 'Cool Car Manager',
       createdAt: new Date().toISOString(),
@@ -123,113 +153,92 @@ export default function AddExpenseScreen() {
 
     addExpense(newExpense);
 
+    // Cloud Firestore Sync
     import('firebase/firestore').then(async ({ doc, setDoc }) => {
       try {
         const { db } = await import('../../src/services/firebase/firebase.config');
         await setDoc(doc(db, 'enterprises', entId, 'expenses', expenseId), newExpense);
       } catch (err) {
-        console.log('[AddExpense] Firestore sync error:', err);
+        console.log('[AddExpense] Firestore sync error/offline:', err);
       }
     }).catch(() => {});
 
     showAlert(
-      'Expense Saved!',
-      `Recorded ${currencySymbol}${num} under ${category}`,
+      'Expense Logged!',
+      `Recorded ${currencySymbol}${num} for "${effectiveReason}"\nSpent by: ${effectiveSpentBy}\nPaid from: ${selectedAccountName}`,
       'success',
       [{ text: 'Done', style: 'default', onPress: () => router.back() }]
     );
   };
 
-  const bg = isDark ? '#0C1829' : '#FFFFFF';
-  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
-  const textMuted = '#64748B';
-  const inputBg = isDark ? '#111E33' : '#FFFFFF';
-  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0';
+  const canvasBg = isDark ? '#000000' : '#153580';
+  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(43, 53, 68, 0.08)';
+  const primaryBtnBg = isDark ? '#FFFFFF' : '#153580';
+  const primaryBtnText = isDark ? '#0C1829' : '#FFFFFF';
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: bg }}
-    >
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
+    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+      {/* Royal Blue Top Header */}
+      <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 20 }}>
 
-      {/* Top Header matching Screen 8 */}
-      <View
-        style={{
-          paddingTop: insets.top + 8,
-          paddingHorizontal: 20,
-          paddingBottom: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottomWidth: 1,
-          borderBottomColor: borderColor,
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-          style={{ width: 40, height: 40, justifyContent: 'center' }}
-        >
-          <ArrowLeft size={22} color={textPrimary} strokeWidth={2.4} />
-        </TouchableOpacity>
-
-        <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
-          Expense Entry
-        </Text>
-
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 22,
-          paddingTop: 24,
-          paddingBottom: insets.bottom + 90,
-        }}
-      >
-        {/* Top Center Round Navy Icon Container */}
-        <View style={{ alignItems: 'center', marginBottom: 28 }}>
-          <View
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
             style={{
-              width: 58,
-              height: 58,
-              borderRadius: 29,
-              backgroundColor: '#0C1829',
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
               alignItems: 'center',
               justifyContent: 'center',
-              shadowColor: '#0C1829',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.25,
-              shadowRadius: 10,
-              elevation: 6,
             }}
           >
-            <Wallet size={24} color="#FFFFFF" strokeWidth={2.2} />
-          </View>
-        </View>
+            <ChevronLeft size={22} color="#FFFFFF" />
+          </TouchableOpacity>
 
-        {/* Input Fields matching Screen 8 */}
-        <View style={{ gap: 20 }}>
-          {/* Amount Field */}
-          <View>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary, marginBottom: 8 }}>
-              Amount
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+              Add Daily Expense
             </Text>
-            <View
-              style={{
-                height: 54,
-                backgroundColor: inputBg,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: borderColor,
-                paddingHorizontal: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ fontSize: 16, fontWeight: '800', color: textPrimary, marginRight: 6 }}>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12, fontWeight: '600' }}>
+              Cool Car Workshop Ledger
+            </Text>
+          </View>
+
+          <View style={{ width: 44 }} />
+        </View>
+      </View>
+
+      {/* Crisp White Lower Sheet */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: sheetBg,
+          marginTop: -14,
+          borderTopLeftRadius: 36,
+          borderTopRightRadius: 36,
+          paddingTop: 22,
+          paddingHorizontal: 20,
+          shadowColor: '#0C1829',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: isDark ? 0.4 : 0.06,
+          shadowRadius: 16,
+          elevation: 8,
+        }}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+          {/* Card 1: Amount to Pay */}
+          <GlassCard
+            variant={isDark ? 'navy' : 'sand'}
+            padding={16}
+            style={{ borderRadius: 24, marginBottom: 18 }}
+          >
+            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 6 }}>
+              Expense Amount *
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 28, fontWeight: '900' }}>
                 {currencySymbol}
               </Text>
               <TextInput
@@ -238,205 +247,309 @@ export default function AddExpenseScreen() {
                 placeholder="0.00"
                 placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
-                style={{ flex: 1, fontSize: 16, fontWeight: '700', color: textPrimary }}
+                style={{
+                  flex: 1,
+                  fontSize: 28,
+                  fontWeight: '900',
+                  color: isDark ? '#FFFFFF' : '#0C1829',
+                }}
               />
             </View>
-          </View>
+          </GlassCard>
 
-          {/* Category Dropdown Field */}
-          <View>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary, marginBottom: 8 }}>
-              Category
-            </Text>
-            <TouchableOpacity
-              onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-              activeOpacity={0.8}
-              style={{
-                height: 54,
-                backgroundColor: inputBg,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: borderColor,
-                paddingHorizontal: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Text style={{ fontSize: 15, fontWeight: '600', color: textPrimary }}>
-                {category}
+          {/* Card 2: What was the expense for? (Reason / Category) */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 18,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              gap: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Tag size={16} color={isDark ? '#60A5FA' : '#153580'} />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Expense Purpose / Category *
               </Text>
-              <ChevronDown size={18} color="#94A3B8" />
-            </TouchableOpacity>
+            </View>
 
-            {/* Inline Category Options */}
-            {showCategoryPicker && (
-              <View
-                style={{
-                  backgroundColor: inputBg,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: borderColor,
-                  marginTop: 6,
-                  overflow: 'hidden',
-                }}
-              >
-                {CATEGORIES.map((cat, idx) => (
+
+            {/* Quick Reason Pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {COMMON_EXPENSE_REASONS.map((r) => {
+                const isSel = r === reason && !customReason.trim();
+                return (
                   <TouchableOpacity
-                    key={cat}
+                    key={r}
                     onPress={() => {
-                      setCategory(cat);
-                      setShowCategoryPicker(false);
+                      setReason(r);
+                      setCustomReason('');
                     }}
                     style={{
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderBottomWidth: idx < CATEGORIES.length - 1 ? 1 : 0,
-                      borderBottomColor: borderColor,
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 14,
+                      backgroundColor: isSel
+                        ? (isDark ? '#FFFFFF' : '#0C1829')
+                        : (isDark ? '#1C2538' : '#FFFFFF'),
+                      borderWidth: 1,
+                      borderColor: cardBorder,
                     }}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: textPrimary }}>
-                      {cat}
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: isSel
+                          ? (isDark ? '#0C1829' : '#FFFFFF')
+                          : (isDark ? '#FFFFFF' : '#0C1829'),
+                      }}
+                    >
+                      {r}
                     </Text>
-                    {category === cat && <Check size={16} color="#0C1829" />}
                   </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
+                );
+              })}
+            </ScrollView>
 
-          {/* Payment Mode Field */}
-          <View>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary, marginBottom: 8 }}>
-              Payment Mode
-            </Text>
-            <TouchableOpacity
-              onPress={() => setShowPaymentPicker(!showPaymentPicker)}
-              activeOpacity={0.8}
-              style={{
-                height: 54,
-                backgroundColor: inputBg,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: borderColor,
-                paddingHorizontal: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Text style={{ fontSize: 15, fontWeight: '600', color: textPrimary }}>
-                {PAYMENT_MODES.find((m) => m.value === paymentMode)?.label || 'Cash'}
-              </Text>
-              <ChevronDown size={18} color="#94A3B8" />
-            </TouchableOpacity>
-
-            {/* Inline Payment Options */}
-            {showPaymentPicker && (
-              <View
-                style={{
-                  backgroundColor: inputBg,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: borderColor,
-                  marginTop: 6,
-                  overflow: 'hidden',
-                }}
-              >
-                {PAYMENT_MODES.map((pm, idx) => (
-                  <TouchableOpacity
-                    key={pm.value}
-                    onPress={() => {
-                      setPaymentMode(pm.value);
-                      setShowPaymentPicker(false);
-                    }}
-                    style={{
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderBottomWidth: idx < PAYMENT_MODES.length - 1 ? 1 : 0,
-                      borderBottomColor: borderColor,
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: textPrimary }}>
-                      {pm.label}
-                    </Text>
-                    {paymentMode === pm.value && <Check size={16} color="#0C1829" />}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
-          {/* Note (Optional) Field */}
-          <View>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary, marginBottom: 8 }}>
-              Note (Optional)
-            </Text>
+            {/* Custom Reason Input */}
             <TextInput
-              value={note}
-              onChangeText={setNote}
-              placeholder="Add note"
+              value={customReason}
+              onChangeText={setCustomReason}
+              placeholder="Or type custom reason e.g. Bumper clip packet"
               placeholderTextColor="#94A3B8"
               style={{
-                height: 54,
-                backgroundColor: inputBg,
+                backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
                 borderRadius: 14,
-                borderWidth: 1,
-                borderColor: borderColor,
-                paddingHorizontal: 16,
-                fontSize: 15,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 13,
                 fontWeight: '600',
-                color: textPrimary,
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                borderWidth: 1,
+                borderColor: cardBorder,
               }}
             />
           </View>
-        </View>
-      </ScrollView>
 
-      {/* Fixed Bottom Save Button matching Screen 8 */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          paddingHorizontal: 22,
-          paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 20,
-          paddingTop: 12,
-          backgroundColor: bg,
-          borderTopWidth: 1,
-          borderTopColor: borderColor,
-        }}
-      >
-        <TouchableOpacity
-          onPress={handleSave}
-          activeOpacity={0.88}
-          style={{
-            height: 52,
-            backgroundColor: '#0C1829',
-            borderRadius: 14,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#0C1829',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.25,
-            shadowRadius: 8,
-            elevation: 4,
-          }}
-        >
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-            Save Expense
-          </Text>
-        </TouchableOpacity>
+          {/* Card 3: Kisne Liya (Who took the money) */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 18,
+              borderWidth: 1,
+              borderColor: cardBorder,
+              gap: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <User size={16} color={isDark ? '#60A5FA' : '#153580'} />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                Spent By / Paid To *
+              </Text>
+            </View>
+
+            {/* Quick Staff Selection Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {['Workshop Cashier / Self', ...(employees || []).map((e) => e?.name || '').filter(Boolean), 'Vendor / Delivery Boy'].map((person) => {
+                const isSel = person === spentBy && !customSpentBy.trim();
+                return (
+                  <TouchableOpacity
+                    key={person}
+                    onPress={() => {
+                      setSpentBy(person);
+                      setCustomSpentBy('');
+                    }}
+
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 14,
+                      backgroundColor: isSel
+                        ? (isDark ? '#FFFFFF' : '#0C1829')
+                        : (isDark ? '#1C2538' : '#FFFFFF'),
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: isSel
+                          ? (isDark ? '#0C1829' : '#FFFFFF')
+                          : (isDark ? '#FFFFFF' : '#0C1829'),
+                      }}
+                    >
+                      {person}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Custom Name Input */}
+            <TextInput
+              value={customSpentBy}
+              onChangeText={setCustomSpentBy}
+              placeholder="Or type person name (e.g. Ramesh Mechanic)"
+              placeholderTextColor="#94A3B8"
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                borderRadius: 14,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 13,
+                fontWeight: '600',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                borderWidth: 1,
+                borderColor: cardBorder,
+              }}
+            />
+          </View>
+
+          {/* Card 4: Date & Exact Time */}
+          <View
+            style={{
+              backgroundColor: isDark ? '#141926' : '#F8FAFD',
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 18,
+              borderWidth: 1,
+              borderColor: cardBorder,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 10 }}>
+              Date & Time
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1.2 }}>
+                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600', marginBottom: 4 }}>Date</Text>
+                <TouchableOpacity
+                  onPress={() => setIsCalendarOpen(true)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                    borderRadius: 14,
+                    paddingHorizontal: 10,
+                    height: 44,
+                    gap: 6,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <Calendar size={15} color={isDark ? '#60A5FA' : '#153580'} />
+                  <Text style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '700' }}>
+                    {date}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600', marginBottom: 4 }}>Time</Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
+                    borderRadius: 14,
+                    paddingHorizontal: 10,
+                    height: 44,
+                    gap: 6,
+                    borderWidth: 1,
+                    borderColor: cardBorder,
+                  }}
+                >
+                  <Clock size={15} color="#64748B" />
+                  <TextInput
+                    value={time}
+                    onChangeText={setTime}
+                    placeholder="02:30 PM"
+                    placeholderTextColor="#94A3B8"
+                    style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '700' }}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Card 5: Payment Mode & Bank Account Deduction */}
+          <BankPaymentSelector
+            paymentMode={paymentMode}
+            onPaymentModeChange={setPaymentMode}
+            selectedAccountId={selectedAccountId}
+            onAccountChange={(accId, accName) => {
+              setSelectedAccountId(accId);
+              setSelectedAccountName(accName);
+            }}
+            label="Paid From (Bank Account / Cash Drawer) *"
+          />
+
+          {/* Optional Notes */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+              Extra Note (Optional)
+            </Text>
+            <TextInput
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="e.g. Paid for tea vendor at corner shop"
+              placeholderTextColor="#94A3B8"
+              style={{
+                backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                borderRadius: 16,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                fontSize: 13,
+                fontWeight: '600',
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                borderWidth: 1,
+                borderColor: cardBorder,
+              }}
+            />
+          </View>
+
+          {/* Submit CTA */}
+          <TouchableOpacity
+            onPress={handleSave}
+            activeOpacity={0.88}
+            style={{
+              backgroundColor: primaryBtnBg,
+              paddingVertical: 18,
+              borderRadius: 30,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#0C1829',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 10,
+              elevation: 4,
+            }}
+          >
+            <Text style={{ color: primaryBtnText, fontSize: 16, fontWeight: '800' }}>
+              Save Expense Entry
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
+      {/* CALENDAR PICKER MODAL */}
+      <CalendarPickerModal
+        visible={isCalendarOpen}
+        selectedDate={date}
+        onSelectDate={setDate}
+        onClose={() => setIsCalendarOpen(false)}
+        title="Select Expense Date"
+      />
+
+      {/* THEMED CUSTOM ALERT MODAL */}
       <ThemedAlert {...alertConfig} />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
