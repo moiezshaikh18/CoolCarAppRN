@@ -1,7 +1,6 @@
 // ============================================================
-// Login Screen — Authentication Portal
-// Clean Unified Layout, Vertically Centered Content
-// Zero Cut-off Divs & Full Light/Dark Consistency
+// Screen 3: Welcome Back — Login Screen
+// Directly matching Screen 3 in Reference Design Mockup
 // ============================================================
 
 import React, { useState } from 'react';
@@ -13,20 +12,19 @@ import {
   ScrollView,
   Alert,
   StatusBar,
-  Image,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Eye, EyeOff, Phone, Lock, Mail } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, Phone, Chrome } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE } from '../../src/features/enterprise/mockEnterprise';
 
 export default function LoginScreen() {
-  const { theme, isDark } = useTheme();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { setUser, setAuthState } = useAuthStore();
   const { setActiveEnterprise, setActiveMember } = useEnterpriseStore();
@@ -51,7 +49,6 @@ export default function LoginScreen() {
       if (e) savedEmail = e;
     } catch {}
 
-    // Attempt Firebase anonymous auth session if allowed in console
     try {
       const { signInAnonymously } = await import('firebase/auth');
       const { auth } = await import('../../src/services/firebase/firebase.config');
@@ -100,229 +97,208 @@ export default function LoginScreen() {
     });
   };
 
-  const pageBg = isDark ? '#181A20' : '#F4F6F9';
-  const cardBg = isDark ? '#242834' : '#FFFFFF';
-  const inputBg = isDark ? '#1E232F' : '#F8FAFC';
-  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(43,53,68,0.08)';
+  const bg = isDark ? '#0C1829' : '#FFFFFF';
+  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
+  const textMuted = '#64748B';
+  const inputBg = isDark ? '#111E33' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0';
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: pageBg }}
+      style={{ flex: 1, backgroundColor: bg }}
     >
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={pageBg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           flexGrow: 1,
-          justifyContent: 'center',
-          paddingHorizontal: 22,
-          paddingTop: insets.top + 20,
-          paddingBottom: insets.bottom + 20,
+          paddingHorizontal: 24,
+          paddingTop: insets.top + 12,
+          paddingBottom: insets.bottom + 24,
+          justifyContent: 'space-between',
         }}
       >
-        {/* Centered Brand Logo & Typography */}
-        <View style={{ alignItems: 'center', marginBottom: 26 }}>
-          <Image
-            source={require('../../assets/cool_car_logo.png')}
-            style={{ width: 190, height: 65, marginBottom: 12 }}
-            resizeMode="contain"
-          />
-          <Text
-            style={{
-              color: isDark ? '#FFFFFF' : '#0F172A',
-              fontSize: 26,
-              fontWeight: '900',
-              letterSpacing: -0.5,
-              textAlign: 'center',
-            }}
+        <View>
+          {/* Top Back Navigation Arrow */}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            style={{ width: 40, height: 40, justifyContent: 'center', marginBottom: 20 }}
           >
-            Welcome Back
-          </Text>
-          <Text
-            style={{
-              color: isDark ? '#94A3B8' : '#64748B',
-              fontSize: 14,
-              marginTop: 4,
-              fontWeight: '600',
-              textAlign: 'center',
-            }}
-          >
-            Sign in to manage your workshop operations
-          </Text>
-        </View>
+            <ArrowLeft size={22} color={textPrimary} strokeWidth={2.4} />
+          </TouchableOpacity>
 
-        {/* Centered Main Form Card */}
-        <View
-          style={{
-            backgroundColor: cardBg,
-            borderRadius: 24,
-            padding: 22,
-            borderWidth: 1,
-            borderColor: borderColor,
-            gap: 16,
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: isDark ? 0.25 : 0.06,
-            shadowRadius: 12,
-            elevation: 3,
-          }}
-        >
-          {/* Email or Phone Input */}
-          <View>
-            <Text
-              style={{
-                color: isDark ? '#CBD5E1' : '#475569',
-                fontSize: 11,
-                fontWeight: '800',
-                marginBottom: 8,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-              }}
-            >
-              Email or Phone Number
+          {/* Header Typography matching Screen 3 */}
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <Text style={{ fontSize: 26, fontWeight: '800', color: textPrimary, letterSpacing: -0.5 }}>
+              Welcome Back
             </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: inputBg,
-                borderRadius: 16,
-                paddingHorizontal: 16,
-                height: 52,
-                gap: 12,
-                borderWidth: 1,
-                borderColor: borderColor,
-              }}
-            >
-              <Mail size={18} color={theme.textMuted} />
+            <Text style={{ fontSize: 14, color: textMuted, fontWeight: '500', marginTop: 6 }}>
+              Login to continue
+            </Text>
+          </View>
+
+          {/* Input Form Fields */}
+          <View style={{ gap: 18 }}>
+            {/* Email / Phone Field */}
+            <View>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary, marginBottom: 8 }}>
+                Email / Phone
+              </Text>
               <TextInput
                 value={identifier}
                 onChangeText={setIdentifier}
-                placeholder="Enter email or 10-digit mobile"
-                placeholderTextColor={theme.textMuted}
+                placeholder="Enter email or phone"
+                placeholderTextColor="#94A3B8"
                 autoCapitalize="none"
-                style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
+                style={{
+                  height: 52,
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                  paddingHorizontal: 16,
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: textPrimary,
+                }}
               />
             </View>
-          </View>
 
-          {/* Password Input */}
-          <View>
-            <Text
+            {/* Password Field */}
+            <View>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary, marginBottom: 8 }}>
+                Password
+              </Text>
+              <View
+                style={{
+                  height: 52,
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                  paddingHorizontal: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter password"
+                  placeholderTextColor="#94A3B8"
+                  secureTextEntry={!showPassword}
+                  style={{ flex: 1, fontSize: 15, fontWeight: '600', color: textPrimary }}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff size={18} color="#94A3B8" /> : <Eye size={18} color="#94A3B8" />}
+                </TouchableOpacity>
+              </View>
+
+              {/* Forgot Password Link */}
+              <TouchableOpacity
+                onPress={() => Alert.alert('Reset Password', 'Password reset link sent to registered email.')}
+                style={{ alignSelf: 'flex-end', marginTop: 8 }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Login Primary Button */}
+            <TouchableOpacity
+              onPress={handleLogin}
+              activeOpacity={0.88}
               style={{
-                color: isDark ? '#CBD5E1' : '#475569',
-                fontSize: 11,
-                fontWeight: '800',
-                marginBottom: 8,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-              }}
-            >
-              Password
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: inputBg,
-                borderRadius: 16,
-                paddingHorizontal: 16,
                 height: 52,
-                gap: 12,
-                borderWidth: 1,
-                borderColor: borderColor,
+                backgroundColor: '#0C1829',
+                borderRadius: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 10,
+                shadowColor: '#0C1829',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+                elevation: 4,
               }}
             >
-              <Lock size={18} color={theme.textMuted} />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter your password"
-                placeholderTextColor={theme.textMuted}
-                secureTextEntry={!showPassword}
-                style={{ flex: 1, color: theme.text, fontSize: 15, fontWeight: '600' }}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? (
-                  <EyeOff size={18} color={theme.textMuted} />
-                ) : (
-                  <Eye size={18} color={theme.textMuted} />
-                )}
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                Login
+              </Text>
+            </TouchableOpacity>
+
+            {/* Divider: or continue with */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 14 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: borderColor }} />
+              <Text style={{ paddingHorizontal: 12, fontSize: 12, color: '#94A3B8', fontWeight: '500' }}>
+                or continue with
+              </Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: borderColor }} />
+            </View>
+
+            {/* Social / Quick Action Buttons: Google & Phone */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {/* Google */}
+              <TouchableOpacity
+                onPress={handleLogin}
+                activeOpacity={0.8}
+                style={{
+                  flex: 1,
+                  height: 50,
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <Chrome size={18} color="#EA4335" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: textPrimary }}>
+                  Google
+                </Text>
+              </TouchableOpacity>
+
+              {/* Phone */}
+              <TouchableOpacity
+                onPress={handlePhoneOTPFlow}
+                activeOpacity={0.8}
+                style={{
+                  flex: 1,
+                  height: 50,
+                  backgroundColor: inputBg,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: borderColor,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <Phone size={18} color="#0C1829" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: textPrimary }}>
+                  Phone
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Sign In Button */}
-          <TouchableOpacity
-            onPress={handleLogin}
-            activeOpacity={0.88}
-            style={{
-              backgroundColor: '#153580',
-              paddingVertical: 16,
-              borderRadius: 30,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginTop: 4,
-              shadowColor: '#153580',
-              shadowOpacity: 0.35,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 4 },
-              elevation: 4,
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              Sign In
-            </Text>
-          </TouchableOpacity>
         </View>
 
-        {/* Divider */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 12 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: borderColor }} />
-          <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>
-            OR CONTINUE WITH
-          </Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: borderColor }} />
-        </View>
-
-        {/* OTP Quick Login Button */}
-        <TouchableOpacity
-          onPress={handlePhoneOTPFlow}
-          activeOpacity={0.88}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            backgroundColor: cardBg,
-            borderWidth: 1,
-            borderColor: borderColor,
-            borderRadius: 30,
-            paddingVertical: 15,
-            marginBottom: 20,
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: isDark ? 0.2 : 0.04,
-            shadowRadius: 8,
-            elevation: 2,
-          }}
-        >
-          <Phone size={18} color="#153580" />
-          <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 15, fontWeight: '800' }}>
-            Sign in with OTP
-          </Text>
-        </TouchableOpacity>
-
-        {/* Sign Up Link */}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-          <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: '500' }}>
-            {"Don't have a garage account?"}
+        {/* Footer: Don't have an account? Sign Up */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 }}>
+          <Text style={{ fontSize: 13, color: textMuted, fontWeight: '500' }}>
+            {"Don't have an account? "}
           </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Text style={{ color: '#153580', fontSize: 14, fontWeight: '800' }}>
-              Create Account
+            <Text style={{ fontSize: 13, color: '#0C1829', fontWeight: '800' }}>
+              Sign Up
             </Text>
           </TouchableOpacity>
         </View>

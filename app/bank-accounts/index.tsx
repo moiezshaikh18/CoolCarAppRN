@@ -1,296 +1,177 @@
 // ============================================================
-// Bank Accounts & Receipts Screen — Cool Car Workshop
-// Pure Month-to-Month Tracking (Starts at 0 each month)
-// Tracks Cash Inward, UPI (per Bank), and Swipe POS (per Bank)
-// Zero-Bleed Layout
+// Screen 19: Payment Modes — Ledgers & Accounts
+// Directly matching Screen 19 in Reference Design Mockup
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ChevronLeft,
-  Building2,
-  CreditCard,
-  QrCode,
+  ArrowLeft,
   Banknote,
-  Plus,
-  CheckCircle2,
+  QrCode,
+  CreditCard,
+  Building2,
+  ChevronRight,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
-import { useEnterprise } from '../../src/hooks/useEnterprise';
-import { GlassCard } from '../../src/components/common/GlassCard';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
-import { usePaymentStore } from '../../src/store/paymentStore';
-import { formatCurrency } from '../../src/utils/currency';
 
-export default function BankAccountsScreen() {
+const PAYMENT_MODES_LIST = [
+  { id: '1', name: 'Cash', icon: Banknote, color: '#10B981', bgColor: '#ECFDF5', desc: 'Cash Drawer / Counter' },
+  { id: '2', name: 'UPI', icon: QrCode, color: '#2563EB', bgColor: '#EFF6FF', desc: 'GooglePay / PhonePe / Paytm' },
+  { id: '3', name: 'Card', icon: CreditCard, color: '#7C3AED', bgColor: '#EDE9FE', desc: 'POS Terminal Machine' },
+  { id: '4', name: 'Bank Transfer', icon: Building2, color: '#0284C7', bgColor: '#E0F2FE', desc: 'NEFT / RTGS / IMPS' },
+];
+
+export default function PaymentModesScreen() {
   const { isDark } = useTheme();
-  const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const accounts = useBankAccountStore((s) => s.accounts);
-  const { payments } = usePaymentStore();
+  const { accounts } = useBankAccountStore();
 
-  // Calculate Month Totals: Cash, UPI, Swipe per account
-  const monthStats = useMemo(() => {
-    let cash = 0;
-    let upi = 0;
-    let swipe = 0;
+  const handleAddMode = () => {
+    router.push('/bank-accounts/add');
+  };
 
-    const accountBreakdown: Record<string, { upi: number; swipe: number; total: number }> = {};
-    accounts.forEach((a) => {
-      accountBreakdown[a.id] = { upi: 0, swipe: 0, total: 0 };
-    });
-
-    payments.forEach((p) => {
-      if (p.voided) return;
-      if (p.paymentMode === 'CASH') {
-        cash += p.amount;
-      } else if (p.paymentMode === 'UPI') {
-        upi += p.amount;
-        if (p.paymentAccountId && accountBreakdown[p.paymentAccountId]) {
-          accountBreakdown[p.paymentAccountId].upi += p.amount;
-          accountBreakdown[p.paymentAccountId].total += p.amount;
-        }
-      } else if (p.paymentMode === 'CARD_SWIPE') {
-        swipe += p.amount;
-        if (p.paymentAccountId && accountBreakdown[p.paymentAccountId]) {
-          accountBreakdown[p.paymentAccountId].swipe += p.amount;
-          accountBreakdown[p.paymentAccountId].total += p.amount;
-        }
-      }
-    });
-
-    return {
-      cash,
-      upi,
-      swipe,
-      totalInflow: cash + upi + swipe,
-      accountBreakdown,
-    };
-  }, [accounts, payments]);
-
-  const canvasBg = isDark ? '#0A0D14' : '#153580';
-  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
-  const cardBg = isDark ? '#141824' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.08)';
+  const bg = isDark ? '#0C1829' : '#FFFFFF';
+  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
+  const textMuted = '#64748B';
+  const cardBg = isDark ? '#111E33' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9';
 
   return (
-    <View style={{ flex: 1, backgroundColor: sheetBg }}>
-      <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+    <View style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
 
-      {/* Royal Blue Top Header */}
+      {/* Top Header matching Screen 19 */}
       <View
         style={{
-          backgroundColor: canvasBg,
           paddingTop: insets.top + 8,
           paddingHorizontal: 20,
-          paddingBottom: 24,
+          paddingBottom: 14,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: 'rgba(255, 255, 255, 0.22)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ChevronLeft size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
-            Bank & Cash Inflow
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => router.push('/bank-accounts/add')}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: 'rgba(255, 255, 255, 0.22)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Featured Monthly Inflow Card */}
-        <GlassCard
-          variant="navy"
-          padding={20}
-          style={{ borderRadius: 24 }}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+          style={{ width: 40, height: 40, justifyContent: 'center' }}
         >
-          <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: '600' }}>
-            This Month Total Collections
-          </Text>
-          <Text style={{ color: '#FFFFFF', fontSize: 34, fontWeight: '900', letterSpacing: -0.5, marginTop: 4 }}>
-            {formatCurrency(monthStats.totalInflow, currencySymbol)}
-          </Text>
+          <ArrowLeft size={22} color={textPrimary} strokeWidth={2.4} />
+        </TouchableOpacity>
 
-          {/* 3-Way Mode Split Row */}
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.12)', borderRadius: 14, padding: 10, alignItems: 'center' }}>
-              <Banknote size={16} color="#FFFFFF" />
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700', marginTop: 4 }}>
-                Cash Counter
-              </Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginTop: 2 }}>
-                {formatCurrency(monthStats.cash, currencySymbol)}
-              </Text>
-            </View>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
+          Payment Modes
+        </Text>
 
-            <View style={{ flex: 1, backgroundColor: 'rgba(59, 130, 246, 0.25)', borderRadius: 14, padding: 10, alignItems: 'center' }}>
-              <QrCode size={16} color="#93C5FD" />
-              <Text style={{ color: '#93C5FD', fontSize: 10, fontWeight: '700', marginTop: 4 }}>
-                UPI Received
-              </Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginTop: 2 }}>
-                {formatCurrency(monthStats.upi, currencySymbol)}
-              </Text>
-            </View>
-
-            <View style={{ flex: 1, backgroundColor: 'rgba(168, 85, 247, 0.25)', borderRadius: 14, padding: 10, alignItems: 'center' }}>
-              <CreditCard size={16} color="#E9D5FF" />
-              <Text style={{ color: '#E9D5FF', fontSize: 10, fontWeight: '700', marginTop: 4 }}>
-                Card Swipe POS
-              </Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginTop: 2 }}>
-                {formatCurrency(monthStats.swipe, currencySymbol)}
-              </Text>
-            </View>
-          </View>
-        </GlassCard>
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Main Content Sheet with ZERO Blue Bleed */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: sheetBg,
-          marginTop: -14,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          overflow: 'hidden',
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 20,
+          paddingBottom: insets.bottom + 90,
+          gap: 12,
         }}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 40 }}
-        >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A' }}>
-              Linked Workshop Accounts ({accounts.length})
-            </Text>
-            <TouchableOpacity onPress={() => router.push('/bank-accounts/add')}>
-              <Text style={{ color: '#153580', fontSize: 13, fontWeight: '800' }}>
-                + Link Account
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Account Cards */}
-          <View style={{ gap: 12 }}>
-            {accounts.map((acc) => {
-              const breakdown = monthStats.accountBreakdown[acc.id] || { upi: 0, swipe: 0, total: 0 };
-              const isCash = acc.accountType === 'CASH_IN_HAND';
-
-              return (
+        {PAYMENT_MODES_LIST.map((mode) => {
+          const Icon = mode.icon;
+          return (
+            <TouchableOpacity
+              key={mode.id}
+              onPress={() => router.push('/bank-accounts/add')}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                backgroundColor: cardBg,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: borderColor,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                 <View
-                  key={acc.id}
                   style={{
-                    backgroundColor: cardBg,
-                    borderRadius: 22,
-                    padding: 16,
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                    shadowColor: '#000',
-                    shadowOpacity: 0.03,
-                    shadowRadius: 8,
-                    elevation: 2,
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    backgroundColor: mode.bgColor,
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <View
-                        style={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: 21,
-                          backgroundColor: isCash ? '#FEF3C7' : '#EFF6FF',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {isCash ? (
-                          <Banknote size={20} color="#D97706" />
-                        ) : (
-                          <Building2 size={20} color="#153580" />
-                        )}
-                      </View>
-                      <View>
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                          {acc.bankName}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: isDark ? '#94A3B8' : '#64748B', fontWeight: '600', marginTop: 1 }}>
-                          {acc.accountName} {acc.accountNumber ? `• ${acc.accountNumber.slice(-4)}` : ''}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981' }}>
-                        {formatCurrency(isCash ? monthStats.cash : breakdown.total, currencySymbol)}
-                      </Text>
-                      <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', marginTop: 1 }}>
-                        This Month Inward
-                      </Text>
-                    </View>
-                  </View>
-
-                  {!isCash && (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        paddingTop: 10,
-                        borderTopWidth: 1,
-                        borderTopColor: cardBorder,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <QrCode size={13} color="#3B82F6" />
-                        <Text style={{ fontSize: 11, color: isDark ? '#94A3B8' : '#64748B', fontWeight: '600' }}>
-                          UPI: {formatCurrency(breakdown.upi, currencySymbol)}
-                        </Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <CreditCard size={13} color="#8B5CF6" />
-                        <Text style={{ fontSize: 11, color: isDark ? '#94A3B8' : '#64748B', fontWeight: '600' }}>
-                          Swipe: {formatCurrency(breakdown.swipe, currencySymbol)}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
+                  <Icon size={22} color={mode.color} strokeWidth={2.2} />
                 </View>
-              );
-            })}
-          </View>
-        </ScrollView>
+
+                <View>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: textPrimary }}>
+                    {mode.name}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: textMuted, fontWeight: '500', marginTop: 2 }}>
+                    {mode.desc}
+                  </Text>
+                </View>
+              </View>
+
+              <ChevronRight size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Fixed Bottom Button matching Screen 19 */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 22,
+          paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 20,
+          paddingTop: 12,
+          backgroundColor: bg,
+          borderTopWidth: 1,
+          borderTopColor: borderColor,
+        }}
+      >
+        <TouchableOpacity
+          onPress={handleAddMode}
+          activeOpacity={0.88}
+          style={{
+            height: 52,
+            backgroundColor: '#0C1829',
+            borderRadius: 14,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#0C1829',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+            + Add Payment Mode
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

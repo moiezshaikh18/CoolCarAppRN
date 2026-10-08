@@ -422,24 +422,26 @@ export default function JobSheetDetailsScreen() {
     }
   };
 
-  const canvasBg = isDark ? '#0A0D14' : '#153580';
-  const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
-  const cardBg = isDark ? '#141824' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.08)';
+  const bg = isDark ? '#0C1829' : '#FFFFFF';
+  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
+  const textMuted = '#64748B';
+  const sheetBg = isDark ? '#0A0D14' : '#F8FAFC';
+  const cardBg = isDark ? '#111E33' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9';
 
   if (!job) {
     return (
       <View style={{ flex: 1, backgroundColor: sheetBg, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
-        <Text style={{ fontSize: 18, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829', marginBottom: 8 }}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
+        <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary, marginBottom: 8 }}>
           Job Sheet Not Found
         </Text>
-        <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20 }}>
+        <Text style={{ fontSize: 13, color: textMuted, textAlign: 'center', marginBottom: 20 }}>
           The requested job sheet could not be located.
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20, backgroundColor: '#153580' }}
+          style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 16, backgroundColor: '#0C1829' }}
         >
           <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>Go Back</Text>
         </TouchableOpacity>
@@ -451,180 +453,148 @@ export default function JobSheetDetailsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
-      <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
 
-      {/* Royal Blue Top Header */}
+      {/* Top Header matching Screen 10 */}
       <View
         style={{
-          backgroundColor: canvasBg,
+          backgroundColor: bg,
           paddingTop: insets.top + 8,
           paddingHorizontal: 20,
-          paddingBottom: 24,
+          paddingBottom: 14,
+          flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottomWidth: 1,
+          borderBottomColor: cardBorder,
         }}
       >
-        {/* Top Bar */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: 'rgba(255, 255, 255, 0.22)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ChevronLeft size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+          style={{ width: 40, height: 40, justifyContent: 'center' }}
+        >
+          <ChevronLeft size={24} color={textPrimary} strokeWidth={2.4} />
+        </TouchableOpacity>
 
-          <View style={{ alignItems: 'center' }}>
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              {job.jobNumber}
-            </Text>
-            <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, fontWeight: '600' }}>
-              Cool Car AC Repair
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity
-              onPress={handleDirectPrint}
-              disabled={isPdfGenerating}
-              activeOpacity={0.8}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 5,
-                backgroundColor: 'rgba(255, 255, 255, 0.28)',
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.35)',
-              }}
-              accessibilityLabel="Print Job Card"
-            >
-              {isPdfGenerating ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Printer size={15} color="#FFFFFF" strokeWidth={2.4} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>Print</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Dynamic Car Silhouette */}
-        <View style={{ marginBottom: 8 }}>
-          <DynamicCarIllustration modelName={job.vehicleModel} size={64} showBadge={true} />
-        </View>
-
-        <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>
-          {job.vehicleModel}
-        </Text>
-        <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 13, fontWeight: '800', marginTop: 2 }}>
-          {job.vehicleNumber} • <Text style={{ fontWeight: '600' }}>{job.customerName}</Text>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
+          Job Sheet Details
         </Text>
 
-        <View
+        <TouchableOpacity
+          onPress={handleDirectPrint}
+          disabled={isPdfGenerating}
+          activeOpacity={0.8}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 6,
-            marginTop: 6,
-            backgroundColor: 'rgba(255, 255, 255, 0.15)',
             paddingHorizontal: 10,
-            paddingVertical: 4,
+            paddingVertical: 6,
             borderRadius: 12,
+            backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
           }}
+          accessibilityLabel="Print Job Card"
         >
-          <Clock size={13} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
-            Logged: {job.time || '11:30 AM'} • {typeof job.date === 'string' ? job.date : 'Today'}
-          </Text>
-        </View>
-
-        {/* Bill Total */}
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 10, marginBottom: 8 }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 32, fontWeight: '900', letterSpacing: -0.5 }}>
-            {formatCurrency(job.finalAmount, currencySymbol)}
-          </Text>
-        </View>
-
-        {/* Status Pill & Payment Pill */}
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <View
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.22)',
-              paddingHorizontal: 12,
-              paddingVertical: 5,
-              borderRadius: 16,
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
-              {job.workCategory === 'AC' ? '❄️ AC Work' : job.workCategory === 'MECHANICAL' ? '🔧 Mechanical' : '⚙️ Both'}
-            </Text>
-          </View>
-
-          {/* User Requested: In Progress until paid, then Done */}
-          <View
-            style={{
-              backgroundColor: isDone ? 'rgba(16, 185, 129, 0.25)' : 'rgba(96, 165, 250, 0.25)',
-              paddingHorizontal: 12,
-              paddingVertical: 5,
-              borderRadius: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            {isDone && <CheckCircle2 size={12} color="#10B981" />}
-            <Text style={{ color: isDone ? '#10B981' : '#93C5FD', fontSize: 11, fontWeight: '800' }}>
-              {isDone ? 'Done' : 'In Progress'}
-            </Text>
-          </View>
-
-          <View
-            style={{
-              backgroundColor: job.pendingAmount === 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
-              paddingHorizontal: 12,
-              paddingVertical: 5,
-              borderRadius: 16,
-            }}
-          >
-            <Text
-              style={{
-                color: job.pendingAmount === 0 ? '#10B981' : '#FCA5A5',
-                fontSize: 11,
-                fontWeight: '800',
-              }}
-            >
-              {job.pendingAmount === 0 ? 'Fully Paid' : `Due: ${formatCurrency(job.pendingAmount, currencySymbol)}`}
-            </Text>
-          </View>
-        </View>
+          {isPdfGenerating ? (
+            <ActivityIndicator size="small" color={textPrimary} />
+          ) : (
+            <>
+              <Printer size={16} color={textPrimary} strokeWidth={2.4} />
+              <Text style={{ color: textPrimary, fontSize: 12, fontWeight: '800' }}>Print</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Main Content Sheet with ZERO Blue Bleed */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: sheetBg,
-          marginTop: -14,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          overflow: 'hidden',
-        }}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 }}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 40 }}
+        {/* Job Sheet Summary Card matching Screen 10 */}
+        <View
+          style={{
+            backgroundColor: cardBg,
+            borderRadius: 20,
+            padding: 18,
+            borderWidth: 1,
+            borderColor: cardBorder,
+            gap: 14,
+            marginBottom: 16,
+          }}
         >
-          {/* Segmented Switcher */}
+          {/* Header Row: Job ID & Status Badge */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: textPrimary }}>
+                #{job.jobNumber || job.id}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <Clock size={12} color={textMuted} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: textMuted }}>
+                  {typeof job.date === 'string' ? job.date : 'Today'} • {job.time || '11:30 AM'}
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: isDone ? '#ECFDF5' : '#FEF3C7',
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              {isDone && <CheckCircle2 size={12} color="#10B981" />}
+              <Text style={{ fontSize: 12, fontWeight: '800', color: isDone ? '#10B981' : '#D97706' }}>
+                {isDone ? 'Completed' : 'Pending'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ height: 1, backgroundColor: cardBorder }} />
+
+          {/* Customer & Vehicle Info Grid matching Screen 10 */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, textTransform: 'uppercase' }}>Customer</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: textPrimary, marginTop: 2 }}>{job.customerName}</Text>
+              <Text style={{ fontSize: 13, color: textMuted, marginTop: 1 }}>{job.customerPhone || 'N/A'}</Text>
+            </View>
+
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, textTransform: 'uppercase' }}>Vehicle</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: textPrimary, marginTop: 2 }}>{job.vehicleModel}</Text>
+              <Text style={{ fontSize: 13, color: textMuted, marginTop: 1 }}>{job.vehicleNumber}</Text>
+            </View>
+          </View>
+
+          <View style={{ height: 1, backgroundColor: cardBorder }} />
+
+          {/* Financial Summary Row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, textTransform: 'uppercase' }}>Total Amount</Text>
+              <Text style={{ fontSize: 22, fontWeight: '900', color: textPrimary, marginTop: 2 }}>
+                {formatCurrency(job.finalAmount, currencySymbol)}
+              </Text>
+            </View>
+
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, textTransform: 'uppercase' }}>
+                {job.pendingAmount === 0 ? 'Status' : 'Pending Due'}
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: job.pendingAmount === 0 ? '#10B981' : '#EF4444', marginTop: 2 }}>
+                {job.pendingAmount === 0 ? 'Paid in Full' : formatCurrency(job.pendingAmount, currencySymbol)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Segmented Switcher */}
           <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', marginBottom: 16 }}>
             <TouchableOpacity onPress={() => setActiveTab('overview')} activeOpacity={0.7}>
               <Text
@@ -1270,7 +1240,6 @@ export default function JobSheetDetailsScreen() {
             </View>
           )}
         </ScrollView>
-      </View>
 
       {/* Payment Collection Modal with Amount Modify, Split Payment & Bank Selection */}
       <Modal

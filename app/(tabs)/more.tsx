@@ -1,76 +1,42 @@
 // ============================================================
-// More Tab — Sky Blue & Midnight Navy Luxury Settings Layout
-// Directly matching media_1790189780212.png & media_1790189816628.png
+// Screen 21: Settings — Modern Clean Settings Hub
+// Directly matching Screen 21 in Reference Design Mockup
 // ============================================================
 
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   User,
   Building2,
-  Bell,
   Database,
   Download,
-  Shield,
+  Sliders,
+  HelpCircle,
   Info,
   LogOut,
   ChevronRight,
-  Palette,
   Sun,
   Moon,
   Users,
   Car,
   FileSpreadsheet,
-  Package,
   Wallet,
   Receipt,
-  Calendar,
+  Layers,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useHideOnScroll } from '../../src/store/tabBarStore';
-
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
-import { GlassCard } from '../../src/components/common/GlassCard';
 import { router } from 'expo-router';
-import { getInitials, formatRoleLabel } from '../../src/utils/formatters';
-
-const MENU_SECTIONS = [
-  {
-    title: 'Core Workshop Modules',
-    items: [
-      { label: 'Staff & Salary Tracker', icon: Users, route: '/staff' },
-      { label: 'Daily Job Sheets (AC & Mech)', icon: FileSpreadsheet, route: '/job-sheets' },
-      { label: 'Daily Expenses Ledger', icon: Receipt, route: '/entries' },
-      { label: 'Spare Part Purchase Chalans', icon: Package, route: '/inventory' },
-      { label: 'Bank Accounts & Cash Counter', icon: Wallet, route: '/bank-accounts' },
-    ],
-  },
-  {
-    title: 'Garage Records & Tools',
-    items: [
-      { label: 'Customers Directory', icon: Users, route: '/customers' },
-      { label: 'Vehicles Fleet', icon: Car, route: '/vehicles' },
-      { label: 'Expense Categories', icon: Building2, route: '/expenses/categories' },
-    ],
-  },
-  {
-    title: 'System & Backup',
-    items: [
-      { label: 'Export Reports (PDF / Excel)', icon: Download, route: '/settings/export' },
-      { label: 'Cloud Backup & Sync', icon: Database, route: '/settings/backup' },
-      { label: 'About Cool Car Workshop', icon: Info, route: '/settings/about' },
-    ],
-  },
-];
 
 export default function MoreScreen() {
-  const { theme, isDark, toggleMode } = useTheme();
+  const { isDark, toggleMode } = useTheme();
   const insets = useSafeAreaInsets();
   const { onScroll: onHideNavScroll } = useHideOnScroll();
   const { user, reset: resetAuth, setAuthState } = useAuthStore();
-  const { activeMember, reset: resetEnterprise } = useEnterpriseStore();
+  const { reset: resetEnterprise } = useEnterpriseStore();
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to log out of your garage account?', [
@@ -88,185 +54,304 @@ export default function MoreScreen() {
     ]);
   };
 
-  const canvasBg = isDark ? '#181A20' : '#153580';
-  const sheetBg = isDark ? '#181A20' : '#F4F6F9';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(43, 53, 68, 0.06)';
+  const bg = isDark ? '#0C1829' : '#FFFFFF';
+  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
+  const textMuted = '#64748B';
+  const cardBg = isDark ? '#111E33' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9';
+  const rowHover = isDark ? '#1A2942' : '#F8FAFC';
+
+  // Primary settings matching Screen 21 mockup
+  const SETTINGS_ITEMS = [
+    {
+      title: 'Profile',
+      icon: User,
+      iconColor: '#2563EB',
+      bgColor: '#EFF6FF',
+      route: '/settings/profile',
+    },
+    {
+      title: 'Business Info',
+      icon: Building2,
+      iconColor: '#F59E0B',
+      bgColor: '#FEF3C7',
+      route: '/settings/business',
+    },
+    {
+      title: 'Backup & Restore',
+      icon: Database,
+      iconColor: '#8B5CF6',
+      bgColor: '#EDE9FE',
+      route: '/settings/backup',
+    },
+    {
+      title: 'Export Data',
+      icon: Download,
+      iconColor: '#10B981',
+      bgColor: '#D1FAE5',
+      route: '/settings/export',
+    },
+    {
+      title: 'App Settings',
+      icon: Sliders,
+      iconColor: '#06B6D4',
+      bgColor: '#CFFAFE',
+      route: '/settings/app',
+    },
+    {
+      title: 'Help & Support',
+      icon: HelpCircle,
+      iconColor: '#EC4899',
+      bgColor: '#FCE7F3',
+      route: '/settings/help',
+    },
+    {
+      title: 'About Us',
+      icon: Info,
+      iconColor: '#64748B',
+      bgColor: '#F1F5F9',
+      route: '/settings/about',
+    },
+  ];
+
+  // Workshop management shortcuts
+  const WORKSHOP_MODULES = [
+    { title: 'Job Sheets Register', icon: FileSpreadsheet, iconColor: '#2563EB', bgColor: '#EFF6FF', route: '/job-sheets' },
+    { title: 'Staff & Technicians', icon: Users, iconColor: '#059669', bgColor: '#ECFDF5', route: '/staff' },
+    { title: 'Expenses & Ledgers', icon: Receipt, iconColor: '#DC2626', bgColor: '#FEF2F2', route: '/entries' },
+    { title: 'Customers Directory', icon: User, iconColor: '#D97706', bgColor: '#FFFBEB', route: '/customers' },
+    { title: 'Vehicles Fleet', icon: Car, iconColor: '#7C3AED', bgColor: '#F5F3FF', route: '/vehicles' },
+    { title: 'Payment Modes', icon: Wallet, iconColor: '#0891B2', bgColor: '#ECFEFF', route: '/bank-accounts' },
+  ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: sheetBg }}>
+    <View style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
+
+      {/* Top Header matching Screen 21 */}
+      <View
+        style={{
+          paddingTop: insets.top + 10,
+          paddingHorizontal: 20,
+          paddingBottom: 14,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
+        }}
+      >
+        <Text style={{ fontSize: 22, fontWeight: '900', color: textPrimary, letterSpacing: -0.5 }}>
+          Settings
+        </Text>
+
+        {/* Theme Mode Toggle Button */}
+        <TouchableOpacity
+          onPress={toggleMode}
+          activeOpacity={0.8}
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {isDark ? <Sun size={18} color="#FBBF24" /> : <Moon size={18} color="#0C1829" />}
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         onScroll={onHideNavScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 160 + insets.bottom }}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 16,
+          paddingBottom: insets.bottom + 90,
+          gap: 20,
+        }}
       >
-
-        {/* Royal Blue Top Header */}
-        <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <View>
-              <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '900', letterSpacing: -0.5 }}>
-                Garage Control
-              </Text>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
-                Settings & Workshop Modules
-              </Text>
-            </View>
-
-            {/* Dark/Light Mode Toggle */}
-            <TouchableOpacity
-              onPress={toggleMode}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {isDark ? <Sun size={20} color="#FBBF24" /> : <Moon size={20} color="#FFFFFF" />}
-            </TouchableOpacity>
-          </View>
-
-          {/* User Profile Card (Featured Midnight Navy Style) */}
-          <TouchableOpacity
-            onPress={() => router.push('/settings/profile' as any)}
-            activeOpacity={0.88}
+        {/* User Card */}
+        <TouchableOpacity
+          onPress={() => router.push('/settings/profile' as any)}
+          activeOpacity={0.88}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: cardBg,
+            borderRadius: 18,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: borderColor,
+            gap: 14,
+          }}
+        >
+          <View
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: isDark ? '#101927' : '#0C1829',
-              borderRadius: 28,
-              padding: 16,
-              gap: 14,
-              shadowColor: '#0C1829',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.2,
-              shadowRadius: 14,
-              elevation: 4,
-            }}
-          >
-            <View
-              style={{
-                width: 50,
-                height: 50,
-                borderRadius: 25,
-                backgroundColor: 'rgba(255, 255, 255, 0.16)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
-                {getInitials(user?.displayName ?? 'Garage Owner')}
-              </Text>
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                {user?.displayName ?? 'Manish Kumar'}
-              </Text>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 12, marginTop: 2 }}>
-                {user?.phone ?? '+91 98765 43210'} • {formatRoleLabel(activeMember?.role ?? 'OWNER')}
-              </Text>
-            </View>
-
-            <ChevronRight size={18} color="rgba(255, 255, 255, 0.6)" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Unified Lower Content (Seamless with zero cut-off lines) */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-          {MENU_SECTIONS.map((section, sIdx) => (
-            <View key={section.title} style={{ marginBottom: 24 }}>
-              <Text
-                style={{
-                  color: '#64748B',
-                  fontSize: 12,
-                  fontWeight: '800',
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  marginBottom: 12,
-                  marginLeft: 4,
-                }}
-              >
-                {section.title}
-              </Text>
-
-              <View
-                style={{
-                  backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                  borderRadius: 24,
-                  borderWidth: 1,
-                  borderColor: cardBorder,
-                  overflow: 'hidden',
-                }}
-              >
-                {section.items.map((item, idx) => {
-                  const Icon = item.icon;
-                  const isLast = idx === section.items.length - 1;
-
-                  return (
-                    <TouchableOpacity
-                      key={item.label}
-                      onPress={() => router.push(item.route as any)}
-                      activeOpacity={0.7}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        paddingVertical: 14,
-                        paddingHorizontal: 16,
-                        borderBottomWidth: isLast ? 0 : 1,
-                        borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(12, 24, 41, 0.04)',
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
-                        <View
-                          style={{
-                            width: 38,
-                            height: 38,
-                            borderRadius: 19,
-                            backgroundColor: isDark ? '#1C2538' : '#0C1829',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Icon size={17} color="#FFFFFF" />
-                        </View>
-                        <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 14, fontWeight: '700', flex: 1 }}>
-                          {item.label}
-                        </Text>
-                      </View>
-                      <ChevronRight size={16} color="#94A3B8" />
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          ))}
-
-          {/* Sign Out Button */}
-          <TouchableOpacity
-            onPress={handleLogout}
-            activeOpacity={0.85}
-            style={{
-              flexDirection: 'row',
+              width: 50,
+              height: 50,
+              borderRadius: 25,
+              backgroundColor: '#0C1829',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
-              paddingVertical: 16,
-              borderRadius: 28,
-              gap: 8,
-              marginTop: 8,
             }}
           >
-            <LogOut size={18} color="#EF4444" />
-            <Text style={{ color: '#EF4444', fontSize: 15, fontWeight: '800' }}>
-              Sign Out of Garage
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
+              {(user?.displayName || 'Super Auto Garage').slice(0, 2).toUpperCase()}
             </Text>
-          </TouchableOpacity>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: textPrimary }}>
+              {user?.displayName || 'Super Auto Garage'}
+            </Text>
+            <Text style={{ fontSize: 13, color: textMuted, marginTop: 2 }}>
+              {user?.phone || user?.email || 'Workshop Admin'}
+            </Text>
+          </View>
+          <ChevronRight size={18} color={textMuted} />
+        </TouchableOpacity>
+
+        {/* Core Settings List matching Screen 21 */}
+        <View
+          style={{
+            backgroundColor: cardBg,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: borderColor,
+            overflow: 'hidden',
+          }}
+        >
+          {SETTINGS_ITEMS.map((item, index) => {
+            const Icon = item.icon;
+            const isLast = index === SETTINGS_ITEMS.length - 1;
+            return (
+              <TouchableOpacity
+                key={item.title}
+                onPress={() => router.push(item.route as any)}
+                activeOpacity={0.7}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  borderBottomWidth: isLast ? 0 : 1,
+                  borderBottomColor: borderColor,
+                }}
+              >
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    backgroundColor: item.bgColor,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14,
+                  }}
+                >
+                  <Icon size={18} color={item.iconColor} strokeWidth={2.4} />
+                </View>
+
+                <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: textPrimary }}>
+                  {item.title}
+                </Text>
+
+                <ChevronRight size={18} color={textMuted} />
+              </TouchableOpacity>
+            );
+          })}
         </View>
+
+        {/* Workshop Modules Section */}
+        <View>
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '800',
+              color: textMuted,
+              textTransform: 'uppercase',
+              letterSpacing: 0.8,
+              marginBottom: 10,
+              marginLeft: 4,
+            }}
+          >
+            Workshop Management
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: cardBg,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: borderColor,
+              overflow: 'hidden',
+            }}
+          >
+            {WORKSHOP_MODULES.map((item, index) => {
+              const Icon = item.icon;
+              const isLast = index === WORKSHOP_MODULES.length - 1;
+              return (
+                <TouchableOpacity
+                  key={item.title}
+                  onPress={() => router.push(item.route as any)}
+                  activeOpacity={0.7}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    borderBottomWidth: isLast ? 0 : 1,
+                    borderBottomColor: borderColor,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      backgroundColor: item.bgColor,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 14,
+                    }}
+                  >
+                    <Icon size={18} color={item.iconColor} strokeWidth={2.4} />
+                  </View>
+
+                  <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: textPrimary }}>
+                    {item.title}
+                  </Text>
+
+                  <ChevronRight size={18} color={textMuted} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          onPress={handleLogout}
+          activeOpacity={0.88}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            paddingVertical: 16,
+            borderRadius: 16,
+            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+            borderWidth: 1,
+            borderColor: isDark ? 'rgba(239, 68, 68, 0.25)' : '#FEE2E2',
+          }}
+        >
+          <LogOut size={18} color="#EF4444" strokeWidth={2.4} />
+          <Text style={{ fontSize: 15, fontWeight: '800', color: '#EF4444' }}>
+            Sign Out
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

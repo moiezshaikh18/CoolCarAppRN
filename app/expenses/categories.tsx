@@ -1,6 +1,6 @@
 // ============================================================
-// Expense Categories Screen — Expense Ledger Categories
-// Signature Sky Blue Header & Mega-Curved Lower Sheet
+// Screen 15: Expense Categories — Categories Directory
+// Directly matching Screen 15 in Reference Design Mockup
 // ============================================================
 
 import React, { useState } from 'react';
@@ -16,13 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   ChevronRight,
-  Plus,
-  Home as HomeIcon,
+  Store,
   Zap,
   Briefcase,
   Wrench,
-  Droplet,
-  Package,
   Coffee,
   MoreHorizontal,
 } from 'lucide-react-native';
@@ -32,184 +29,168 @@ import { router } from 'expo-router';
 interface CategoryItem {
   id: string;
   name: string;
-  iconName: string;
+  icon: any;
+  color: string;
+  bgColor: string;
 }
 
 const DEFAULT_CATEGORIES: CategoryItem[] = [
-  { id: '1', name: 'Shop Rent', iconName: 'Home' },
-  { id: '2', name: 'Electricity Bill', iconName: 'Zap' },
-  { id: '3', name: 'Staff Salaries', iconName: 'Briefcase' },
-  { id: '4', name: 'Tools & Equipment', iconName: 'Wrench' },
-  { id: '5', name: 'Oil & Lubricants', iconName: 'Droplet' },
-  { id: '6', name: 'Spare Parts & Material', iconName: 'Package' },
-  { id: '7', name: 'Tea & Snacks', iconName: 'Coffee' },
-  { id: '8', name: 'Miscellaneous', iconName: 'MoreHorizontal' },
+  { id: '1', name: 'Shop Rent', icon: Store, color: '#D97706', bgColor: '#FEF3C7' },
+  { id: '2', name: 'Electricity Bill', icon: Zap, color: '#0284C7', bgColor: '#E0F2FE' },
+  { id: '3', name: 'Salary', icon: Briefcase, color: '#0D9488', bgColor: '#CCFBF1' },
+  { id: '4', name: 'Tools & Equipment', icon: Wrench, color: '#2563EB', bgColor: '#EFF6FF' },
+  { id: '5', name: 'Tea & Snacks', icon: Coffee, color: '#DC2626', bgColor: '#FEE2E2' },
+  { id: '6', name: 'Miscellaneous', icon: MoreHorizontal, color: '#7C3AED', bgColor: '#EDE9FE' },
 ];
 
 export default function ExpenseCategoriesScreen() {
-  const { theme, isDark } = useTheme();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
-
-  const getIcon = (iconName: string) => {
-    const size = 20;
-    const color = isDark ? '#FFFFFF' : '#3B82F6';
-    switch (iconName) {
-      case 'Home': return <HomeIcon size={size} color={color} />;
-      case 'Zap': return <Zap size={size} color={color} />;
-      case 'Briefcase': return <Briefcase size={size} color={color} />;
-      case 'Wrench': return <Wrench size={size} color={color} />;
-      case 'Droplet': return <Droplet size={size} color={color} />;
-      case 'Package': return <Package size={size} color={color} />;
-      case 'Coffee': return <Coffee size={size} color={color} />;
-      default: return <MoreHorizontal size={size} color={color} />;
-    }
-  };
+  const [categories, setCategories] = useState<CategoryItem[]>(DEFAULT_CATEGORIES);
 
   const handleAddCategory = () => {
     Alert.prompt
       ? Alert.prompt('New Category', 'Enter category name', (text) => {
-          if (text) {
+          if (text?.trim()) {
             setCategories([
               ...categories,
               {
                 id: Date.now().toString(),
-                name: text,
-                iconName: 'MoreHorizontal',
+                name: text.trim(),
+                icon: MoreHorizontal,
+                color: '#2563EB',
+                bgColor: '#EFF6FF',
               },
             ]);
           }
         })
-      : Alert.alert('Add Category', 'Custom category modal is ready.');
+      : Alert.alert('Add Category', 'Quick category added.');
   };
 
-  const skyBg = isDark ? '#070A0F' : '#153580';
-  const sheetBg = isDark ? '#070A0F' : '#F8FAFC';
+  const bg = isDark ? '#0C1829' : '#FFFFFF';
+  const textPrimary = isDark ? '#FFFFFF' : '#0C1829';
+  const textMuted = '#94A3B8';
+  const cardBg = isDark ? '#111E33' : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9';
 
   return (
-    <View style={{ flex: 1, backgroundColor: sheetBg }}>
-      <StatusBar barStyle="light-content" backgroundColor={skyBg} />
+    <View style={{ flex: 1, backgroundColor: bg }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={bg} />
 
-      {/* Symmetrical Sky Blue Top Header */}
+      {/* Top Header matching Screen 15 */}
       <View
         style={{
-          backgroundColor: skyBg,
-          paddingTop: insets.top + 10,
+          paddingTop: insets.top + 8,
           paddingHorizontal: 20,
-          paddingBottom: 22,
+          paddingBottom: 14,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 12,
+          justifyContent: 'space-between',
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
         }}
       >
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: 'rgba(255,255,255,0.22)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          activeOpacity={0.7}
+          style={{ width: 40, height: 40, justifyContent: 'center' }}
         >
-          <ArrowLeft size={20} color="#FFFFFF" />
+          <ArrowLeft size={22} color={textPrimary} strokeWidth={2.4} />
         </TouchableOpacity>
-        <View>
-          <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 }}>
-            Expense Categories
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 1, fontWeight: '600' }}>
-            Workshop classification tags
-          </Text>
-        </View>
+
+        <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
+          Expense Categories
+        </Text>
+
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Signature Lower Content Sheet with ZERO Blue Bleed */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: sheetBg,
-          marginTop: -14,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          paddingTop: 16,
-          overflow: 'hidden',
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 18,
+          paddingBottom: insets.bottom + 90,
+          gap: 10,
         }}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110, paddingTop: 4 }}
-        >
-          <View style={{ gap: 12 }}>
-            {categories.map((cat) => (
-              <View
-                key={cat.id}
-                style={{
-                  backgroundColor: isDark ? '#101927' : '#FFFFFF',
-                  borderRadius: 24,
-                  padding: 16,
-                  borderWidth: 1,
-                  borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  shadowColor: '#000',
-                  shadowOpacity: isDark ? 0.3 : 0.04,
-                  shadowRadius: 10,
-                  shadowOffset: { width: 0, height: 4 },
-                  elevation: 2,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                  <View
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 24,
-                      backgroundColor: isDark ? '#141926' : '#EFF6FF',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {getIcon(cat.iconName)}
-                  </View>
-                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700' }}>
-                    {cat.name}
-                  </Text>
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          return (
+            <TouchableOpacity
+              key={cat.id}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                backgroundColor: cardBg,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: borderColor,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    backgroundColor: cat.bgColor,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Icon size={20} color={cat.color} strokeWidth={2.2} />
                 </View>
-                <ChevronRight size={18} color={theme.textMuted} />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: textPrimary }}>
+                  {cat.name}
+                </Text>
               </View>
-            ))}
-          </View>
-        </ScrollView>
 
-        {/* Floating Midnight Navy CTA */}
-        <View style={{ position: 'absolute', bottom: 24, left: 20, right: 20 }}>
-          <TouchableOpacity
-            onPress={handleAddCategory}
-            activeOpacity={0.88}
-            style={{
-              backgroundColor: '#0C1829',
-              paddingVertical: 16,
-              borderRadius: 32,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              shadowColor: '#000',
-              shadowOpacity: 0.35,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 5 },
-              elevation: 6,
-            }}
-          >
-            <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-              Add Category
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <ChevronRight size={18} color={textMuted} />
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Fixed Bottom Button matching Screen 15 */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 22,
+          paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 20,
+          paddingTop: 12,
+          backgroundColor: bg,
+          borderTopWidth: 1,
+          borderTopColor: borderColor,
+        }}
+      >
+        <TouchableOpacity
+          onPress={handleAddCategory}
+          activeOpacity={0.88}
+          style={{
+            height: 52,
+            backgroundColor: '#0C1829',
+            borderRadius: 14,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#0C1829',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+            + Add Category
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
