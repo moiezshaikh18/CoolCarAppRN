@@ -134,8 +134,6 @@ export default function AddPurchaseChalanScreen() {
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
-  const [vehicleSelectIndex, setVehicleSelectIndex] = useState<number | null>(null);
-  const [vehicleSearchQuery, setVehicleSearchQuery] = useState('');
   const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
     visible: false,
     title: '',
@@ -715,118 +713,108 @@ export default function AddPurchaseChalanScreen() {
                       borderColor: cardBorder,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <Car size={14} color={isDark ? '#60A5FA' : '#153580'} />
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: textPrimary, textTransform: 'uppercase' }}>
-                        Brought for Vehicle (Car Tag):
-                      </Text>
-                    </View>
-
-                    {/* Vehicle Directory Selector Button */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        setVehicleSelectIndex(index);
-                        setVehicleSearchQuery('');
-                      }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        backgroundColor: inputBg,
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
-                        borderWidth: 1,
-                        borderColor: cardBorder,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                        <Car size={16} color={isDark ? '#60A5FA' : '#153580'} />
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: textPrimary }} numberOfLines={1}>
-                          {item.assignedVehicleNumber || 'Select from Garage Directory'}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Car size={14} color={isDark ? '#60A5FA' : '#153580'} />
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: textPrimary, textTransform: 'uppercase' }}>
+                          Vehicle Tag / Stock:
                         </Text>
-                        {item.assignedVehicleModel && item.assignedVehicleModel !== item.assignedVehicleNumber && (
-                          <Text style={{ fontSize: 12, color: textMuted }} numberOfLines={1}>
-                            ({item.assignedVehicleModel})
-                          </Text>
-                        )}
                       </View>
-                      <ChevronDown size={16} color={textMuted} />
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setItemVehicle(index, 'General Stock', 'Workshop Stock')}
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 8,
+                          backgroundColor: item.assignedVehicleNumber === 'General Stock' ? (isDark ? '#1E293B' : '#E2E8F0') : 'transparent',
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: item.assignedVehicleNumber === 'General Stock' ? (isDark ? '#60A5FA' : '#153580') : textMuted }}>
+                          📦 General Stock
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
 
-                    {/* Quick Car Chips from Directory */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 6 }}>
-                      {availableVehicles.slice(0, 6).map((vp) => {
-                        const isSelected = item.assignedVehicleNumber === vp.reg;
-                        return (
-                          <TouchableOpacity
-                            key={vp.reg}
-                            onPress={() => setItemVehicle(index, vp.reg, vp.model)}
-                            style={{
-                              paddingHorizontal: 10,
-                              paddingVertical: 6,
-                              borderRadius: 10,
-                              backgroundColor: isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : isDark ? '#222D42' : '#F1F5F9',
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 11,
-                                fontWeight: '700',
-                                color: isSelected ? (isDark ? '#0C1829' : '#FFFFFF') : textPrimary,
-                              }}
-                            >
-                              {vp.reg} {vp.reg !== 'General Stock' && vp.model ? `(${vp.model.split(' ')[0]})` : ''}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-
-                    {/* Explicit Manual Vehicle Details Entry Option */}
-                    <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: cardBorder }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: textMuted, textTransform: 'uppercase', marginBottom: 6 }}>
-                        ✏️ Or Enter Vehicle Details Manually:
-                      </Text>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <View style={{ flex: 1.2 }}>
-                          <TextInput
-                            value={item.assignedVehicleNumber === 'General Stock' ? '' : item.assignedVehicleNumber}
-                            onChangeText={(val) => updateItem(index, 'assignedVehicleNumber', val || 'General Stock')}
-                            placeholder="Vehicle Reg (e.g. MH12AB1234)"
-                            placeholderTextColor="#94A3B8"
-                            autoCapitalize="characters"
-                            style={{
-                              backgroundColor: inputBg,
-                              borderRadius: 10,
-                              paddingHorizontal: 10,
-                              paddingVertical: 8,
-                              fontSize: 12,
-                              fontWeight: '700',
-                              color: textPrimary,
-                            }}
-                          />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <TextInput
-                            value={item.assignedVehicleModel === 'Workshop Stock' ? '' : item.assignedVehicleModel}
-                            onChangeText={(val) => updateItem(index, 'assignedVehicleModel', val || 'Car')}
-                            placeholder="Car Model (e.g. Innova)"
-                            placeholderTextColor="#94A3B8"
-                            style={{
-                              backgroundColor: inputBg,
-                              borderRadius: 10,
-                              paddingHorizontal: 10,
-                              paddingVertical: 8,
-                              fontSize: 12,
-                              fontWeight: '700',
-                              color: textPrimary,
-                            }}
-                          />
-                        </View>
+                    {/* Direct Manual Vehicle Inputs */}
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                      <View style={{ flex: 1.2 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: textMuted, marginBottom: 4 }}>
+                          Vehicle Number / Reg *
+                        </Text>
+                        <TextInput
+                          value={item.assignedVehicleNumber === 'General Stock' ? '' : item.assignedVehicleNumber}
+                          onChangeText={(val) => updateItem(index, 'assignedVehicleNumber', val || 'General Stock')}
+                          placeholder="e.g. MH12AN8090"
+                          placeholderTextColor="#94A3B8"
+                          autoCapitalize="characters"
+                          style={{
+                            backgroundColor: inputBg,
+                            borderRadius: 10,
+                            paddingHorizontal: 10,
+                            paddingVertical: 9,
+                            fontSize: 13,
+                            fontWeight: '700',
+                            color: textPrimary,
+                          }}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: textMuted, marginBottom: 4 }}>
+                          Car Model (Optional)
+                        </Text>
+                        <TextInput
+                          value={item.assignedVehicleModel === 'Workshop Stock' ? '' : item.assignedVehicleModel}
+                          onChangeText={(val) => updateItem(index, 'assignedVehicleModel', val || 'Car')}
+                          placeholder="e.g. Qualis / Innova"
+                          placeholderTextColor="#94A3B8"
+                          style={{
+                            backgroundColor: inputBg,
+                            borderRadius: 10,
+                            paddingHorizontal: 10,
+                            paddingVertical: 9,
+                            fontSize: 13,
+                            fontWeight: '700',
+                            color: textPrimary,
+                          }}
+                        />
                       </View>
                     </View>
+
+                    {/* Quick Garage Cars One-Tap Suggestions */}
+                    {availableVehicles.length > 0 && (
+                      <View>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: textMuted, marginBottom: 5 }}>
+                          Quick Tag from Workshop Cars:
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                          {availableVehicles.map((vp) => {
+                            const isSelected = item.assignedVehicleNumber === vp.reg;
+                            return (
+                              <TouchableOpacity
+                                key={vp.reg}
+                                onPress={() => setItemVehicle(index, vp.reg, vp.model)}
+                                style={{
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 5,
+                                  borderRadius: 10,
+                                  backgroundColor: isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : isDark ? '#1C2538' : '#F1F5F9',
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: '700',
+                                    color: isSelected ? (isDark ? '#0C1829' : '#FFFFFF') : textPrimary,
+                                  }}
+                                >
+                                  {vp.reg} {vp.reg !== 'General Stock' && vp.model ? `(${vp.model.split(' ')[0]})` : ''}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
                   </View>
                 </View>
               );
@@ -1093,147 +1081,6 @@ export default function AddPurchaseChalanScreen() {
             >
               <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Done</Text>
             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* VEHICLE DIRECTORY SELECTION MODAL */}
-      <Modal
-        visible={vehicleSelectIndex !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setVehicleSelectIndex(null)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setVehicleSelectIndex(null)}
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 20,
-          }}
-        >
-          <View
-            style={{
-              width: '100%',
-              maxWidth: 400,
-              maxHeight: '80%',
-              backgroundColor: isDark ? '#141926' : '#FFFFFF',
-              borderRadius: 24,
-              padding: 22,
-              shadowColor: '#000',
-              shadowOpacity: 0.3,
-              shadowRadius: 15,
-              elevation: 8,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Car size={20} color={isDark ? '#60A5FA' : '#153580'} />
-                <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
-                  Select Vehicle / Tag
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setVehicleSelectIndex(null)} hitSlop={10}>
-                <X size={20} color={textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Search Input */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: inputBg,
-                borderRadius: 14,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                gap: 8,
-                marginBottom: 14,
-              }}
-            >
-              <Search size={16} color={textMuted} />
-              <TextInput
-                value={vehicleSearchQuery}
-                onChangeText={setVehicleSearchQuery}
-                placeholder="Search car or type custom reg..."
-                placeholderTextColor="#94A3B8"
-                autoCapitalize="characters"
-                style={{ flex: 1, color: textPrimary, fontSize: 14, fontWeight: '600' }}
-              />
-            </View>
-
-            {vehicleSearchQuery.trim().length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  if (vehicleSelectIndex !== null) {
-                    setItemVehicle(vehicleSelectIndex, vehicleSearchQuery.trim().toUpperCase(), 'Custom Vehicle');
-                  }
-                  setVehicleSelectIndex(null);
-                }}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: 12,
-                  borderRadius: 14,
-                  backgroundColor: '#153580',
-                  marginBottom: 10,
-                }}
-              >
-                <View>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>
-                    + Tag Manual: {vehicleSearchQuery.trim().toUpperCase()}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
-                    Assign part to this custom vehicle number
-                  </Text>
-                </View>
-                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-              </TouchableOpacity>
-            )}
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {availableVehicles
-                .filter((v) => {
-                  if (!vehicleSearchQuery.trim()) return true;
-                  const q = vehicleSearchQuery.toLowerCase();
-                  return v.reg.toLowerCase().includes(q) || v.model.toLowerCase().includes(q);
-                })
-                .map((v) => (
-                  <TouchableOpacity
-                    key={v.reg}
-                    onPress={() => {
-                      if (vehicleSelectIndex !== null) {
-                        setItemVehicle(vehicleSelectIndex, v.reg, v.model);
-                      }
-                      setVehicleSelectIndex(null);
-                    }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: 14,
-                      borderRadius: 14,
-                      backgroundColor: isDark ? '#1C2538' : '#F8FAFD',
-                      borderWidth: 1,
-                      borderColor: cardBorder,
-                    }}
-                  >
-                    <View>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: textPrimary }}>
-                        {v.reg}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: textMuted, marginTop: 2 }}>
-                        {v.model}
-                      </Text>
-                    </View>
-                    <Check size={16} color={isDark ? '#60A5FA' : '#153580'} />
-                  </TouchableOpacity>
-                ))}
-            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>

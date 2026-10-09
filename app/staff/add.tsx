@@ -61,7 +61,7 @@ export default function AddStaffScreen() {
   const [officialDocNumber, setOfficialDocNumber] = useState('');
   const [notes, setNotes] = useState('');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Required Field', 'Please enter staff member name');
       return;
@@ -100,15 +100,14 @@ export default function AddStaffScreen() {
     addEmployee(newStaff);
 
     // Cloud Firestore Sync
-    const entId = enterpriseId || 'enterprise-cool-car';
-    import('firebase/firestore').then(async ({ doc, setDoc }) => {
-      try {
-        const { db } = await import('../../src/services/firebase/firebase.config');
-        await setDoc(doc(db, 'enterprises', entId, 'employees', newStaff.id), newStaff);
-      } catch (err) {
-        console.log('[AddStaff] Firestore sync error/offline:', err);
-      }
-    }).catch(() => {});
+    try {
+      const entId = enterpriseId || 'enterprise-cool-car';
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../../src/services/firebase/firebase.config');
+      await setDoc(doc(db, 'enterprises', entId, 'employees', newStaff.id), newStaff);
+    } catch (err) {
+      console.log('[AddStaff] Firestore sync notice/offline:', err);
+    }
 
     Alert.alert('Staff Added', `${newStaff.name} registered as ${newStaff.role}!`, [
       { text: 'Done', onPress: () => router.back() },

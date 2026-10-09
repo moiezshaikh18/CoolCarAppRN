@@ -12,6 +12,7 @@ import {
   ScrollView,
   RefreshControl,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,9 +20,10 @@ import {
   ArrowLeft,
   Search,
   Car,
-  Plus,
   ChevronRight,
   User,
+  Trash2,
+  Plus,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -32,7 +34,7 @@ export default function VehiclesListScreen() {
   const { theme, isDark } = useTheme();
   const { enterpriseId } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { setVehicles } = useVehicleStore();
+  const { setVehicles, deleteVehicle } = useVehicleStore();
 
   const [search, setSearch] = useState('');
   const [selectedFuel, setSelectedFuel] = useState<string>('ALL');
@@ -86,6 +88,32 @@ export default function VehiclesListScreen() {
     setRefreshing(true);
     await new Promise((r) => setTimeout(r, 600));
     setRefreshing(false);
+  };
+
+  const handleDeleteVehicle = (vehicleId: string, regNumber: string) => {
+    Alert.alert(
+      'Delete Vehicle',
+      `Are you sure you want to delete vehicle ${regNumber}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            deleteVehicle(vehicleId);
+            setLocalVehicles((prev) => prev.filter((v) => v.id !== vehicleId));
+            try {
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'vehicles', vehicleId));
+            } catch (err) {
+              console.log('[DeleteVehicle] Firestore notice:', err);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const skyBg = isDark ? '#070A0F' : '#153580';
@@ -244,20 +272,39 @@ export default function VehiclesListScreen() {
                       <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800' }}>
                         {vehicle.make} {vehicle.model}
                       </Text>
-                      {/* Reg Plate Pill */}
-                      <View
-                        style={{
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          borderRadius: 8,
-                          backgroundColor: isDark ? '#141926' : '#F1F5F9',
-                          borderWidth: 1,
-                          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-                        }}
-                      >
-                        <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
-                          {vehicle.registrationNumber}
-                        </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {/* Reg Plate Pill */}
+                        <View
+                          style={{
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 8,
+                            backgroundColor: isDark ? '#141926' : '#F1F5F9',
+                            borderWidth: 1,
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                          }}
+                        >
+                          <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+                            {vehicle.registrationNumber}
+                          </Text>
+                        </View>
+
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVehicle(vehicle.id, vehicle.registrationNumber);
+                          }}
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 13,
+                            backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Trash2 size={13} color="#DC2626" />
+                        </TouchableOpacity>
                       </View>
                     </View>
 

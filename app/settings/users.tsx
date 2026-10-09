@@ -4,7 +4,7 @@
 // Signature Sky Blue Header & Mega-Curved Lower Sheet
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,8 +29,11 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
+import { useAuthStore } from '../../src/store/authStore';
+import { useEmployeeStore } from '../../src/store/employeeStore';
 import { UserRole } from '../../src/types/enterprise.types';
 import { formatRoleLabel } from '../../src/utils/formatters';
+import { Employee } from '../../src/types/employee.types';
 
 interface TeamMember {
   id: string;
@@ -39,37 +42,6 @@ interface TeamMember {
   role: UserRole;
   isActive: boolean;
 }
-
-const DEFAULT_MEMBERS: TeamMember[] = [
-  {
-    id: 'm1',
-    name: 'Manish Kumar (You)',
-    phone: '+91 98765 43210',
-    role: 'OWNER',
-    isActive: true,
-  },
-  {
-    id: 'm2',
-    name: 'Vikas Deshmukh',
-    phone: '+91 98200 11223',
-    role: 'MANAGER',
-    isActive: true,
-  },
-  {
-    id: 'm3',
-    name: 'Kavita Singh',
-    phone: '+91 98199 44556',
-    role: 'ACCOUNTANT',
-    isActive: true,
-  },
-  {
-    id: 'm4',
-    name: 'Rohan Patil',
-    phone: '+91 98333 77889',
-    role: 'EMPLOYEE',
-    isActive: true,
-  },
-];
 
 const ROLES: { role: UserRole; label: string; desc: string }[] = [
   { role: 'OWNER', label: 'Owner', desc: 'Full unrestricted access & billing' },
@@ -83,14 +55,72 @@ export default function UsersRolesScreen() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { activeEnterprise } = useEnterpriseStore();
+  const { user } = useAuthStore();
+  const { employees, setEmployees, addEmployee, deleteEmployee } = useEmployeeStore();
 
-  const [members, setMembers] = useState<TeamMember[]>(DEFAULT_MEMBERS);
   const [modalVisible, setModalVisible] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('EMPLOYEE');
 
-  const handleAddMember = () => {
+  // Live Firestore Sync for Employees
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    const fetchTeam = async () => {
+      try {
+        const entId = activeEnterprise?.id || 'enterprise-cool-car';
+        const { collection, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+
+        const staffRef = collection(db, 'enterprises', entId, 'employees');
+        unsubscribe = onSnapshot(staffRef, (snap) => {
+          if (!snap.empty) {
+            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Employee));
+            setEmployees(list);
+          }
+        });
+      } catch (err) {
+        console.log('[UsersRoles] Firestore sync notice:', err);
+      }
+    };
+    fetchTeam();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [activeEnterprise?.id, setEmployees]);
+
+  // Unified Team Members (Owner + Registered Employees)
+  const members: TeamMember[] = useMemo(() => {
+    const list: TeamMember[] = [
+      {
+        id: 'owner-me',
+        name: `${user?.displayName || 'Workshop Owner'} (You)`,
+        phone: user?.phone || activeEnterprise?.phone || '+91 98765 43210',
+        role: 'OWNER',
+        isActive: true,
+      },
+    ];
+
+    employees.forEach((emp) => {
+      let role: UserRole = 'EMPLOYEE';
+      if (emp.role?.toLowerCase().includes('manager')) role = 'MANAGER';
+      else if (emp.role?.toLowerCase().includes('admin')) role = 'ADMIN';
+      else if (emp.role?.toLowerCase().includes('account')) role = 'ACCOUNTANT';
+      else if (emp.privileges?.canViewReports) role = 'MANAGER';
+
+      list.push({
+        id: emp.id,
+        name: emp.name,
+        phone: emp.phone,
+        role,
+        isActive: emp.isActive !== false,
+      });
+    });
+
+    return list;
+  }, [user, activeEnterprise, employees]);
+
+  const handleAddMember = async () => {
     if (!newName.trim()) {
       Alert.alert('Required', 'Please enter staff member name');
       return;
@@ -100,34 +130,71 @@ export default function UsersRolesScreen() {
       return;
     }
 
-    const newMember: TeamMember = {
-      id: `m-${Date.now()}`,
+    const clean10 = newPhone.replace(/\D/g, '').slice(-10);
+    const newEmployee: Employee = {
+      id: `emp-${Date.now()}`,
+      enterpriseId: activeEnterprise?.id || 'enterprise-cool-car',
       name: newName.trim(),
-      phone: `+91 ${newPhone.replace(/\D/g, '').slice(-10)}`,
-      role: newRole,
+      phone: `+91 ${clean10}`,
+      role: newRole === 'MANAGER' ? 'Workshop Manager' : newRole === 'ACCOUNTANT' ? 'Accountant' : newRole === 'ADMIN' ? 'Workshop Admin' : 'Mechanic / Technician',
+      salaryType: 'MONTHLY',
+      salaryAmount: 20000,
+      joiningDate: new Date().toISOString().slice(0, 10),
+      status: 'ACTIVE',
+      officialDocType: 'AADHAAR',
+      officialDocNumber: '',
+      currentAdvance: 0,
+      totalPaidSalary: 0,
       isActive: true,
+      privileges: {
+        canCreateJobSheets: true,
+        canRecordExpenses: newRole === 'ADMIN' || newRole === 'MANAGER' || newRole === 'ACCOUNTANT',
+        canManageChalans: newRole === 'ADMIN' || newRole === 'MANAGER',
+        canViewBankBalances: newRole === 'ADMIN' || newRole === 'ACCOUNTANT',
+        canViewReports: newRole === 'ADMIN' || newRole === 'ACCOUNTANT',
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    setMembers([...members, newMember]);
+    addEmployee(newEmployee);
+
+    try {
+      const entId = activeEnterprise?.id || 'enterprise-cool-car';
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../../src/services/firebase/firebase.config');
+      await setDoc(doc(db, 'enterprises', entId, 'employees', newEmployee.id), newEmployee);
+    } catch (err) {
+      console.log('[UsersRoles] Cloud sync notice:', err);
+    }
+
     setNewName('');
     setNewPhone('');
     setNewRole('EMPLOYEE');
     setModalVisible(false);
-    Alert.alert('Added', `${newMember.name} added as ${formatRoleLabel(newMember.role)}.`);
+    Alert.alert('Added', `${newEmployee.name} added as ${formatRoleLabel(newRole)}.`);
   };
 
   const handleRemoveMember = (id: string, name: string) => {
-    if (members.find((m) => m.id === id)?.role === 'OWNER') {
+    if (id === 'owner-me') {
       Alert.alert('Action Restricted', 'Owner account cannot be removed.');
       return;
     }
-    Alert.alert('Remove Team Member', `Are you sure you want to revoke access for ${name}?`, [
+    Alert.alert('Remove Team Member', `Are you sure you want to revoke access and delete ${name}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Revoke',
         style: 'destructive',
-        onPress: () => {
-          setMembers(members.filter((m) => m.id !== id));
+        onPress: async () => {
+          deleteEmployee(id);
+          try {
+            const entId = activeEnterprise?.id || 'enterprise-cool-car';
+            const { doc, deleteDoc } = await import('firebase/firestore');
+            const { db } = await import('../../src/services/firebase/firebase.config');
+            await deleteDoc(doc(db, 'enterprises', entId, 'employees', id));
+          } catch (err) {
+            console.log('[UsersRoles] Delete notice:', err);
+          }
         },
       },
     ]);

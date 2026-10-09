@@ -30,6 +30,7 @@ interface ExpenseStore {
   addCategory: (category: ExpenseCategory) => void;
   addExpense: (expense: Expense) => void;
   updateExpense: (id: string, data: Partial<Expense>) => void;
+  deleteExpense: (id: string) => void;
   voidExpense: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -55,6 +56,10 @@ export const useExpenseStore = create<ExpenseStore>()(
       updateExpense: (id, data) =>
         set((state) => ({
           expenses: state.expenses.map((e) => (e.id === id ? { ...e, ...data } : e)),
+        })),
+      deleteExpense: (id) =>
+        set((state) => ({
+          expenses: state.expenses.filter((e) => e.id !== id),
         })),
       voidExpense: (id) =>
         set((state) => ({

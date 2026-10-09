@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Shield,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -39,11 +40,11 @@ import PayStaffScreen from './pay';
 
 export default function StaffDetailScreen() {
   const { theme, isDark } = useTheme();
-  const { currencySymbol } = useEnterprise();
+  const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { getEmployeeById, getPaymentsByEmployeeId, markEmployeeAsLeft, updateEmployee } = useEmployeeStore();
+  const { getEmployeeById, getPaymentsByEmployeeId, markEmployeeAsLeft, updateEmployee, deleteEmployee } = useEmployeeStore();
   const staff = id && id !== 'pay' ? getEmployeeById(id) : undefined;
   const paymentHistory = id && id !== 'pay' ? getPaymentsByEmployeeId(id) : [];
 
@@ -117,6 +118,33 @@ export default function StaffDetailScreen() {
     );
   };
 
+  const handleDeleteStaff = () => {
+    showAlert(
+      'Delete Staff Member',
+      `Are you sure you want to delete ${staff.name}? This will permanently remove them from staff and payroll records.`,
+      'error',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            deleteEmployee(staff.id);
+            try {
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'employees', staff.id));
+            } catch (err) {
+              console.log('[DeleteStaff] Firestore delete error:', err);
+            }
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
   const hasAdvance = (staff.currentAdvance || 0) > 0;
   const isLeft = staff.status === 'LEFT';
   const skyBg = isDark ? '#000000' : '#153580';
@@ -158,19 +186,35 @@ export default function StaffDetailScreen() {
             Staff Profile
           </Text>
 
-          <TouchableOpacity
-            onPress={() => Linking.openURL(`tel:${staff.phone}`)}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: 'rgba(255,255,255,0.22)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Phone size={18} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={handleDeleteStaff}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: 'rgba(239, 68, 68, 0.35)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Trash2 size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`tel:${staff.phone}`)}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: 'rgba(255,255,255,0.22)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Phone size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Profile Card Header */}

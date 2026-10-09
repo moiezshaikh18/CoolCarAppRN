@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
+  Alert,
   StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -25,6 +26,7 @@ import {
   DollarSign,
   ChevronRight,
   Wrench,
+  Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -37,7 +39,7 @@ export default function StaffListScreen() {
   const { theme, isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { employees, setEmployees } = useEmployeeStore();
+  const { employees, setEmployees, deleteEmployee } = useEmployeeStore();
   const { isOwner, isAdmin } = usePermissions();
 
   useEffect(() => {
@@ -62,8 +64,6 @@ export default function StaffListScreen() {
           if (!snap.empty) {
             const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Employee));
             setEmployees(list);
-          } else {
-            setEmployees([]);
           }
         });
       } catch (err) {
@@ -97,6 +97,31 @@ export default function StaffListScreen() {
   const cardBg = isDark ? '#101927' : '#FFFFFF';
   const inputBg = isDark ? '#141926' : '#F8FAFC';
   const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+  const handleDeleteStaff = (staffId: string, staffName: string) => {
+    Alert.alert(
+      'Delete Staff Member',
+      `Are you sure you want to delete ${staffName}? They will be removed from staff list and access records.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            deleteEmployee(staffId);
+            try {
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'employees', staffId));
+            } catch (err) {
+              console.log('[DeleteStaff] Firestore error:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
@@ -276,7 +301,25 @@ export default function StaffListScreen() {
                       </View>
                     </View>
 
-                    <ChevronRight size={18} color={theme.textMuted} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDeleteStaff(staff.id, staff.name);
+                        }}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Trash2 size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                      <ChevronRight size={18} color={theme.textMuted} />
+                    </View>
                   </TouchableOpacity>
 
                   {/* Financial Overview Row: Salary & Advance Status */}

@@ -17,6 +17,7 @@ interface JobSheetStore {
   setJobSheets: (jobSheets: JobSheet[]) => void;
   addJobSheet: (jobSheet: JobSheet) => void;
   updateJobSheet: (id: string, data: Partial<JobSheet>) => void;
+  deleteJobSheet: (id: string) => void;
   setSelectedJobSheet: (jobSheet: JobSheet | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -41,6 +42,14 @@ export const useJobSheetStore = create<JobSheetStore>()(
           jobSheets: state.jobSheets.map((j) =>
             j.id === id || j.jobNumber === id ? { ...j, ...data } : j
           ),
+        })),
+      deleteJobSheet: (id) =>
+        set((state) => ({
+          jobSheets: state.jobSheets.filter((j) => j.id !== id && j.jobNumber !== id),
+          selectedJobSheet:
+            state.selectedJobSheet?.id === id || state.selectedJobSheet?.jobNumber === id
+              ? null
+              : state.selectedJobSheet,
         })),
       setSelectedJobSheet: (selectedJobSheet) => set({ selectedJobSheet }),
       setLoading: (isLoading) => set({ isLoading }),

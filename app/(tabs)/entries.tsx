@@ -21,13 +21,16 @@ import {
   Car,
   TrendingDown,
   TrendingUp,
+  Trash2,
 } from 'lucide-react-native';
+import { Alert } from 'react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { router } from 'expo-router';
 import { useExpenseStore } from '../../src/store/expenseStore';
+import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { useHideOnScroll } from '../../src/store/tabBarStore';
 
 
@@ -56,8 +59,59 @@ export default function EntriesScreen() {
 
   const [currentDate] = useState('Today');
   const [jobs, setJobs] = useState<JobSheetEntry[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
   const realExpenses = useExpenseStore((s) => s.expenses);
+  const { deleteExpense, setExpenses } = useExpenseStore();
+  const { deleteJobSheet } = useJobSheetStore();
+
+  const handleDeleteJobEntry = (id: string, jobNum: string) => {
+    Alert.alert(
+      'Delete Job Sheet',
+      `Are you sure you want to delete Job Sheet ${jobNum}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            deleteJobSheet(id);
+            try {
+              const entId = enterprise?.id || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'jobSheets', id));
+            } catch (err) {
+              console.log('[DeleteJob] Firestore notice:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteExpenseEntry = (id: string, name: string) => {
+    Alert.alert(
+      'Delete Expense',
+      `Are you sure you want to delete expense "${name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            deleteExpense(id);
+            try {
+              const entId = enterprise?.id || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'expenses', id));
+            } catch (err) {
+              console.log('[DeleteExpense] Firestore notice:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // Live Firestore Sync
   useEffect(() => {
@@ -97,18 +151,11 @@ export default function EntriesScreen() {
         const expRef = collection(db, 'enterprises', entId, 'expenses');
         unsubscribeExpenses = onSnapshot(expRef, (snap) => {
           if (!snap.empty) {
-            const list: ExpenseEntry[] = snap.docs.map((d) => {
-              const data = d.data();
-              return {
-                id: d.id,
-                category: data.category || 'General Expense',
-                amount: Number(data.amount) || 0,
-                iconName: 'Receipt',
-              };
-            });
+            const list = snap.docs.map((d) => ({
+              id: d.id,
+              ...d.data(),
+            })) as any[];
             setExpenses(list);
-          } else {
-            setExpenses([]);
           }
         });
       } catch (err) {
@@ -326,16 +373,34 @@ export default function EntriesScreen() {
                     <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
                       {formatCurrency(item.amount, currencySymbol)}
                     </Text>
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: '800',
-                        color: item.status === 'Paid' ? '#00C896' : item.status === 'Partially Paid' ? '#F59E0B' : '#EF4444',
-                        marginTop: 4,
-                      }}
-                    >
-                      {item.status}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '800',
+                          color: item.status === 'Paid' ? '#00C896' : item.status === 'Partially Paid' ? '#F59E0B' : '#EF4444',
+                        }}
+                      >
+                        {item.status}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDeleteJobEntry(item.id, item.jobNumber);
+                        }}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginLeft: 4,
+                        }}
+                      >
+                        <Trash2 size={13} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -392,9 +457,24 @@ export default function EntriesScreen() {
                         </Text>
                       </View>
                     </View>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#EF4444' }}>
-                      -{formatCurrency(item.amount, currencySymbol)}
-                    </Text>
+                    <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#EF4444' }}>
+                        -{formatCurrency(item.amount, currencySymbol)}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteExpenseEntry(item.id, item.categoryName || item.description || 'Expense')}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 14,
+                          backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Trash2 size={14} color="#DC2626" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))
               )}

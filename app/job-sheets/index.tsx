@@ -17,6 +17,7 @@ import {
   Linking,
   StatusBar,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +31,7 @@ import {
   Calendar,
   Printer,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -51,7 +53,7 @@ export default function JobSheetsScreen() {
   const { isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { jobSheets, setJobSheets, updateJobSheet } = useJobSheetStore();
+  const { jobSheets, setJobSheets, updateJobSheet, deleteJobSheet } = useJobSheetStore();
 
   const [activeTab, setActiveTab] = useState<JobStatus | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -207,6 +209,32 @@ export default function JobSheetsScreen() {
     }
   };
 
+  const handleDeleteItem = (item: JobSheet, e?: any) => {
+    e?.stopPropagation?.();
+    Alert.alert(
+      'Delete Job Sheet',
+      `Are you sure you want to delete Job Sheet #${item.jobNumber}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            deleteJobSheet(item.id);
+            try {
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'jobSheets', item.id));
+            } catch (err) {
+              console.log('[DeleteJobSheet] Firestore notice:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderJobCard = ({ item }: { item: JobSheet }) => {
     const isPaid = (item.pendingAmount ?? 0) === 0 && (item.totalPaid ?? 0) > 0;
     const isPending = (item.pendingAmount ?? 0) > 0;
@@ -289,13 +317,30 @@ export default function JobSheetsScreen() {
               </Text>
             ) : null}
 
-            <TouchableOpacity
-              onPress={(e) => handlePrintItem(item, e)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={styles.cardPrintButton}
-            >
-              <Printer size={15} color="#64748B" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+              <TouchableOpacity
+                onPress={(e) => handleDeleteItem(item, e)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#FEE2E2',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Trash2 size={14} color="#EF4444" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={(e) => handlePrintItem(item, e)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.cardPrintButton}
+              >
+                <Printer size={15} color="#64748B" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </TouchableOpacity>

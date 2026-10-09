@@ -40,6 +40,7 @@ import {
   Sliders,
   Check,
   RotateCcw,
+  Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -59,7 +60,7 @@ export default function JobSheetDetailsScreen() {
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string; openPayment?: string }>();
-  const { jobSheets, updateJobSheet } = useJobSheetStore();
+  const { jobSheets, updateJobSheet, deleteJobSheet } = useJobSheetStore();
   const { addPayment } = usePaymentStore();
   const accounts = useBankAccountStore((s) => s.accounts);
   const activeAccounts = useMemo(() => accounts.filter((a) => a.isActive), [accounts]);
@@ -481,6 +482,33 @@ export default function JobSheetDetailsScreen() {
     );
   }
 
+  const handleDeleteJobSheet = () => {
+    if (!job) return;
+    Alert.alert(
+      'Delete Job Sheet',
+      `Are you sure you want to permanently delete Job Sheet #${job.jobNumber}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            deleteJobSheet(job.id);
+            try {
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'jobSheets', job.id));
+            } catch (err) {
+              console.log('[DeleteJobSheet] Firestore error:', err);
+            }
+            router.replace('/job-sheets');
+          },
+        },
+      ]
+    );
+  };
+
   const isDone = (job.pendingAmount === 0 && job.finalAmount > 0) || job.status === 'COMPLETED';
 
   return (
@@ -522,7 +550,25 @@ export default function JobSheetDetailsScreen() {
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={handleDeleteJobSheet}
+              activeOpacity={0.8}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                backgroundColor: 'rgba(239, 68, 68, 0.35)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: 'rgba(239, 68, 68, 0.5)',
+              }}
+              accessibilityLabel="Delete Job Sheet"
+            >
+              <Trash2 size={16} color="#FFFFFF" strokeWidth={2.4} />
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={handleDirectPrint}
               disabled={isPdfGenerating}

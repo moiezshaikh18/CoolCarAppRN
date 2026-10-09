@@ -18,6 +18,7 @@ interface VehicleStore {
   setCustomerVehicles: (vehicles: Vehicle[]) => void;
   addVehicle: (vehicle: Vehicle) => void;
   updateVehicle: (id: string, data: Partial<Vehicle>) => void;
+  deleteVehicle: (id: string) => void;
   setSelectedVehicle: (vehicle: Vehicle | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -40,6 +41,11 @@ export const useVehicleStore = create<VehicleStore>()(
       updateVehicle: (id, data) =>
         set((state) => ({
           vehicles: state.vehicles.map((v) => (v.id === id ? { ...v, ...data } : v)),
+        })),
+      deleteVehicle: (id) =>
+        set((state) => ({
+          vehicles: state.vehicles.filter((v) => v.id !== id),
+          selectedVehicle: state.selectedVehicle?.id === id ? null : state.selectedVehicle,
         })),
       setSelectedVehicle: (selectedVehicle) => set({ selectedVehicle }),
       setLoading: (isLoading) => set({ isLoading }),

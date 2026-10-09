@@ -23,7 +23,9 @@ import {
   Banknote,
   Plus,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react-native';
+import { Alert } from 'react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { GlassCard } from '../../src/components/common/GlassCard';
@@ -39,6 +41,7 @@ export default function BankAccountsScreen() {
   const rawAccounts = useBankAccountStore((s) => s.accounts);
   const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
   const setAccounts = useBankAccountStore((s) => s.setAccounts);
+  const deleteAccount = useBankAccountStore((s) => s.deleteAccount);
   const rawPayments = usePaymentStore((s) => s.payments);
   const payments = Array.isArray(rawPayments) ? rawPayments : [];
   const { canViewBankBalances } = usePermissions();
@@ -118,6 +121,31 @@ export default function BankAccountsScreen() {
   const sheetBg = isDark ? '#0A0D14' : '#F4F6F9';
   const cardBg = isDark ? '#141824' : '#FFFFFF';
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.08)';
+
+  const handleDeleteAccount = (accId: string, accName: string) => {
+    Alert.alert(
+      'Delete Bank Account',
+      `Are you sure you want to delete ${accName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            deleteAccount(accId);
+            try {
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'bankAccounts', accId));
+            } catch (err) {
+              console.log('[DeleteAccount] Firestore notice:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
@@ -290,13 +318,30 @@ export default function BankAccountsScreen() {
                       </View>
                     </View>
 
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981' }}>
-                        {formatCurrency(isCash ? monthStats.cash : breakdown.total, currencySymbol)}
-                      </Text>
-                      <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', marginTop: 1 }}>
-                        This Month Inward
-                      </Text>
+                    <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 10 }}>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981' }}>
+                          {formatCurrency(isCash ? monthStats.cash : breakdown.total, currencySymbol)}
+                        </Text>
+                        <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', marginTop: 1 }}>
+                          This Month Inward
+                        </Text>
+                      </View>
+                      {!isCash && (
+                        <TouchableOpacity
+                          onPress={() => handleDeleteAccount(acc.id, acc.accountName)}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 16,
+                            backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Trash2 size={15} color="#DC2626" />
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
 

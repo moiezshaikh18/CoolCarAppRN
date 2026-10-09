@@ -15,10 +15,11 @@ import {
   TextInput,
   StatusBar,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Search, Plus, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, Search, Plus, ChevronRight, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useCustomerStore } from '../../src/store/customerStore';
@@ -29,7 +30,7 @@ export default function CustomerListScreen() {
   const { isDark } = useTheme();
   const { enterpriseId } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { setCustomers } = useCustomerStore();
+  const { setCustomers, removeCustomer } = useCustomerStore();
   const [search, setSearch] = useState('');
   const [localCustomers, setLocalCustomers] = useState<any[]>([]);
 
@@ -67,6 +68,32 @@ export default function CustomerListScreen() {
       c.name?.toLowerCase().includes(search.toLowerCase()) ||
       (c.phone && c.phone.includes(search))
   );
+
+  const handleDeleteCustomer = (id: string, name: string) => {
+    Alert.alert(
+      'Delete Customer',
+      `Are you sure you want to delete ${name}? This will remove them from the directory.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              removeCustomer(id);
+              setLocalCustomers((prev) => prev.filter((c) => c.id !== id));
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'customers', id));
+            } catch (err) {
+              console.log('[CustomerList] Delete error:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const pageBg = isDark ? '#070A0F' : '#FFFFFF';
 
@@ -162,6 +189,16 @@ export default function CustomerListScreen() {
                       <Text style={styles.pendingText}>₹{item.pendingAmount}</Text>
                     </View>
                   )}
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCustomer(item.id, item.name || 'this customer');
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{ padding: 4, marginRight: 2 }}
+                  >
+                    <Trash2 size={16} color="#EF4444" />
+                  </TouchableOpacity>
                   <ChevronRight size={20} color="#64748B" />
                 </View>
               </TouchableOpacity>

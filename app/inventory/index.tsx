@@ -63,7 +63,17 @@ export default function InventoryScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => deleteChalan(id),
+          onPress: async () => {
+            deleteChalan(id);
+            try {
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'chalans', id));
+            } catch (err) {
+              console.log('[DeleteChalan] Firestore delete notice:', err);
+            }
+          },
         },
       ]
     );

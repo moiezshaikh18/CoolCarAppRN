@@ -25,6 +25,7 @@ import {
   Plus,
   MessageSquare,
   ChevronRight,
+  Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
@@ -36,10 +37,10 @@ import { getInitials } from '../../src/utils/formatters';
 
 export default function CustomerDetailsScreen() {
   const { theme, isDark } = useTheme();
-  const { currencySymbol } = useEnterprise();
+  const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { customers } = useCustomerStore();
+  const { customers, removeCustomer } = useCustomerStore();
   const { vehicles } = useVehicleStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'fleet'>('overview');
 
@@ -73,13 +74,40 @@ export default function CustomerDetailsScreen() {
     );
   }
 
+  const handleDeleteCustomer = () => {
+    if (!customer) return;
+    Alert.alert(
+      'Delete Customer',
+      `Are you sure you want to delete ${customer.name}? This will remove them from the customer directory.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            removeCustomer(customer.id);
+            try {
+              const entId = enterpriseId || 'enterprise-cool-car';
+              const { doc, deleteDoc } = await import('firebase/firestore');
+              const { db } = await import('../../src/services/firebase/firebase.config');
+              await deleteDoc(doc(db, 'enterprises', entId, 'customers', customer.id));
+            } catch (err) {
+              console.log('[DeleteCustomer] Firestore notice:', err);
+            }
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
 
       {/* Sky Blue Header */}
       <View style={{ backgroundColor: canvasBg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
-          {/* Top Bar with Back & Share */}
+          {/* Top Bar with Back, Delete & Share */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
             <TouchableOpacity
               onPress={() => router.back()}
@@ -99,19 +127,35 @@ export default function CustomerDetailsScreen() {
               Customer Profile
             </Text>
 
-            <TouchableOpacity
-              onPress={() => Alert.alert('Share', 'Customer account link copied.')}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Share2 size={18} color="#FFFFFF" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TouchableOpacity
+                onPress={handleDeleteCustomer}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: 'rgba(239, 68, 68, 0.35)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Trash2 size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => Alert.alert('Share', 'Customer account link copied.')}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: isDark ? '#141926' : 'rgba(255, 255, 255, 0.25)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Share2 size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Central Customer Avatar */}
