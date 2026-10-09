@@ -3,6 +3,8 @@
 // ============================================================
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Vehicle } from '../types/vehicle.types';
 
 interface VehicleStore {
@@ -22,25 +24,33 @@ interface VehicleStore {
   reset: () => void;
 }
 
-export const useVehicleStore = create<VehicleStore>((set) => ({
-  vehicles: [],
-  selectedVehicle: null,
-  customerVehicles: [],
-  isLoading: false,
-  error: null,
+export const useVehicleStore = create<VehicleStore>()(
+  persist(
+    (set) => ({
+      vehicles: [],
+      selectedVehicle: null,
+      customerVehicles: [],
+      isLoading: false,
+      error: null,
 
-  setVehicles: (vehicles) => set({ vehicles }),
-  setCustomerVehicles: (customerVehicles) => set({ customerVehicles }),
-  addVehicle: (vehicle) =>
-    set((state) => ({ vehicles: [vehicle, ...state.vehicles] })),
-  updateVehicle: (id, data) =>
-    set((state) => ({
-      vehicles: state.vehicles.map((v) => (v.id === id ? { ...v, ...data } : v)),
-    })),
-  setSelectedVehicle: (selectedVehicle) => set({ selectedVehicle }),
-  setLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  reset: () =>
-    set({ vehicles: [], selectedVehicle: null, customerVehicles: [], isLoading: false, error: null }),
-}));
+      setVehicles: (vehicles) => set({ vehicles }),
+      setCustomerVehicles: (customerVehicles) => set({ customerVehicles }),
+      addVehicle: (vehicle) =>
+        set((state) => ({ vehicles: [vehicle, ...state.vehicles] })),
+      updateVehicle: (id, data) =>
+        set((state) => ({
+          vehicles: state.vehicles.map((v) => (v.id === id ? { ...v, ...data } : v)),
+        })),
+      setSelectedVehicle: (selectedVehicle) => set({ selectedVehicle }),
+      setLoading: (isLoading) => set({ isLoading }),
+      setError: (error) => set({ error }),
+      reset: () =>
+        set({ vehicles: [], selectedVehicle: null, customerVehicles: [], isLoading: false, error: null }),
+    }),
+    {
+      name: 'cool-car-vehicle-store',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 

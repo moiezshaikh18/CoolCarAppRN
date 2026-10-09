@@ -3,6 +3,8 @@
 // ============================================================
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Payment } from '../types/payment.types';
 
 interface PaymentStore {
@@ -20,24 +22,32 @@ interface PaymentStore {
   reset: () => void;
 }
 
-export const usePaymentStore = create<PaymentStore>((set) => ({
-  payments: [],
-  jobSheetPayments: [],
-  isLoading: false,
-  error: null,
+export const usePaymentStore = create<PaymentStore>()(
+  persist(
+    (set) => ({
+      payments: [],
+      jobSheetPayments: [],
+      isLoading: false,
+      error: null,
 
-  setPayments: (payments) => set({ payments }),
-  setJobSheetPayments: (jobSheetPayments) => set({ jobSheetPayments }),
-  addPayment: (payment) =>
-    set((state) => ({ payments: [payment, ...state.payments] })),
-  voidPayment: (id) =>
-    set((state) => ({
-      payments: state.payments.map((p) =>
-        p.id === id ? { ...p, voided: true } : p
-      ),
-    })),
-  setLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  reset: () => set({ payments: [], jobSheetPayments: [], isLoading: false, error: null }),
-}));
+      setPayments: (payments) => set({ payments }),
+      setJobSheetPayments: (jobSheetPayments) => set({ jobSheetPayments }),
+      addPayment: (payment) =>
+        set((state) => ({ payments: [payment, ...state.payments] })),
+      voidPayment: (id) =>
+        set((state) => ({
+          payments: state.payments.map((p) =>
+            p.id === id ? { ...p, voided: true } : p
+          ),
+        })),
+      setLoading: (isLoading) => set({ isLoading }),
+      setError: (error) => set({ error }),
+      reset: () => set({ payments: [], jobSheetPayments: [], isLoading: false, error: null }),
+    }),
+    {
+      name: 'cool-car-payment-store',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 

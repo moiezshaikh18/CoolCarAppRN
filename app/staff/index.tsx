@@ -29,6 +29,7 @@ import {
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useEmployeeStore } from '../../src/store/employeeStore';
+import { usePermissions } from '../../src/hooks/usePermissions';
 import { formatCurrency } from '../../src/utils/currency';
 import { Employee } from '../../src/types/employee.types';
 
@@ -37,6 +38,13 @@ export default function StaffListScreen() {
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { employees, setEmployees } = useEmployeeStore();
+  const { isOwner, isAdmin } = usePermissions();
+
+  useEffect(() => {
+    if (!isOwner && !isAdmin) {
+      router.back();
+    }
+  }, [isOwner, isAdmin]);
 
   const [search, setSearch] = useState('');
 

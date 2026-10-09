@@ -47,16 +47,31 @@ export function CalendarPickerModal({
 }: CalendarPickerModalProps) {
   const { isDark } = useTheme();
 
-  const initial = selectedDate ? new Date(selectedDate) : new Date();
-  const [currentYear, setCurrentYear] = useState(
-    isNaN(initial.getFullYear()) ? new Date().getFullYear() : initial.getFullYear()
-  );
-  const [currentMonth, setCurrentMonth] = useState(
-    isNaN(initial.getMonth()) ? new Date().getMonth() : initial.getMonth()
-  );
-  const [activeDate, setActiveDate] = useState(
-    selectedDate || new Date().toISOString().split('T')[0]
-  );
+  const parseSafeDate = (dStr?: string) => {
+    if (!dStr) {
+      const now = new Date();
+      return { y: now.getFullYear(), m: now.getMonth(), str: now.toISOString().split('T')[0] };
+    }
+    const parts = dStr.split('-');
+    if (parts.length >= 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      if (!isNaN(y) && !isNaN(m)) {
+        return { y, m, str: dStr };
+      }
+    }
+    const parsed = new Date(dStr);
+    if (!isNaN(parsed.getFullYear())) {
+      return { y: parsed.getFullYear(), m: parsed.getMonth(), str: dStr };
+    }
+    const now = new Date();
+    return { y: now.getFullYear(), m: now.getMonth(), str: now.toISOString().split('T')[0] };
+  };
+
+  const initial = parseSafeDate(selectedDate);
+  const [currentYear, setCurrentYear] = useState(initial.y);
+  const [currentMonth, setCurrentMonth] = useState(initial.m);
+  const [activeDate, setActiveDate] = useState(initial.str);
 
   if (!visible) return null;
 

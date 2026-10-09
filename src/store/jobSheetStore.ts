@@ -3,6 +3,8 @@
 // ============================================================
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { JobSheet } from '../types/jobSheet.types';
 
 interface JobSheetStore {
@@ -22,25 +24,33 @@ interface JobSheetStore {
   reset: () => void;
 }
 
-export const useJobSheetStore = create<JobSheetStore>((set) => ({
-  jobSheets: [],
-  selectedJobSheet: null,
-  isLoading: false,
-  error: null,
-  statusFilter: null,
+export const useJobSheetStore = create<JobSheetStore>()(
+  persist(
+    (set) => ({
+      jobSheets: [],
+      selectedJobSheet: null,
+      isLoading: false,
+      error: null,
+      statusFilter: null,
 
-  setJobSheets: (jobSheets) => set({ jobSheets }),
-  addJobSheet: (jobSheet) =>
-    set((state) => ({ jobSheets: [jobSheet, ...state.jobSheets] })),
-  updateJobSheet: (id, data) =>
-    set((state) => ({
-      jobSheets: state.jobSheets.map((j) => (j.id === id ? { ...j, ...data } : j)),
-    })),
-  setSelectedJobSheet: (selectedJobSheet) => set({ selectedJobSheet }),
-  setLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  setStatusFilter: (statusFilter) => set({ statusFilter }),
-  reset: () =>
-    set({ jobSheets: [], selectedJobSheet: null, isLoading: false, error: null }),
-}));
+      setJobSheets: (jobSheets) => set({ jobSheets }),
+      addJobSheet: (jobSheet) =>
+        set((state) => ({ jobSheets: [jobSheet, ...state.jobSheets] })),
+      updateJobSheet: (id, data) =>
+        set((state) => ({
+          jobSheets: state.jobSheets.map((j) => (j.id === id ? { ...j, ...data } : j)),
+        })),
+      setSelectedJobSheet: (selectedJobSheet) => set({ selectedJobSheet }),
+      setLoading: (isLoading) => set({ isLoading }),
+      setError: (error) => set({ error }),
+      setStatusFilter: (statusFilter) => set({ statusFilter }),
+      reset: () =>
+        set({ jobSheets: [], selectedJobSheet: null, isLoading: false, error: null }),
+    }),
+    {
+      name: 'cool-car-jobsheet-store',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 

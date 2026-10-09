@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useAuthStore } from '../../src/store/authStore';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -28,7 +29,13 @@ export default function SplashScreen() {
   const scale = useSharedValue(1.04);
 
   const handleNext = () => {
-    router.replace('/(auth)/welcome');
+    const authState = useAuthStore.getState().authState;
+    const user = useAuthStore.getState().user;
+    if (authState === 'authenticated' && user) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/(auth)/welcome');
+    }
   };
 
   useEffect(() => {

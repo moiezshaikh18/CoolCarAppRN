@@ -28,18 +28,25 @@ import {
   Clock,
   Layers,
   Store,
+  Search,
+  ChevronDown,
+  X,
 } from 'lucide-react-native';
+import { Modal } from 'react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useChalanStore } from '../../src/store/chalanStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { useExpenseStore } from '../../src/store/expenseStore';
+import { useVehicleStore } from '../../src/store/vehicleStore';
+import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { BankPaymentSelector } from '../../src/components/common/BankPaymentSelector';
 import { ChalanItem, PurchaseChalan } from '../../src/types/chalan.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { formatCurrency } from '../../src/utils/currency';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
 import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
+import { usePermissions } from '../../src/hooks/usePermissions';
 
 const VENDOR_PRESETS = [
   'National Auto Spares',
@@ -47,13 +54,6 @@ const VENDOR_PRESETS = [
   'Sharma Motor Parts',
   'Bosch Genuine Distributor',
   'Subros Authorized Spares',
-];
-
-const VEHICLE_PRESETS = [
-  { reg: 'MH02AB1234', model: 'Honda City ZX' },
-  { reg: 'DL04CD5678', model: 'Hyundai Creta SX' },
-  { reg: 'MH04EF9012', model: 'Maruti Brezza ZDi' },
-  { reg: 'General Stock', model: 'Workshop Stock' },
 ];
 
 interface FormChalanItem {
@@ -69,10 +69,36 @@ export default function AddPurchaseChalanScreen() {
   const { theme, isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
+  const { canManageChalans } = usePermissions();
+
+  React.useEffect(() => {
+    if (!canManageChalans) {
+      router.back();
+    }
+  }, [canManageChalans]);
 
   const { addChalan } = useChalanStore();
   const { accounts, debitAccount } = useBankAccountStore();
   const { addExpense } = useExpenseStore();
+  const directoryVehicles = useVehicleStore((s) => s.vehicles);
+  const activeJobs = useJobSheetStore((s) => s.jobSheets);
+
+  const availableVehicles = useMemo(() => {
+    const list: Array<{ reg: string; model: string }> = [
+      { reg: 'General Stock', model: 'Workshop Stock' },
+    ];
+    activeJobs.forEach((j) => {
+      if (j.vehicleNumber && !list.some((item) => item.reg === j.vehicleNumber)) {
+        list.push({ reg: j.vehicleNumber, model: j.vehicleModel || 'Car' });
+      }
+    });
+    directoryVehicles.forEach((v) => {
+      if (v.registrationNumber && !list.some((item) => item.reg === v.registrationNumber)) {
+        list.push({ reg: v.registrationNumber, model: v.model || 'Car' });
+      }
+    });
+    return list;
+  }, [directoryVehicles, activeJobs]);
 
   // Basic Info
   const [chalanNumber, setChalanNumber] = useState(() => `CH-${Math.floor(1000 + Math.random() * 9000)}`);
@@ -82,7 +108,7 @@ export default function AddPurchaseChalanScreen() {
 
   const now = new Date();
   const [date, setDate] = useState(now.toISOString().split('T')[0]);
-  const [time] = useState(
+  const [time, setTime] = useState(
     now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
   );
 
@@ -93,8 +119,8 @@ export default function AddPurchaseChalanScreen() {
       partName: '',
       quantity: '1',
       unitPrice: '',
-      assignedVehicleNumber: '',
-      assignedVehicleModel: '',
+      assignedVehicleNumber: 'General Stock',
+      assignedVehicleModel: 'Workshop Stock',
     },
   ]);
 
@@ -107,6 +133,9 @@ export default function AddPurchaseChalanScreen() {
   const [amountPaidCustom, setAmountPaidCustom] = useState<string | null>(null);
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const [vehicleSelectIndex, setVehicleSelectIndex] = useState<number | null>(null);
+  const [vehicleSearchQuery, setVehicleSearchQuery] = useState('');
   const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
     visible: false,
     title: '',
@@ -183,7 +212,7 @@ export default function AddPurchaseChalanScreen() {
     });
   };
 
-  const handleSaveChalan = () => {
+  const handleSaveChalan = async () => {
     if (!chalanNumber.trim()) {
       showAlert('Chalan No Required', 'Please enter a chalan number.', 'warning');
       return;
@@ -193,18 +222,18 @@ export default function AddPurchaseChalanScreen() {
       return;
     }
 
-    // Validate items
-    const invalidItem = items.find((it) => !it.partName.trim() || !(parseFloat(it.unitPrice) > 0));
-    if (invalidItem) {
+    // Filter valid items (ignore empty rows)
+    const validItems = items.filter((it) => it.partName.trim() && parseFloat(it.unitPrice) > 0);
+    if (validItems.length === 0) {
       showAlert(
         'Incomplete Parts',
-        'Please ensure each spare part has a name and a valid purchase price.',
+        'Please enter at least one spare part with a name and a valid purchase price.',
         'warning'
       );
       return;
     }
 
-    const compiledItems: ChalanItem[] = items.map((it) => {
+    const compiledItems: ChalanItem[] = validItems.map((it) => {
       const q = parseFloat(it.quantity) || 1;
       const p = parseFloat(it.unitPrice) || 0;
       return {
@@ -218,6 +247,11 @@ export default function AddPurchaseChalanScreen() {
       };
     });
 
+    const calculatedTotal = compiledItems.reduce((sum, it) => sum + it.totalPrice, 0);
+    const paidAmount = Math.min(calculatedTotal, effectiveAmountPaid);
+    const pendingDue = Math.max(0, calculatedTotal - paidAmount);
+
+    const entId = enterpriseId || 'enterprise-cool-car';
     const newChalan: PurchaseChalan = {
       id: `chalan_${Date.now()}`,
       chalanNumber: chalanNumber.trim(),
@@ -226,12 +260,12 @@ export default function AddPurchaseChalanScreen() {
       date,
       time,
       items: compiledItems,
-      totalAmount: grandTotal,
-      amountPaid: effectiveAmountPaid,
-      pendingAmount: remainingDue,
-      paymentMode: effectiveAmountPaid > 0 ? (paymentMode as any) : 'PENDING',
-      bankAccountId: effectiveAmountPaid > 0 ? selectedAccountId : undefined,
-      bankAccountName: effectiveAmountPaid > 0 ? selectedAccountName : undefined,
+      totalAmount: calculatedTotal,
+      amountPaid: paidAmount,
+      pendingAmount: pendingDue,
+      paymentMode: paidAmount > 0 ? (paymentMode as any) : 'PENDING',
+      bankAccountId: paidAmount > 0 ? selectedAccountId : undefined,
+      bankAccountName: paidAmount > 0 ? selectedAccountName : undefined,
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -239,34 +273,47 @@ export default function AddPurchaseChalanScreen() {
 
     addChalan(newChalan);
 
-    // Auto-debit bank account if payment made
-    if (effectiveAmountPaid > 0) {
-      debitAccount(selectedAccountId, effectiveAmountPaid);
+    const expId = `exp_chalan_${Date.now()}`;
+    const expData = {
+      id: expId,
+      enterpriseId: entId,
+      categoryId: 'cat_parts',
+      categoryName: `Spare Parts Purchase (${chalanNumber.trim()})`,
+      amount: paidAmount,
+      description: `Chalan ${chalanNumber.trim()} from ${vendorName.trim()} (${compiledItems.length} items)`,
+      spentBy: 'Workshop Store',
+      time,
+      paymentMode: paymentMode,
+      paymentAccountId: selectedAccountId,
+      paymentAccountName: selectedAccountName,
+      date,
+      voided: false,
+      createdBy: 'Workshop Store',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-      // Auto-log to expense store
-      addExpense({
-        id: `exp_chalan_${Date.now()}`,
-        enterpriseId: enterpriseId || 'enterprise-cool-car',
-        categoryId: 'cat_parts',
-        categoryName: `Spare Parts Purchase (${chalanNumber.trim()})`,
-        amount: effectiveAmountPaid,
-        description: `Chalan ${chalanNumber.trim()} from ${vendorName.trim()} (${items.length} items)`,
-        spentBy: 'Workshop Store',
-        time,
-        paymentMode: paymentMode,
-        paymentAccountId: selectedAccountId,
-        paymentAccountName: selectedAccountName,
-        date,
-        voided: false,
-        createdBy: 'Workshop Store',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+    // Auto-debit bank account if payment made
+    if (paidAmount > 0) {
+      debitAccount(selectedAccountId, paidAmount);
+      addExpense(expData as any);
+    }
+
+    // Cloud Firestore Sync
+    try {
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../../src/services/firebase/firebase.config');
+      await setDoc(doc(db, 'enterprises', entId, 'chalans', newChalan.id), newChalan);
+      if (paidAmount > 0) {
+        await setDoc(doc(db, 'enterprises', entId, 'expenses', expId), expData);
+      }
+    } catch (cloudErr) {
+      console.log('[SaveChalan] Firestore sync notice:', cloudErr);
     }
 
     showAlert(
       'Chalan Saved Successfully',
-      `Chalan ${newChalan.chalanNumber} for ${items.length} items (Total: ₹${grandTotal.toLocaleString()}) recorded.`,
+      `Chalan ${newChalan.chalanNumber} for ${compiledItems.length} items (Total: ₹${calculatedTotal.toLocaleString()}) recorded.`,
       'success',
       [{ text: 'View Chalans', style: 'default', onPress: () => router.replace('/inventory') }]
     );
@@ -370,24 +417,43 @@ export default function AddPurchaseChalanScreen() {
                 />
               </View>
 
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1.2 }}>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: textMuted, marginBottom: 6 }}>
                   Date & Time
                 </Text>
-                <TouchableOpacity
-                  onPress={() => setIsCalendarOpen(true)}
-                  style={{
-                    backgroundColor: inputBg,
-                    borderRadius: 14,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary }}>
-                    📅 {date} • {time}
-                  </Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <TouchableOpacity
+                    onPress={() => setIsCalendarOpen(true)}
+                    style={{
+                      flex: 1.2,
+                      backgroundColor: inputBg,
+                      borderRadius: 14,
+                      paddingHorizontal: 10,
+                      paddingVertical: 12,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: textPrimary }} numberOfLines={1}>
+                      📅 {date}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setIsTimePickerOpen(true)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: inputBg,
+                      borderRadius: 14,
+                      paddingHorizontal: 8,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: textPrimary }} numberOfLines={1}>
+                      ⏰ {time}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -631,9 +697,42 @@ export default function AddPurchaseChalanScreen() {
                       </Text>
                     </View>
 
-                    {/* Quick Car Chips */}
+                    {/* Vehicle Directory Selector Button */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setVehicleSelectIndex(index);
+                        setVehicleSearchQuery('');
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: inputBg,
+                        borderRadius: 12,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        borderWidth: 1,
+                        borderColor: cardBorder,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                        <Car size={16} color={isDark ? '#60A5FA' : '#153580'} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: textPrimary }} numberOfLines={1}>
+                          {item.assignedVehicleNumber || 'Select from Garage Directory'}
+                        </Text>
+                        {item.assignedVehicleModel && item.assignedVehicleModel !== item.assignedVehicleNumber && (
+                          <Text style={{ fontSize: 12, color: textMuted }} numberOfLines={1}>
+                            ({item.assignedVehicleModel})
+                          </Text>
+                        )}
+                      </View>
+                      <ChevronDown size={16} color={textMuted} />
+                    </TouchableOpacity>
+
+                    {/* Quick Car Chips from Directory */}
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 6 }}>
-                      {VEHICLE_PRESETS.map((vp) => {
+                      {availableVehicles.slice(0, 6).map((vp) => {
                         const isSelected = item.assignedVehicleNumber === vp.reg;
                         return (
                           <TouchableOpacity
@@ -653,14 +752,14 @@ export default function AddPurchaseChalanScreen() {
                                 color: isSelected ? (isDark ? '#0C1829' : '#FFFFFF') : textPrimary,
                               }}
                             >
-                              {vp.reg} {vp.reg !== 'General Stock' ? `(${vp.model.split(' ')[0]})` : ''}
+                              {vp.reg} {vp.reg !== 'General Stock' && vp.model ? `(${vp.model.split(' ')[0]})` : ''}
                             </Text>
                           </TouchableOpacity>
                         );
                       })}
                     </ScrollView>
 
-                    {/* Custom Car Input */}
+                    {/* Custom Car Input Fallback */}
                     <TextInput
                       value={item.assignedVehicleNumber}
                       onChangeText={(val) => updateItem(index, 'assignedVehicleNumber', val)}
@@ -844,6 +943,218 @@ export default function AddPurchaseChalanScreen() {
         onClose={() => setIsCalendarOpen(false)}
         title="Select Chalan Date"
       />
+
+      {/* TIME PICKER MODAL */}
+      <Modal
+        visible={isTimePickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsTimePickerOpen(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setIsTimePickerOpen(false)}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 20,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 380,
+              backgroundColor: isDark ? '#141926' : '#FFFFFF',
+              borderRadius: 24,
+              padding: 22,
+              shadowColor: '#000',
+              shadowOpacity: 0.3,
+              shadowRadius: 15,
+              elevation: 8,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Clock size={20} color={isDark ? '#60A5FA' : '#153580'} />
+                <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
+                  Select Inward Time
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsTimePickerOpen(false)} hitSlop={10}>
+                <X size={20} color={textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                const cur = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                setTime(cur);
+                setIsTimePickerOpen(false);
+              }}
+              style={{
+                backgroundColor: isDark ? '#1C2538' : '#EFF6FF',
+                paddingVertical: 12,
+                borderRadius: 14,
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
+              <Text style={{ color: isDark ? '#60A5FA' : '#153580', fontSize: 13, fontWeight: '800' }}>
+                ⚡ Set to Current Time
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, textTransform: 'uppercase', marginBottom: 10 }}>
+              Quick Time Slots:
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {['09:00 AM', '10:30 AM', '11:45 AM', '01:30 PM', '03:15 PM', '05:00 PM', '06:30 PM', '08:00 PM'].map((slot) => (
+                <TouchableOpacity
+                  key={slot}
+                  onPress={() => {
+                    setTime(slot);
+                    setIsTimePickerOpen(false);
+                  }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 12,
+                    backgroundColor: time === slot ? (isDark ? '#FFFFFF' : '#153580') : isDark ? '#1C2538' : '#F1F5F9',
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: time === slot ? (isDark ? '#0C1829' : '#FFFFFF') : textPrimary }}>
+                    {slot}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setIsTimePickerOpen(false)}
+              style={{
+                backgroundColor: '#0C1829',
+                borderRadius: 14,
+                paddingVertical: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* VEHICLE DIRECTORY SELECTION MODAL */}
+      <Modal
+        visible={vehicleSelectIndex !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVehicleSelectIndex(null)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setVehicleSelectIndex(null)}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 20,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 400,
+              maxHeight: '80%',
+              backgroundColor: isDark ? '#141926' : '#FFFFFF',
+              borderRadius: 24,
+              padding: 22,
+              shadowColor: '#000',
+              shadowOpacity: 0.3,
+              shadowRadius: 15,
+              elevation: 8,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Car size={20} color={isDark ? '#60A5FA' : '#153580'} />
+                <Text style={{ fontSize: 18, fontWeight: '800', color: textPrimary }}>
+                  Select Vehicle / Tag
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setVehicleSelectIndex(null)} hitSlop={10}>
+                <X size={20} color={textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: inputBg,
+                borderRadius: 14,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                gap: 8,
+                marginBottom: 14,
+              }}
+            >
+              <Search size={16} color={textMuted} />
+              <TextInput
+                value={vehicleSearchQuery}
+                onChangeText={setVehicleSearchQuery}
+                placeholder="Search by car reg or model..."
+                placeholderTextColor="#94A3B8"
+                style={{ flex: 1, color: textPrimary, fontSize: 14, fontWeight: '600' }}
+              />
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {availableVehicles
+                .filter((v) => {
+                  if (!vehicleSearchQuery.trim()) return true;
+                  const q = vehicleSearchQuery.toLowerCase();
+                  return v.reg.toLowerCase().includes(q) || v.model.toLowerCase().includes(q);
+                })
+                .map((v) => (
+                  <TouchableOpacity
+                    key={v.reg}
+                    onPress={() => {
+                      if (vehicleSelectIndex !== null) {
+                        setItemVehicle(vehicleSelectIndex, v.reg, v.model);
+                      }
+                      setVehicleSelectIndex(null);
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: isDark ? '#1C2538' : '#F8FAFD',
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                    }}
+                  >
+                    <View>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: textPrimary }}>
+                        {v.reg}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: textMuted, marginTop: 2 }}>
+                        {v.model}
+                      </Text>
+                    </View>
+                    <Check size={16} color={isDark ? '#60A5FA' : '#153580'} />
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* THEMED CUSTOM ALERT MODAL */}
       <ThemedAlert {...alertConfig} />

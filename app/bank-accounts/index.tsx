@@ -29,14 +29,48 @@ import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { usePaymentStore } from '../../src/store/paymentStore';
+import { usePermissions } from '../../src/hooks/usePermissions';
 import { formatCurrency } from '../../src/utils/currency';
 
 export default function BankAccountsScreen() {
   const { isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const accounts = useBankAccountStore((s) => s.accounts);
-  const { payments } = usePaymentStore();
+  const rawAccounts = useBankAccountStore((s) => s.accounts);
+  const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
+  const setAccounts = useBankAccountStore((s) => s.setAccounts);
+  const rawPayments = usePaymentStore((s) => s.payments);
+  const payments = Array.isArray(rawPayments) ? rawPayments : [];
+  const { canViewBankBalances } = usePermissions();
+
+  // Route permission check
+  useEffect(() => {
+    if (!canViewBankBalances) {
+      router.back();
+    }
+  }, [canViewBankBalances]);
+
+  // Firestore real-time sync
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    (async () => {
+      try {
+        const entId = enterpriseId || 'enterprise-cool-car';
+        const { collection, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+        const ref = collection(db, 'enterprises', entId, 'bankAccounts');
+        unsub = onSnapshot(ref, (snap) => {
+          if (!snap.empty) {
+            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+            setAccounts(list);
+          }
+        }, (err) => console.log('[BankAccounts] listener error:', err));
+      } catch (e) {
+        console.log('[BankAccounts] sync notice:', e);
+      }
+    })();
+    return () => unsub?.();
+  }, [enterpriseId, setAccounts]);
 
   // Calculate Month Totals: Cash, UPI, Swipe per account
   const monthStats = useMemo(() => {
@@ -46,24 +80,27 @@ export default function BankAccountsScreen() {
 
     const accountBreakdown: Record<string, { upi: number; swipe: number; total: number }> = {};
     accounts.forEach((a) => {
-      accountBreakdown[a.id] = { upi: 0, swipe: 0, total: 0 };
+      if (a && a.id) {
+        accountBreakdown[a.id] = { upi: 0, swipe: 0, total: 0 };
+      }
     });
 
     payments.forEach((p) => {
-      if (p.voided) return;
+      if (!p || p.voided) return;
+      const amt = Number(p.amount) || 0;
       if (p.paymentMode === 'CASH') {
-        cash += p.amount;
+        cash += amt;
       } else if (p.paymentMode === 'UPI') {
-        upi += p.amount;
+        upi += amt;
         if (p.paymentAccountId && accountBreakdown[p.paymentAccountId]) {
-          accountBreakdown[p.paymentAccountId].upi += p.amount;
-          accountBreakdown[p.paymentAccountId].total += p.amount;
+          accountBreakdown[p.paymentAccountId].upi += amt;
+          accountBreakdown[p.paymentAccountId].total += amt;
         }
       } else if (p.paymentMode === 'CARD_SWIPE') {
-        swipe += p.amount;
+        swipe += amt;
         if (p.paymentAccountId && accountBreakdown[p.paymentAccountId]) {
-          accountBreakdown[p.paymentAccountId].swipe += p.amount;
-          accountBreakdown[p.paymentAccountId].total += p.amount;
+          accountBreakdown[p.paymentAccountId].swipe += amt;
+          accountBreakdown[p.paymentAccountId].total += amt;
         }
       }
     });
@@ -206,7 +243,8 @@ export default function BankAccountsScreen() {
           {/* Account Cards */}
           <View style={{ gap: 12 }}>
             {accounts.map((acc) => {
-              const breakdown = monthStats.accountBreakdown[acc.id] || { upi: 0, swipe: 0, total: 0 };
+              if (!acc) return null;
+              const breakdown = monthStats?.accountBreakdown?.[acc.id] || { upi: 0, swipe: 0, total: 0 };
               const isCash = acc.accountType === 'CASH_IN_HAND';
 
               return (
@@ -244,10 +282,10 @@ export default function BankAccountsScreen() {
                       </View>
                       <View>
                         <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0F172A' }}>
-                          {acc.bankName}
+                          {acc.bankName || 'Bank'}
                         </Text>
                         <Text style={{ fontSize: 12, color: isDark ? '#94A3B8' : '#64748B', fontWeight: '600', marginTop: 1 }}>
-                          {acc.accountName} {acc.accountNumber ? `• ${acc.accountNumber.slice(-4)}` : ''}
+                          {acc.accountName} {acc.accountNumber ? `• ${String(acc.accountNumber).slice(-4)}` : ''}
                         </Text>
                       </View>
                     </View>

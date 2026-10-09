@@ -268,11 +268,28 @@ export default function JobSheetDetailsScreen() {
   }, [params.openPayment]);
 
   // Mark Work as Completed directly without payment (e.g. car ready for delivery)
-  const handleMarkWorkDone = () => {
+  const handleMarkWorkDone = async () => {
     if (!job) return;
+    const nowIso = new Date().toISOString();
     updateJobSheet(job.id, {
       status: 'COMPLETED',
+      updatedAt: nowIso,
     });
+    setDbJob((prev) => (prev ? { ...prev, status: 'COMPLETED', updatedAt: nowIso } : null));
+
+    try {
+      const entId = enterpriseId || 'enterprise-cool-car';
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../../src/services/firebase/firebase.config');
+      await setDoc(
+        doc(db, 'enterprises', entId, 'jobSheets', job.id),
+        { status: 'COMPLETED', updatedAt: nowIso },
+        { merge: true }
+      );
+    } catch (e) {
+      console.log('[JobDetail] Firebase status update error:', e);
+    }
+
     Alert.alert(
       'Work Completed ✓',
       `Job #${job.jobNumber} marked as COMPLETED.\n${job.pendingAmount > 0 ? `Remaining customer balance (₹${job.pendingAmount}) can be collected anytime.` : 'All dues are settled.'}`

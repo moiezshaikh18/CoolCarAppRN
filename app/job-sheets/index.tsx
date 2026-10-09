@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  ScrollView,
   Linking,
   StatusBar,
   StyleSheet,
@@ -28,10 +29,12 @@ import {
   ChevronRight,
   Calendar,
   Printer,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
+import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
 import { formatCurrency } from '../../src/utils/currency';
 import { JobSheet, JobStatus } from '../../src/types/jobSheet.types';
 import { printJobCard } from '../../src/utils/jobCardPdf';
@@ -42,18 +45,22 @@ const STATUS_TABS: { label: string; value: JobStatus | 'ALL' }[] = [
   { label: 'Completed', value: 'COMPLETED' },
 ];
 
+type DateFilterMode = 'ALL' | 'TODAY' | 'YESTERDAY' | 'THIS_WEEK' | 'CUSTOM';
+
 export default function JobSheetsScreen() {
   const { isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { jobSheets, setJobSheets } = useJobSheetStore();
+  const { jobSheets, setJobSheets, updateJobSheet } = useJobSheetStore();
 
   const [activeTab, setActiveTab] = useState<JobStatus | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Daily Date Navigation (< 15 May 2025 >) matching Screen 9
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('ALL');
   const [isDailyFilterActive, setIsDailyFilterActive] = useState<boolean>(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const formattedDateStr = useMemo(() => {
     return selectedDate.toLocaleDateString('en-GB', {
@@ -66,15 +73,44 @@ export default function JobSheetsScreen() {
   const handlePrevDay = () => {
     setSelectedDate((prev) => new Date(prev.getTime() - 86400000));
     setIsDailyFilterActive(true);
+    setDateFilterMode('CUSTOM');
   };
 
   const handleNextDay = () => {
     setSelectedDate((prev) => new Date(prev.getTime() + 86400000));
     setIsDailyFilterActive(true);
+    setDateFilterMode('CUSTOM');
   };
 
   const handleToggleDailyFilter = () => {
     setIsDailyFilterActive(!isDailyFilterActive);
+    if (!isDailyFilterActive) {
+      setDateFilterMode('CUSTOM');
+    } else {
+      setDateFilterMode('ALL');
+    }
+  };
+
+  const handleQuickMarkDone = async (job: JobSheet, e: any) => {
+    e?.stopPropagation?.();
+    const nowIso = new Date().toISOString();
+    updateJobSheet(job.id, {
+      status: 'COMPLETED',
+      updatedAt: nowIso,
+    });
+
+    try {
+      const entId = enterpriseId || 'enterprise-cool-car';
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../../src/services/firebase/firebase.config');
+      await setDoc(
+        doc(db, 'enterprises', entId, 'jobSheets', job.id),
+        { status: 'COMPLETED', updatedAt: nowIso },
+        { merge: true }
+      );
+    } catch (err) {
+      console.log('[JobSheets] Status update notice:', err);
+    }
   };
 
   // Firestore real-time listener
@@ -113,11 +149,25 @@ export default function JobSheetsScreen() {
     };
   }, [enterpriseId, setJobSheets]);
 
+  const [todayTimestamp] = useState(() => Date.now());
+
   // Filtered jobs
   const filteredJobs = useMemo(() => {
+    const todayStr = new Date(todayTimestamp).toISOString().slice(0, 10);
+    const yesterdayDate = new Date(todayTimestamp - 86400000);
+    const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
+    const sevenDaysAgoStr = new Date(todayTimestamp - 7 * 86400000).toISOString().slice(0, 10);
+
     return jobSheets.filter((job) => {
-      if (isDailyFilterActive) {
-        const jobDateStr = typeof job.date === 'string' ? job.date.slice(0, 10) : '';
+      const jobDateStr = typeof job.date === 'string' ? job.date.slice(0, 10) : '';
+
+      if (dateFilterMode === 'TODAY') {
+        if (jobDateStr !== todayStr) return false;
+      } else if (dateFilterMode === 'YESTERDAY') {
+        if (jobDateStr !== yesterdayStr) return false;
+      } else if (dateFilterMode === 'THIS_WEEK') {
+        if (jobDateStr < sevenDaysAgoStr) return false;
+      } else if (dateFilterMode === 'CUSTOM' || isDailyFilterActive) {
         const curDateStr = selectedDate.toISOString().slice(0, 10);
         if (jobDateStr && jobDateStr !== curDateStr) return false;
       }
@@ -132,7 +182,7 @@ export default function JobSheetsScreen() {
       const custMatch = job.customerName?.toLowerCase().includes(q) || job.customerPhone?.includes(q);
       return Boolean(numMatch || vehMatch || custMatch);
     });
-  }, [jobSheets, activeTab, searchQuery, isDailyFilterActive, selectedDate]);
+  }, [jobSheets, activeTab, searchQuery, isDailyFilterActive, selectedDate, dateFilterMode, todayTimestamp]);
 
   const handlePrintItem = async (item: JobSheet, e: any) => {
     e?.stopPropagation?.();
@@ -258,13 +308,34 @@ export default function JobSheetsScreen() {
               </Text>
             </View>
 
-            <TouchableOpacity
-              onPress={(e) => handlePrintItem(item, e)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={styles.cardPrintButton}
-            >
-              <Printer size={15} color="#64748B" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {item.status !== 'COMPLETED' && (
+                <TouchableOpacity
+                  onPress={(e) => handleQuickMarkDone(item, e)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 3,
+                    backgroundColor: '#10B981',
+                    paddingHorizontal: 8,
+                    paddingVertical: 5,
+                    borderRadius: 10,
+                  }}
+                >
+                  <CheckCircle2 size={12} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>Done</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                onPress={(e) => handlePrintItem(item, e)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.cardPrintButton}
+              >
+                <Printer size={15} color="#64748B" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -294,6 +365,52 @@ export default function JobSheetsScreen() {
           <View style={{ width: 40 }} />
         </View>
 
+        {/* Quick Date Filter Chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 4, marginBottom: 10 }}
+        >
+          {[
+            { id: 'ALL', label: 'All Jobs' },
+            { id: 'TODAY', label: "Today's Jobs" },
+            { id: 'YESTERDAY', label: 'Yesterday' },
+            { id: 'THIS_WEEK', label: 'This Week' },
+            { id: 'CUSTOM', label: isDailyFilterActive ? `📅 ${formattedDateStr}` : 'Pick Date 📅' },
+          ].map((chip) => {
+            const isSelected = dateFilterMode === chip.id;
+            return (
+              <TouchableOpacity
+                key={chip.id}
+                onPress={() => {
+                  if (chip.id === 'CUSTOM') {
+                    setIsCalendarOpen(true);
+                  } else {
+                    setDateFilterMode(chip.id as DateFilterMode);
+                    setIsDailyFilterActive(false);
+                  }
+                }}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 14,
+                  backgroundColor: isSelected ? (isDark ? '#FFFFFF' : '#153580') : (isDark ? '#141926' : '#F1F5F9'),
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '800',
+                    color: isSelected ? (isDark ? '#0C1829' : '#FFFFFF') : (isDark ? '#94A3B8' : '#64748B'),
+                  }}
+                >
+                  {chip.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
         <View style={styles.dateNavigatorContainer}>
           <TouchableOpacity
             onPress={handlePrevDay}
@@ -303,7 +420,7 @@ export default function JobSheetsScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={handleToggleDailyFilter}
+            onPress={() => setIsCalendarOpen(true)}
             style={[
               styles.dateCenterBadge,
               { backgroundColor: isDailyFilterActive ? (isDark ? '#1E293B' : '#EFF6FF') : (isDark ? '#141926' : '#F8FAFC') },
@@ -372,6 +489,20 @@ export default function JobSheetsScreen() {
           })}
         </View>
       </View>
+
+      <CalendarPickerModal
+        visible={isCalendarOpen}
+        selectedDate={selectedDate.toISOString().slice(0, 10)}
+        onSelectDate={(d) => {
+          const parts = d.split('-');
+          const parsed = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          setSelectedDate(parsed);
+          setDateFilterMode('CUSTOM');
+          setIsDailyFilterActive(true);
+          setIsCalendarOpen(false);
+        }}
+        onClose={() => setIsCalendarOpen(false)}
+      />
 
       <FlatList
         data={filteredJobs}

@@ -14,12 +14,13 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, TrendingUp, Calendar, Download } from 'lucide-react-native';
+import { ArrowLeft, TrendingUp, TrendingDown, Calendar, Download } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
-import { formatCurrency } from '../../src/utils/currency';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { useExpenseStore } from '../../src/store/expenseStore';
+import { usePermissions } from '../../src/hooks/usePermissions';
+import { formatCurrency } from '../../src/utils/currency';
 
 const PERIODS = ['This Month', 'Last Month', 'This Quarter', 'FY 24-25'];
 
@@ -27,6 +28,14 @@ export default function ProfitLossScreen() {
   const { theme, isDark } = useTheme();
   const { currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
+  const { canViewReports } = usePermissions();
+
+  React.useEffect(() => {
+    if (!canViewReports) {
+      router.back();
+    }
+  }, [canViewReports]);
+
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
 
   const { jobSheets } = useJobSheetStore();
@@ -156,26 +165,35 @@ export default function ProfitLossScreen() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                Net Workshop Profit
+                {netProfit >= 0 ? 'Net Workshop Profit' : 'Net Workshop Loss'}
               </Text>
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 4,
-                  backgroundColor: 'rgba(0,200,150,0.2)',
+                  backgroundColor: netProfit >= 0 ? 'rgba(0,200,150,0.2)' : 'rgba(239,68,68,0.2)',
                   paddingHorizontal: 10,
                   paddingVertical: 4,
                   borderRadius: 12,
                 }}
               >
-                <TrendingUp size={13} color="#00C896" />
-                <Text style={{ color: '#00C896', fontSize: 11, fontWeight: '800' }}>{profitMargin}% Margin</Text>
+                {netProfit >= 0 ? (
+                  <>
+                    <TrendingUp size={13} color="#00C896" />
+                    <Text style={{ color: '#00C896', fontSize: 11, fontWeight: '800' }}>{profitMargin}% Margin</Text>
+                  </>
+                ) : (
+                  <>
+                    <TrendingDown size={13} color="#EF4444" />
+                    <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '800' }}>Loss</Text>
+                  </>
+                )}
               </View>
             </View>
 
-            <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -1, marginTop: 8 }}>
-              {formatCurrency(netProfit, currencySymbol)}
+            <Text style={{ color: netProfit >= 0 ? '#FFFFFF' : '#EF4444', fontSize: 36, fontWeight: '900', letterSpacing: -1, marginTop: 8 }}>
+              {netProfit >= 0 ? formatCurrency(netProfit, currencySymbol) : `-${formatCurrency(Math.abs(netProfit), currencySymbol)}`}
             </Text>
 
             {/* Income vs Expense Horizontal Proportional Bar */}

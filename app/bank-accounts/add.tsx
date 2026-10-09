@@ -27,6 +27,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
+import { usePermissions } from '../../src/hooks/usePermissions';
 import { AccountType, BankAccount } from '../../src/types/bankAccount.types';
 
 const ACCOUNT_TYPES: { label: string; value: AccountType; icon: any }[] = [
@@ -42,6 +43,13 @@ export default function AddBankAccountScreen() {
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { addAccount } = useBankAccountStore();
+  const { canViewBankBalances } = usePermissions();
+
+  React.useEffect(() => {
+    if (!canViewBankBalances) {
+      router.back();
+    }
+  }, [canViewBankBalances]);
 
   const [accountType, setAccountType] = useState<AccountType>('CURRENT');
   const [accountName, setAccountName] = useState('');
@@ -305,6 +313,30 @@ export default function AddBankAccountScreen() {
             </>
           )}
 
+          {/* Opening Balance */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
+              Opening Ledger Balance (₹) (Optional)
+            </Text>
+            <TextInput
+              value={openingBalance}
+              onChangeText={setOpeningBalance}
+              placeholder="0"
+              placeholderTextColor="#94A3B8"
+              keyboardType="numeric"
+              style={{
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                borderRadius: 22,
+                backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                borderWidth: 1,
+                borderColor: cardBorder,
+                color: isDark ? '#FFFFFF' : '#0C1829',
+                fontSize: 16,
+                fontWeight: '800',
+              }}
+            />
+          </View>
 
           {/* Solid Midnight Navy CTA Button */}
           <TouchableOpacity

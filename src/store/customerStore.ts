@@ -3,6 +3,8 @@
 // ============================================================
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Customer, CustomerFilter } from '../types/customer.types';
 
 interface CustomerStore {
@@ -26,38 +28,46 @@ interface CustomerStore {
   reset: () => void;
 }
 
-export const useCustomerStore = create<CustomerStore>((set) => ({
-  customers: [],
-  selectedCustomer: null,
-  isLoading: false,
-  error: null,
-  filter: { isActive: true, sortBy: 'name', sortOrder: 'asc' },
-  searchQuery: '',
-  lastFetched: null,
-
-  setCustomers: (customers) => set({ customers, lastFetched: Date.now() }),
-  addCustomer: (customer) =>
-    set((state) => ({ customers: [customer, ...state.customers] })),
-  updateCustomer: (id, data) =>
-    set((state) => ({
-      customers: state.customers.map((c) => (c.id === id ? { ...c, ...data } : c)),
-    })),
-  removeCustomer: (id) =>
-    set((state) => ({ customers: state.customers.filter((c) => c.id !== id) })),
-  setSelectedCustomer: (selectedCustomer) => set({ selectedCustomer }),
-  setLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  setFilter: (filter) =>
-    set((state) => ({ filter: { ...state.filter, ...filter } })),
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
-  reset: () =>
-    set({
+export const useCustomerStore = create<CustomerStore>()(
+  persist(
+    (set) => ({
       customers: [],
       selectedCustomer: null,
       isLoading: false,
       error: null,
+      filter: { isActive: true, sortBy: 'name', sortOrder: 'asc' },
       searchQuery: '',
       lastFetched: null,
+
+      setCustomers: (customers) => set({ customers, lastFetched: Date.now() }),
+      addCustomer: (customer) =>
+        set((state) => ({ customers: [customer, ...state.customers] })),
+      updateCustomer: (id, data) =>
+        set((state) => ({
+          customers: state.customers.map((c) => (c.id === id ? { ...c, ...data } : c)),
+        })),
+      removeCustomer: (id) =>
+        set((state) => ({ customers: state.customers.filter((c) => c.id !== id) })),
+      setSelectedCustomer: (selectedCustomer) => set({ selectedCustomer }),
+      setLoading: (isLoading) => set({ isLoading }),
+      setError: (error) => set({ error }),
+      setFilter: (filter) =>
+        set((state) => ({ filter: { ...state.filter, ...filter } })),
+      setSearchQuery: (searchQuery) => set({ searchQuery }),
+      reset: () =>
+        set({
+          customers: [],
+          selectedCustomer: null,
+          isLoading: false,
+          error: null,
+          searchQuery: '',
+          lastFetched: null,
+        }),
     }),
-}));
+    {
+      name: 'cool-car-customer-store',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 

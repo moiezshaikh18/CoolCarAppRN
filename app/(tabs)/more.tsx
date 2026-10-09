@@ -32,6 +32,7 @@ import { useHideOnScroll } from '../../src/store/tabBarStore';
 
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
+import { usePermissions } from '../../src/hooks/usePermissions';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { router } from 'expo-router';
 import { getInitials, formatRoleLabel } from '../../src/utils/formatters';
@@ -71,6 +72,29 @@ export default function MoreScreen() {
   const { onScroll: onHideNavScroll } = useHideOnScroll();
   const { user, reset: resetAuth, setAuthState } = useAuthStore();
   const { activeMember, reset: resetEnterprise } = useEnterpriseStore();
+  const {
+    isOwner,
+    isAdmin,
+    canCreateJobSheets,
+    canRecordExpenses,
+    canManageChalans,
+    canViewBankBalances,
+    canViewReports,
+  } = usePermissions();
+
+  const isItemAllowed = (route: string) => {
+    if (route === '/staff' || route === '/settings/backup') return isOwner || isAdmin;
+    if (route === '/inventory') return canManageChalans;
+    if (route === '/bank-accounts') return canViewBankBalances;
+    if (route === '/settings/export') return canViewReports;
+    if (route === '/entries' || route === '/expenses/categories') return canRecordExpenses || isOwner;
+    return true;
+  };
+
+  const filteredSections = MENU_SECTIONS.map((sec) => ({
+    ...sec,
+    items: sec.items.filter((it) => isItemAllowed(it.route)),
+  })).filter((sec) => sec.items.length > 0);
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to log out of your garage account?', [
@@ -177,7 +201,7 @@ export default function MoreScreen() {
 
         {/* Unified Lower Content (Seamless with zero cut-off lines) */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-          {MENU_SECTIONS.map((section, sIdx) => (
+          {filteredSections.map((section, sIdx) => (
             <View key={section.title} style={{ marginBottom: 24 }}>
               <Text
                 style={{

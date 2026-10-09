@@ -31,6 +31,7 @@ import { PaymentMode } from '../../src/types/payment.types';
 import { useExpenseStore } from '../../src/store/expenseStore';
 import { useEmployeeStore } from '../../src/store/employeeStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
+import { usePermissions } from '../../src/hooks/usePermissions';
 import { formatCurrency } from '../../src/utils/currency';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
 import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
@@ -53,6 +54,13 @@ export default function AddExpenseScreen() {
   const { theme, isDark } = useTheme();
   const { currencySymbol, enterpriseId } = useEnterprise();
   const insets = useSafeAreaInsets();
+  const { canRecordExpenses } = usePermissions();
+
+  React.useEffect(() => {
+    if (!canRecordExpenses) {
+      router.back();
+    }
+  }, [canRecordExpenses]);
 
   const { addExpense } = useExpenseStore();
   const rawEmployees = useEmployeeStore((s) => s.employees);

@@ -23,7 +23,29 @@ export default function RootLayout() {
     const timer = setTimeout(() => {
       SplashScreen.hideAsync();
     }, 300);
-    return () => clearTimeout(timer);
+
+    // Sync Firebase Auth State
+    let unsubAuth: (() => void) | undefined;
+    (async () => {
+      try {
+        const { onAuthStateChanged } = await import('firebase/auth');
+        const { auth } = await import('../src/services/firebase/firebase.config');
+        const { useAuthStore } = await import('../src/store/authStore');
+
+        unsubAuth = onAuthStateChanged(auth, (fbUser) => {
+          if (fbUser) {
+            useAuthStore.getState().setFirebaseUid(fbUser.uid);
+          }
+        });
+      } catch (e) {
+        console.log('[Layout] Auth sync notice:', e);
+      }
+    })();
+
+    return () => {
+      clearTimeout(timer);
+      unsubAuth?.();
+    };
   }, []);
 
   return (

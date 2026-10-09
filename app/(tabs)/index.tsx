@@ -16,6 +16,7 @@ import {
   RefreshControl,
   Dimensions,
   StatusBar,
+  Alert,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -48,15 +49,22 @@ import { formatCurrency } from '../../src/utils/currency';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 import { router } from 'expo-router';
 import { useHideOnScroll } from '../../src/store/tabBarStore';
-
-
-
+import { usePermissions } from '../../src/hooks/usePermissions';
 
 export default function DashboardScreen() {
   const { isDark, toggleMode } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { onScroll: onHideNavScroll } = useHideOnScroll();
+  const {
+    isOwner,
+    isAdmin,
+    canCreateJobSheets,
+    canRecordExpenses,
+    canManageChalans,
+    canViewReports,
+    checkOrAlert,
+  } = usePermissions();
 
   // Stores
   const { employees, setEmployees } = useEmployeeStore();
@@ -335,10 +343,12 @@ export default function DashboardScreen() {
 
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
-                    {"Month Net Profit"}
+                    {canViewReports ? (monthNetProfit >= 0 ? "Month Net Profit" : "Month Net Loss") : "Cars Serviced"}
                   </Text>
-                  <Text style={{ color: '#00C896', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
-                    +{formatCurrency(monthNetProfit, currencySymbol)}
+                  <Text style={{ color: canViewReports ? (monthNetProfit >= 0 ? '#00C896' : '#EF4444') : '#60A5FA', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
+                    {canViewReports
+                      ? (monthNetProfit >= 0 ? `+${formatCurrency(monthNetProfit, currencySymbol)}` : `-${formatCurrency(Math.abs(monthNetProfit), currencySymbol)}`)
+                      : `${monthCarsServiced} Cars`}
                   </Text>
                 </View>
               </View>
@@ -354,7 +364,11 @@ export default function DashboardScreen() {
                 }}
               >
                 <TouchableOpacity
-                  onPress={() => router.push('/job-sheets/create')}
+                  onPress={() => {
+                    if (checkOrAlert('canCreateJobSheets', 'create job sheets')) {
+                      router.push('/job-sheets/create');
+                    }
+                  }}
                   activeOpacity={0.8}
                   style={{ alignItems: 'center', gap: 4 }}
                 >
@@ -376,7 +390,11 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => router.push('/expenses/add')}
+                  onPress={() => {
+                    if (checkOrAlert('canRecordExpenses', 'record workshop expenses')) {
+                      router.push('/expenses/add');
+                    }
+                  }}
                   activeOpacity={0.8}
                   style={{ alignItems: 'center', gap: 4 }}
                 >
@@ -398,7 +416,11 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => router.push('/inventory/chalan-add')}
+                  onPress={() => {
+                    if (checkOrAlert('canManageChalans', 'record purchase chalans')) {
+                      router.push('/inventory/chalan-add');
+                    }
+                  }}
                   activeOpacity={0.8}
                   style={{ alignItems: 'center', gap: 4 }}
                 >
@@ -420,7 +442,13 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => router.push('/staff/pay' as any)}
+                  onPress={() => {
+                    if (isOwner || isAdmin) {
+                      router.push('/staff/pay' as any);
+                    } else {
+                      Alert.alert('Restricted 🔒', 'Staff salary management is restricted to workshop owners.');
+                    }
+                  }}
                   activeOpacity={0.8}
                   style={{ alignItems: 'center', gap: 4 }}
                 >

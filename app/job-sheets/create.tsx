@@ -57,6 +57,7 @@ import { WorkCategory } from '../../src/types/jobSheet.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
 import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
+import { TimePickerModal } from '../../src/components/common/TimePickerModal';
 import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 import { YEARS_LIST } from '../../src/utils/carDatabase';
 import { STANDARD_18_ROUTINE_ITEMS } from '../../src/constants/routineCheckup';
@@ -130,12 +131,43 @@ export default function CreateJobSheetScreen() {
     new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   );
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
   // Car Details
   const [carNumber, setCarNumber] = useState('');
   const [carModel, setCarModel] = useState('');
   const [modelYear, setModelYear] = useState('2022');
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
+  const [showVehicleSuggestions, setShowVehicleSuggestions] = useState(false);
+
+  // Directory Store Access
+  const directoryVehicles = useVehicleStore((s) => s.vehicles);
+  const directoryCustomers = useCustomerStore((s) => s.customers);
+
+  // Filter Matching Vehicles for Autocomplete
+  const matchedVehicles = useMemo(() => {
+    const q = carNumber.trim().toUpperCase().replace(/\s+/g, '');
+    if (q.length < 2) return [];
+    return directoryVehicles.filter((v) =>
+      v.registrationNumber && v.registrationNumber.toUpperCase().replace(/\s+/g, '').includes(q)
+    ).slice(0, 4);
+  }, [carNumber, directoryVehicles]);
+
+  const handleSelectSuggestedVehicle = (v: typeof directoryVehicles[0]) => {
+    setCarNumber(v.registrationNumber);
+    if (v.model) setCarModel(v.model);
+    if (v.modelYear) setModelYear(String(v.modelYear));
+    if (v.customerName) setCustomerName(v.customerName);
+    if (v.customerPhone) setCustomerPhone(v.customerPhone);
+
+    const cust = directoryCustomers.find(
+      (c) => c.id === v.customerId || (c.phone && c.phone === v.customerPhone)
+    );
+    if (cust && cust.pendingAmount > 0) {
+      setPreviousPending(String(cust.pendingAmount));
+    }
+    setShowVehicleSuggestions(false);
+  };
 
   // Customer Details (Optional)
   const [customerName, setCustomerName] = useState('');
@@ -159,6 +191,41 @@ export default function CreateJobSheetScreen() {
   const [items, setItems] = useState<JobItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Custom standard items persisted in workshop catalog
+  const [customStandardItems, setCustomStandardItems] = useState<
+    Array<{ name: string; type: 'SERVICE' | 'PART'; price: number; category: 'AC' | 'MECHANICAL' | 'PARTS'; emoji: string }>
+  >([]);
+
+  // Load custom standard items from storage & cloud
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const saved = await AsyncStorage.getItem('cool_car_custom_standard_items');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setCustomStandardItems(parsed);
+        }
+
+        const entId = enterpriseId || 'enterprise-cool-car';
+        const { collection, getDocs } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+        const snap = await getDocs(collection(db, 'enterprises', entId, 'standardItems'));
+        if (!snap.empty) {
+          const cloudItems = snap.docs.map((d) => d.data() as any);
+          setCustomStandardItems((prev) => {
+            const map = new Map();
+            prev.forEach((it) => map.set(it.name, it));
+            cloudItems.forEach((it) => map.set(it.name, it));
+            return Array.from(map.values());
+          });
+        }
+      } catch (err) {
+        console.log('[CreateJob] standard items fetch notice:', err);
+      }
+    })();
+  }, [enterpriseId]);
+
   // Quick Add Services Dropdown Modal & Category Tabs
   const [isQuickAddModalOpen, setIsQuickAddModalOpen] = useState(false);
   const [presetCategory, setPresetCategory] = useState<'ALL' | 'AC' | 'MECHANICAL' | 'PARTS'>('ALL');
@@ -169,6 +236,7 @@ export default function CreateJobSheetScreen() {
   const [customItemName, setCustomItemName] = useState('');
   const [customItemPrice, setCustomItemPrice] = useState('');
   const [customItemType, setCustomItemType] = useState<'SERVICE' | 'PART'>('SERVICE');
+  const [saveAsStandardItem, setSaveAsStandardItem] = useState(false);
 
   // Edit Item Modal (Tap to Edit)
   const [editingItem, setEditingItem] = useState<JobItem | null>(null);
@@ -216,8 +284,23 @@ export default function CreateJobSheetScreen() {
       title,
       message,
       type,
-      buttons: buttons || [{ text: 'OK', style: 'default' }],
-      onClose: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+      buttons: buttons || [
+        {
+          text: 'OK',
+          style: 'default',
+          onPress: () => {
+            if (type === 'success') {
+              router.replace('/job-sheets');
+            }
+          },
+        },
+      ],
+      onClose: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        if (type === 'success') {
+          router.replace('/job-sheets');
+        }
+      },
     });
   };
 
@@ -248,6 +331,7 @@ export default function CreateJobSheetScreen() {
         category: (p.type === 'PART' ? 'PARTS' : 'MECHANICAL') as 'AC' | 'MECHANICAL' | 'PARTS',
         emoji: '🔧',
       })),
+      ...customStandardItems,
     ];
 
     if (presetCategory === 'AC') {
@@ -261,7 +345,7 @@ export default function CreateJobSheetScreen() {
     if (!quickAddSearch.trim()) return list;
     const q = quickAddSearch.toLowerCase();
     return list.filter((p) => p.name.toLowerCase().includes(q));
-  }, [quickAddSearch, presetCategory]);
+  }, [quickAddSearch, presetCategory, customStandardItems]);
 
   const handleTogglePresetItem = (preset: { name: string; type: 'SERVICE' | 'PART'; price: number }) => {
     const existingIndex = items.findIndex((i) => i.name === preset.name);
@@ -279,7 +363,6 @@ export default function CreateJobSheetScreen() {
       ]);
     }
   };
-
 
   // Open Edit Modal for an item
   const openEditModal = (item: JobItem) => {
@@ -321,17 +404,47 @@ export default function CreateJobSheetScreen() {
       showAlert('Price Required', 'Please enter a valid price.');
       return;
     }
-    setItems((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString() + Math.random().toString().slice(2, 6),
+
+    const newItem: JobItem = {
+      id: Date.now().toString() + Math.random().toString().slice(2, 6),
+      name: customItemName.trim(),
+      type: customItemType,
+      price: priceNum,
+    };
+
+    setItems((prev) => [...prev, newItem]);
+
+    // Save permanently into catalog if requested
+    if (saveAsStandardItem) {
+      const catalogItem = {
         name: customItemName.trim(),
         type: customItemType,
         price: priceNum,
-      },
-    ]);
+        category: (customItemType === 'PART' ? 'PARTS' : workCategory) as any,
+        emoji: customItemType === 'PART' ? '📦' : '⚙️',
+      };
+      setCustomStandardItems((prev) => [...prev, catalogItem]);
+
+      (async () => {
+        try {
+          const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+          const currentList = [...customStandardItems, catalogItem];
+          await AsyncStorage.setItem('cool_car_custom_standard_items', JSON.stringify(currentList));
+
+          const entId = enterpriseId || 'enterprise-cool-car';
+          const { doc, setDoc } = await import('firebase/firestore');
+          const { db } = await import('../../src/services/firebase/firebase.config');
+          const slugId = customItemName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+          await setDoc(doc(db, 'enterprises', entId, 'standardItems', slugId), catalogItem);
+        } catch (e) {
+          console.log('[CreateJob] save standard item notice:', e);
+        }
+      })();
+    }
+
     setCustomItemName('');
     setCustomItemPrice('');
+    setSaveAsStandardItem(false);
     setIsAddCustomModalOpen(false);
   };
 
@@ -705,28 +818,25 @@ export default function CreateJobSheetScreen() {
                 <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4 }}>
                   Intake Time
                 </Text>
-                <View
+                <TouchableOpacity
+                  onPress={() => setIsTimePickerOpen(true)}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     backgroundColor: isDark ? '#1C2538' : '#FFFFFF',
                     borderRadius: 14,
-                    paddingHorizontal: 10,
+                    paddingHorizontal: 12,
                     height: 44,
-                    gap: 6,
                     borderWidth: 1,
                     borderColor: cardBorder,
                   }}
                 >
+                  <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '800' }}>
+                    {jobTime}
+                  </Text>
                   <Clock size={16} color={isDark ? '#60A5FA' : '#153580'} />
-                  <TextInput
-                    value={jobTime}
-                    onChangeText={setJobTime}
-                    placeholder="11:30 AM"
-                    placeholderTextColor="#94A3B8"
-                    style={{ flex: 1, color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 13, fontWeight: '800' }}
-                  />
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -740,8 +850,10 @@ export default function CreateJobSheetScreen() {
                   value={carNumber}
                   onChangeText={(text) => {
                     setCarNumber(text);
+                    setShowVehicleSuggestions(true);
                     if (text.trim()) setHasValidationError(false);
                   }}
+                  onFocus={() => setShowVehicleSuggestions(true)}
                   placeholder="MH02AB1234"
                   placeholderTextColor="#94A3B8"
                   autoCapitalize="characters"
@@ -782,6 +894,55 @@ export default function CreateJobSheetScreen() {
                 />
               </View>
             </View>
+
+            {/* Vehicle Directory Autocomplete Suggestions */}
+            {showVehicleSuggestions && matchedVehicles.length > 0 && (
+              <View
+                style={{
+                  backgroundColor: isDark ? '#1A2333' : '#EFF6FF',
+                  borderRadius: 14,
+                  padding: 10,
+                  marginBottom: 10,
+                  borderWidth: 1,
+                  borderColor: isDark ? '#2D3A54' : '#BFDBFE',
+                  gap: 6,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: isDark ? '#93C5FD' : '#153580', textTransform: 'uppercase' }}>
+                    Matching Garage Vehicles (Tap to auto-fill):
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowVehicleSuggestions(false)}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>Hide</Text>
+                  </TouchableOpacity>
+                </View>
+                {matchedVehicles.map((v) => (
+                  <TouchableOpacity
+                    key={v.id}
+                    onPress={() => handleSelectSuggestedVehicle(v)}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      backgroundColor: isDark ? '#141926' : '#FFFFFF',
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <View>
+                      <Text style={{ fontSize: 13, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                        {v.registrationNumber}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                        {v.model || v.make} {v.customerName ? `• ${v.customerName}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#10B981' }}>Select ✓</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
             {/* Model Year Selector Button (Tap opens 1950 - Current Year Modal) */}
             <View style={{ marginBottom: 12 }}>
@@ -917,8 +1078,8 @@ export default function CreateJobSheetScreen() {
 
           {/* STEP 4: BILLED ITEMS (MODAL TO ADD & TAP TO EDIT) */}
           <View style={{ marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              <View style={{ flex: 1, minWidth: 140 }}>
                 <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0C1829' }}>
                   Billed Items ({items.length})
                 </Text>
@@ -927,7 +1088,7 @@ export default function CreateJobSheetScreen() {
                 </Text>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 6 }}>
+              <View style={{ flexDirection: 'row', gap: 6, flexShrink: 0 }}>
                 {/* Custom Item Button */}
                 <TouchableOpacity
                   onPress={() => setIsAddCustomModalOpen(true)}
@@ -1721,6 +1882,46 @@ export default function CreateJobSheetScreen() {
               }}
             />
 
+            {/* Checkbox: Save to Standard Catalog */}
+            <TouchableOpacity
+              onPress={() => setSaveAsStandardItem(!saveAsStandardItem)}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                backgroundColor: saveAsStandardItem ? (isDark ? 'rgba(96,165,250,0.15)' : '#EFF6FF') : (isDark ? '#1C2538' : '#F8FAFD'),
+                padding: 12,
+                borderRadius: 14,
+                marginBottom: 16,
+                borderWidth: 1,
+                borderColor: saveAsStandardItem ? '#153580' : cardBorder,
+              }}
+            >
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  backgroundColor: saveAsStandardItem ? '#153580' : 'transparent',
+                  borderWidth: 2,
+                  borderColor: saveAsStandardItem ? '#153580' : '#94A3B8',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {saveAsStandardItem && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  Save to Standard Items Catalog
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                  Permanent 1-tap reuse across all future job sheets
+                </Text>
+              </View>
+            </TouchableOpacity>
+
             {/* Actions: Add / Cancel */}
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
@@ -1941,6 +2142,14 @@ export default function CreateJobSheetScreen() {
         onSelectDate={setJobDate}
         onClose={() => setIsCalendarOpen(false)}
         title="Select Job Intake Date"
+      />
+
+      {/* TIME PICKER MODAL */}
+      <TimePickerModal
+        visible={isTimePickerOpen}
+        currentTime={jobTime}
+        onSelectTime={(t) => setJobTime(t)}
+        onClose={() => setIsTimePickerOpen(false)}
       />
 
       {/* THEMED CUSTOM ALERT (Replaces native OS alert) */}
