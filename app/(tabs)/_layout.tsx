@@ -21,22 +21,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/hooks/useTheme';
 import { GlassBottomSheet } from '../../src/components/common/GlassBottomSheet';
 import { useTabBarStore } from '../../src/store/tabBarStore';
+import { usePermissions } from '../../src/hooks/usePermissions';
 
 function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [addSheetOpen, setAddSheetOpen] = useState(false);
-  const isTabBarVisible = useTabBarStore((s) => s.isVisible);
-  const [translateY] = useState(() => new Animated.Value(0));
-
-  useEffect(() => {
-    Animated.spring(translateY, {
-      toValue: isTabBarVisible ? 0 : 120,
-      useNativeDriver: true,
-      bounciness: 0,
-      speed: 16,
-    }).start();
-  }, [isTabBarVisible]);
+  const { canViewReports, canRecordExpenses } = usePermissions();
 
   const tabConfig = [
     { name: 'index', label: 'Home', icon: Wallet },
@@ -51,8 +42,8 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
 
   return (
     <>
-      {/* Floating Midnight Navy Capsule Dock with Hide-on-Scroll */}
-      <Animated.View
+      {/* Permanently Anchored Midnight Navy Capsule Dock */}
+      <View
         style={{
           position: 'absolute',
           bottom: insets.bottom > 0 ? insets.bottom + 8 : 18,
@@ -72,11 +63,13 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
           elevation: 12,
           borderWidth: 1,
           borderColor: dockBorder,
-          transform: [{ translateY }],
+          zIndex: 99,
         }}
       >
-
         {state.routes.map((route: any, index: number) => {
+          if (route.name === 'reports' && !canViewReports) return null;
+          if (route.name === 'entries' && !canRecordExpenses && !canViewReports) return null;
+
           const config = tabConfig[index] || { label: route.name, icon: Wallet };
           const isFocused = state.index === index;
           const isAction = config.isAction;
@@ -136,7 +129,7 @@ function MidnightNavyTabBar({ state, descriptors, navigation }: any) {
             </TouchableOpacity>
           );
         })}
-      </Animated.View>
+      </View>
 
 
       {/* Quick Action Bottom Sheet */}

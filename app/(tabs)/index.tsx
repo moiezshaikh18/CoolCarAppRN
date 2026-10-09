@@ -36,9 +36,12 @@ import {
   Calendar,
   Search,
   X,
+  LogOut,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
+import { useAuthStore } from '../../src/store/authStore';
+import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { useEmployeeStore } from '../../src/store/employeeStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { useExpenseStore } from '../../src/store/expenseStore';
@@ -56,6 +59,24 @@ export default function DashboardScreen() {
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { onScroll: onHideNavScroll } = useHideOnScroll();
+  const { reset: resetAuth, setAuthState } = useAuthStore();
+  const { reset: resetEnterprise } = useEnterpriseStore();
+
+  const handleLogout = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to log out of Cool Car Garage?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => {
+          resetAuth();
+          resetEnterprise();
+          setAuthState('unauthenticated');
+          router.replace('/(auth)/login');
+        },
+      },
+    ]);
+  };
   const {
     isOwner,
     isAdmin,
@@ -255,20 +276,46 @@ export default function DashboardScreen() {
             </Text>
           </View>
 
-          {/* Theme Switcher Button */}
-          <TouchableOpacity
-            onPress={toggleMode}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: isDark ? '#141824' : 'rgba(255, 255, 255, 0.22)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {isDark ? <Sun size={18} color="#FBBF24" /> : <Moon size={18} color="#FFFFFF" />}
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {/* Theme Switcher Button */}
+            <TouchableOpacity
+              onPress={toggleMode}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: isDark ? '#141824' : 'rgba(255, 255, 255, 0.22)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isDark ? <Sun size={17} color="#FBBF24" /> : <Moon size={17} color="#FFFFFF" />}
+            </TouchableOpacity>
+
+            {/* Direct Logout Button */}
+            <TouchableOpacity
+              onPress={handleLogout}
+              activeOpacity={0.85}
+              style={{
+                height: 38,
+                paddingHorizontal: 12,
+                borderRadius: 19,
+                backgroundColor: 'rgba(239, 68, 68, 0.22)',
+                borderWidth: 1,
+                borderColor: 'rgba(239, 68, 68, 0.45)',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+              }}
+              accessibilityLabel="Sign Out"
+            >
+              <LogOut size={15} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>
+                Logout
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
