@@ -73,9 +73,20 @@ export default function DashboardScreen() {
   const { chalans, addChalan } = useChalanStore();
   const { jobSheets: storeJobSheets, setJobSheets } = useJobSheetStore();
 
-  const [activeTab, setActiveTab] = useState<'jobs' | 'expenses' | 'chalans'>('jobs');
+  const [rawTab, setRawTab] = useState<'jobs' | 'expenses' | 'chalans'>('jobs');
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pure derived activeTab without triggering cascading effect renders
+  const activeTab = useMemo(() => {
+    if (rawTab === 'expenses' && !canRecordExpenses && !canViewReports) {
+      return 'jobs';
+    }
+    if (rawTab === 'chalans' && !canManageChalans) {
+      return 'jobs';
+    }
+    return rawTab;
+  }, [rawTab, canRecordExpenses, canViewReports, canManageChalans]);
 
   // Live Firestore Sync for Dashboard
   useEffect(() => {
@@ -140,6 +151,7 @@ export default function DashboardScreen() {
         vehicleModel: s.vehicleModel || 'Car',
         vehicleRegNumber: s.vehicleNumber || 'Vehicle',
         workCategory: s.workCategory,
+        status: s.status || 'IN_PROGRESS',
         amount: s.finalAmount || 0,
         paidAmount: s.totalPaid || 0,
         pendingAmount: s.pendingAmount || 0,
@@ -313,10 +325,12 @@ export default function DashboardScreen() {
               {/* Big Font Main Amount (fontSize: 38) */}
               <View style={{ marginVertical: 12 }}>
                 <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-                  {"Today's Collected Inflow"}
+                  {canViewReports ? "Today's Collected Inflow" : "Active Workshop Queue"}
                 </Text>
                 <Text style={{ color: '#FFFFFF', fontSize: 38, fontWeight: '900', letterSpacing: -1, marginTop: 2 }}>
-                  +{formatCurrency(todayCollections, currencySymbol)}
+                  {canViewReports
+                    ? `+${formatCurrency(todayCollections, currencySymbol)}`
+                    : `${allJobSheets.filter((j) => j.status !== 'COMPLETED').length} Active Jobs`}
                 </Text>
               </View>
 
@@ -334,10 +348,12 @@ export default function DashboardScreen() {
               >
                 <View>
                   <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 10, fontWeight: '700' }}>
-                    {"Today's Outflow"}
+                    {canViewReports ? "Today's Outflow" : "Completed Jobs"}
                   </Text>
-                  <Text style={{ color: '#EF4444', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
-                    -{formatCurrency(todayExpensesTotal, currencySymbol)}
+                  <Text style={{ color: canViewReports ? '#EF4444' : '#00C896', fontSize: 15, fontWeight: '900', marginTop: 1 }}>
+                    {canViewReports
+                      ? `-${formatCurrency(todayExpensesTotal, currencySymbol)}`
+                      : `${allJobSheets.filter((j) => j.status === 'COMPLETED').length} Finished`}
                   </Text>
                 </View>
 
@@ -353,294 +369,289 @@ export default function DashboardScreen() {
                 </View>
               </View>
 
-              {/* Quick Action Capsules */}
+              {/* Quick Action Capsules (Filtered by Permissions) */}
               <View
                 style={{
                   flexDirection: 'row',
-                  justifyContent: 'space-between',
+                  justifyContent: 'space-around',
                   paddingTop: 10,
                   borderTopWidth: 1,
                   borderTopColor: 'rgba(255, 255, 255, 0.12)',
                 }}
               >
-                <TouchableOpacity
-                  onPress={() => {
-                    if (checkOrAlert('canCreateJobSheets', 'create job sheets')) {
-                      router.push('/job-sheets/create');
-                    }
-                  }}
-                  activeOpacity={0.8}
-                  style={{ alignItems: 'center', gap: 4 }}
-                >
-                  <View
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 21,
-                      backgroundColor: '#60A5FA',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
+                {canCreateJobSheets && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/job-sheets/create')}
+                    activeOpacity={0.8}
+                    style={{ alignItems: 'center', gap: 4 }}
                   >
-                    <Plus size={20} color="#FFFFFF" strokeWidth={2.8} />
-                  </View>
-                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
-                    + Job Sheet
-                  </Text>
-                </TouchableOpacity>
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: '#60A5FA',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Plus size={20} color="#FFFFFF" strokeWidth={2.8} />
+                    </View>
+                    <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                      + Job Sheet
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
-                <TouchableOpacity
-                  onPress={() => {
-                    if (checkOrAlert('canRecordExpenses', 'record workshop expenses')) {
-                      router.push('/expenses/add');
-                    }
-                  }}
-                  activeOpacity={0.8}
-                  style={{ alignItems: 'center', gap: 4 }}
-                >
-                  <View
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 21,
-                      backgroundColor: 'rgba(255, 255, 255, 0.16)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
+                {canRecordExpenses && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/expenses/add')}
+                    activeOpacity={0.8}
+                    style={{ alignItems: 'center', gap: 4 }}
                   >
-                    <ArrowUpRight size={19} color="#FFFFFF" strokeWidth={2.2} />
-                  </View>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
-                    + Expense
-                  </Text>
-                </TouchableOpacity>
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <ArrowUpRight size={19} color="#FFFFFF" strokeWidth={2.2} />
+                    </View>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
+                      + Expense
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
-                <TouchableOpacity
-                  onPress={() => {
-                    if (checkOrAlert('canManageChalans', 'record purchase chalans')) {
-                      router.push('/inventory/chalan-add');
-                    }
-                  }}
-                  activeOpacity={0.8}
-                  style={{ alignItems: 'center', gap: 4 }}
-                >
-                  <View
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 21,
-                      backgroundColor: 'rgba(255, 255, 255, 0.16)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
+                {canManageChalans && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/inventory/chalan-add')}
+                    activeOpacity={0.8}
+                    style={{ alignItems: 'center', gap: 4 }}
                   >
-                    <Car size={19} color="#FFFFFF" strokeWidth={2.2} />
-                  </View>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
-                    + Chalan
-                  </Text>
-                </TouchableOpacity>
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Car size={19} color="#FFFFFF" strokeWidth={2.2} />
+                    </View>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
+                      + Chalan
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
-                <TouchableOpacity
-                  onPress={() => {
-                    if (isOwner || isAdmin) {
-                      router.push('/staff/pay' as any);
-                    } else {
-                      Alert.alert('Restricted 🔒', 'Staff salary management is restricted to workshop owners.');
-                    }
-                  }}
-                  activeOpacity={0.8}
-                  style={{ alignItems: 'center', gap: 4 }}
-                >
-                  <View
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 21,
-                      backgroundColor: 'rgba(255, 255, 255, 0.16)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
+                {(isOwner || isAdmin) && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/staff/pay' as any)}
+                    activeOpacity={0.8}
+                    style={{ alignItems: 'center', gap: 4 }}
                   >
-                    <Users size={19} color="#FFFFFF" strokeWidth={2.2} />
-                  </View>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
-                    Pay Staff
-                  </Text>
-                </TouchableOpacity>
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Users size={19} color="#FFFFFF" strokeWidth={2.2} />
+                    </View>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 10, fontWeight: '700' }}>
+                      Pay Staff
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </GlassCard>
           </View>
 
-          {/* 4 CORE WORKSHOP MODULES */}
+          {/* CORE WORKSHOP MODULES (Dynamic per Staff Permissions) */}
           <View style={{ paddingHorizontal: 18 }}>
             <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.6 }}>
-              Core Workshop Modules
+              {isOwner || isAdmin ? 'Core Workshop Modules' : 'Staff Workstation Modules'}
             </Text>
 
             <View style={{ gap: 10 }}>
-              {/* Row 1: Daily Job Sheets & Daily Expenses */}
+              {/* Row 1: Daily Job Sheets & (if permitted) Daily Expenses */}
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                {/* Module 1: Daily Job Sheets */}
-                <TouchableOpacity
-                  onPress={() => router.push('/job-sheets')}
-                  activeOpacity={0.88}
-                  style={{
-                    flex: 1,
-                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
-                    borderRadius: 24,
-                    padding: 16,
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: '#2563EB',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <FileSpreadsheet size={18} color="#FFFFFF" />
+                {canCreateJobSheets && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/job-sheets')}
+                    activeOpacity={0.88}
+                    style={{
+                      flex: 1,
+                      backgroundColor: isDark ? '#242834' : '#FFFFFF',
+                      borderRadius: 24,
+                      padding: 16,
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <View
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: '#2563EB',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <FileSpreadsheet size={18} color="#FFFFFF" />
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: '900', color: '#00C896' }}>
+                        {allJobSheets.length} Active
+                      </Text>
                     </View>
-                    <Text style={{ fontSize: 11, fontWeight: '900', color: '#00C896' }}>
-                      {allJobSheets.length} Active
+
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#2B3544' }}>
+                      Daily Job Sheets
                     </Text>
-                  </View>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                      ❄️ AC & 🔧 Mechanical
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#2B3544' }}>
-                    Daily Job Sheets
-                  </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
-                    ❄️ AC & 🔧 Mechanical
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Module 2: Daily Expenses */}
-                <TouchableOpacity
-                  onPress={() => router.push('/expenses/add')}
-                  activeOpacity={0.88}
-                  style={{
-                    flex: 1,
-                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
-                    borderRadius: 24,
-                    padding: 16,
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: '#EF4444',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Receipt size={18} color="#FFFFFF" />
+                {canRecordExpenses && (
+                  <TouchableOpacity
+                    onPress={() => router.push('/expenses/add')}
+                    activeOpacity={0.88}
+                    style={{
+                      flex: 1,
+                      backgroundColor: isDark ? '#242834' : '#FFFFFF',
+                      borderRadius: 24,
+                      padding: 16,
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <View
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: '#EF4444',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Receipt size={18} color="#FFFFFF" />
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: '900', color: '#EF4444' }}>
+                        {canViewReports ? `-${formatCurrency(todayExpensesTotal, currencySymbol)}` : `${expenses.length} Records`}
+                      </Text>
                     </View>
-                    <Text style={{ fontSize: 11, fontWeight: '900', color: '#EF4444' }}>
-                      -{formatCurrency(todayExpensesTotal, currencySymbol)}
+
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#2B3544' }}>
+                      Daily Expenses
                     </Text>
-                  </View>
-
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#2B3544' }}>
-                    Daily Expenses
-                  </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
-                    Logged By & Purpose
-                  </Text>
-
-                </TouchableOpacity>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                      Logged By & Purpose
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Row 2: Purchase Chalans & Staff */}
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                {/* Module 3: Purchase Chalans */}
-                <TouchableOpacity
-                  onPress={() => router.push('/inventory')}
-                  activeOpacity={0.88}
-                  style={{
-                    flex: 1,
-                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
-                    borderRadius: 24,
-                    padding: 16,
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <View
+              {(canManageChalans || isOwner || isAdmin) && (
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  {canManageChalans && (
+                    <TouchableOpacity
+                      onPress={() => router.push('/inventory')}
+                      activeOpacity={0.88}
                       style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: '#7C3AED',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        flex: 1,
+                        backgroundColor: isDark ? '#242834' : '#FFFFFF',
+                        borderRadius: 24,
+                        padding: 16,
+                        borderWidth: 1,
+                        borderColor: cardBorder,
                       }}
                     >
-                      <Package size={18} color="#FFFFFF" />
-                    </View>
-                    <Text style={{ fontSize: 11, fontWeight: '900', color: '#7C3AED' }}>
-                      {chalans.length} Chalans
-                    </Text>
-                  </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <View
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: '#7C3AED',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Package size={18} color="#FFFFFF" />
+                        </View>
+                        <Text style={{ fontSize: 11, fontWeight: '900', color: '#7C3AED' }}>
+                          {chalans.length} Chalans
+                        </Text>
+                      </View>
 
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#2B3544' }}>
-                    Purchase Chalans
-                  </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
-                    Multi-Car Tagging (10-N)
-                  </Text>
-                </TouchableOpacity>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#2B3544' }}>
+                        Purchase Chalans
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                        Multi-Car Tagging (10-N)
+                      </Text>
+                    </TouchableOpacity>
+                  )}
 
-                {/* Module 4: Staff & Salary */}
-                <TouchableOpacity
-                  onPress={() => router.push('/staff' as any)}
-                  activeOpacity={0.88}
-                  style={{
-                    flex: 1,
-                    backgroundColor: isDark ? '#242834' : '#FFFFFF',
-                    borderRadius: 24,
-                    padding: 16,
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <View
+                  {(isOwner || isAdmin) && (
+                    <TouchableOpacity
+                      onPress={() => router.push('/staff' as any)}
+                      activeOpacity={0.88}
                       style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: '#D97706',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        flex: 1,
+                        backgroundColor: isDark ? '#242834' : '#FFFFFF',
+                        borderRadius: 24,
+                        padding: 16,
+                        borderWidth: 1,
+                        borderColor: cardBorder,
                       }}
                     >
-                      <Users size={18} color="#FFFFFF" />
-                    </View>
-                    <Text style={{ fontSize: 11, fontWeight: '900', color: '#D97706' }}>
-                      {activeStaffCount} Staff
-                    </Text>
-                  </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <View
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: '#D97706',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Users size={18} color="#FFFFFF" />
+                        </View>
+                        <Text style={{ fontSize: 11, fontWeight: '900', color: '#D97706' }}>
+                          {activeStaffCount} Staff
+                        </Text>
+                      </View>
 
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#2B3544' }}>
-                    Staff & Salary
-                  </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
-                    Docs & Advance Tracker
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: isDark ? '#FFFFFF' : '#2B3544' }}>
+                        Staff & Salary
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600', marginTop: 2 }}>
+                        Docs & Advance Tracker
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -660,7 +671,7 @@ export default function DashboardScreen() {
               }}
             >
               <TouchableOpacity
-                onPress={() => setActiveTab('jobs')}
+                onPress={() => setRawTab('jobs')}
                 style={{
                   paddingHorizontal: 16,
                   paddingVertical: 9,
@@ -679,45 +690,49 @@ export default function DashboardScreen() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => setActiveTab('expenses')}
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  borderRadius: 18,
-                  backgroundColor: activeTab === 'expenses' ? (isDark ? '#FFFFFF' : '#153580') : 'transparent',
-                }}
-              >
-                <Text
+              {(canRecordExpenses || canViewReports) && (
+                <TouchableOpacity
+                  onPress={() => setRawTab('expenses')}
                   style={{
-                    fontSize: 12,
-                    fontWeight: '800',
-                    color: activeTab === 'expenses' ? (isDark ? '#000000' : '#FFFFFF') : '#64748B',
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    borderRadius: 18,
+                    backgroundColor: activeTab === 'expenses' ? (isDark ? '#FFFFFF' : '#153580') : 'transparent',
                   }}
                 >
-                  Expenses ({expenses.length})
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '800',
+                      color: activeTab === 'expenses' ? (isDark ? '#000000' : '#FFFFFF') : '#64748B',
+                    }}
+                  >
+                    Expenses ({expenses.length})
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-              <TouchableOpacity
-                onPress={() => setActiveTab('chalans')}
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  borderRadius: 18,
-                  backgroundColor: activeTab === 'chalans' ? (isDark ? '#FFFFFF' : '#153580') : 'transparent',
-                }}
-              >
-                <Text
+              {canManageChalans && (
+                <TouchableOpacity
+                  onPress={() => setRawTab('chalans')}
                   style={{
-                    fontSize: 12,
-                    fontWeight: '800',
-                    color: activeTab === 'chalans' ? (isDark ? '#000000' : '#FFFFFF') : '#64748B',
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    borderRadius: 18,
+                    backgroundColor: activeTab === 'chalans' ? (isDark ? '#FFFFFF' : '#153580') : 'transparent',
                   }}
                 >
-                  Chalans ({chalans.length})
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '800',
+                      color: activeTab === 'chalans' ? (isDark ? '#000000' : '#FFFFFF') : '#64748B',
+                    }}
+                  >
+                    Chalans ({chalans.length})
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 

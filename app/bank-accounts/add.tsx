@@ -29,6 +29,7 @@ import { GlassCard } from '../../src/components/common/GlassCard';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { usePermissions } from '../../src/hooks/usePermissions';
 import { AccountType, BankAccount } from '../../src/types/bankAccount.types';
+import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
 
 const ACCOUNT_TYPES: { label: string; value: AccountType; icon: any }[] = [
   { label: 'Current A/c', value: 'CURRENT', icon: Building },
@@ -55,24 +56,58 @@ export default function AddBankAccountScreen() {
   const [accountName, setAccountName] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
-  const [openingBalance, setOpeningBalance] = useState('');
   const [loading, setLoading] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
+    visible: false,
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'error' | 'warning' | 'success' | 'info' = 'warning',
+    buttons?: any[]
+  ) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      buttons: buttons || [
+        {
+          text: 'OK',
+          style: 'default',
+          onPress: () => {
+            if (type === 'success') {
+              router.replace('/bank-accounts');
+            }
+          },
+        },
+      ],
+      onClose: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        if (type === 'success') {
+          router.replace('/bank-accounts');
+        }
+      },
+    });
+  };
 
   const handleSave = async () => {
     if (!accountName.trim()) {
-      Alert.alert('Required', 'Please enter an account name (e.g. Primary Current Account)');
+      showAlert('Required', 'Please enter an account nickname (e.g. Primary Current Account)', 'warning');
       return;
     }
 
     if (accountType !== 'CASH_IN_HAND' && !bankName.trim()) {
-      Alert.alert('Required', 'Please enter or select a bank name');
+      showAlert('Required', 'Please enter or select a bank name', 'warning');
       return;
     }
 
     setLoading(true);
     const entId = enterpriseId || 'enterprise-cool-car';
     const accId = `acc_${Date.now()}`;
-    const balanceNum = parseFloat(openingBalance.replace(/[^0-9.]/g, '')) || 0;
 
     const newAcc: BankAccount = {
       id: accId,
@@ -82,8 +117,8 @@ export default function AddBankAccountScreen() {
       bankName: accountType === 'CASH_IN_HAND' ? 'Cash Counter' : bankName.trim(),
       accountNumber: accountType === 'CASH_IN_HAND' ? 'CASH' : accountNumber.trim(),
       ifscCode: '',
-      openingBalance: balanceNum,
-      currentBalance: balanceNum,
+      openingBalance: 0,
+      currentBalance: 0,
       isDefault: false,
       isActive: true,
       createdAt: new Date().toISOString(),
@@ -100,9 +135,17 @@ export default function AddBankAccountScreen() {
 
     addAccount(newAcc);
     setLoading(false);
-    Alert.alert('Account Linked', `"${newAcc.accountName}" has been successfully added to your garage ledger.`, [
-      { text: 'Done', onPress: () => router.back() },
-    ]);
+    showAlert(
+      'Bank Account Linked!',
+      `"${newAcc.accountName}" has been successfully added to your garage ledger.\nAll UPI and swipe payments can now be credited to this account.`,
+      'success',
+      [
+        {
+          text: 'View Bank Accounts',
+          onPress: () => router.replace('/bank-accounts'),
+        },
+      ]
+    );
   };
 
   const canvasBg = isDark ? '#070A0F' : '#153580';
@@ -313,31 +356,6 @@ export default function AddBankAccountScreen() {
             </>
           )}
 
-          {/* Opening Balance */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
-              Opening Ledger Balance (₹) (Optional)
-            </Text>
-            <TextInput
-              value={openingBalance}
-              onChangeText={setOpeningBalance}
-              placeholder="0"
-              placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-              style={{
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderRadius: 22,
-                backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                borderWidth: 1,
-                borderColor: cardBorder,
-                color: isDark ? '#FFFFFF' : '#0C1829',
-                fontSize: 16,
-                fontWeight: '800',
-              }}
-            />
-          </View>
-
           {/* Solid Midnight Navy CTA Button */}
           <TouchableOpacity
             onPress={handleSave}
@@ -349,6 +367,7 @@ export default function AddBankAccountScreen() {
               borderRadius: 30,
               alignItems: 'center',
               justifyContent: 'center',
+              marginTop: 10,
               shadowColor: '#0C1829',
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.2,
@@ -366,6 +385,8 @@ export default function AddBankAccountScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      <ThemedAlert {...alertConfig} />
     </View>
   );
 }

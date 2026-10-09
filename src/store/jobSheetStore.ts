@@ -38,7 +38,9 @@ export const useJobSheetStore = create<JobSheetStore>()(
         set((state) => ({ jobSheets: [jobSheet, ...state.jobSheets] })),
       updateJobSheet: (id, data) =>
         set((state) => ({
-          jobSheets: state.jobSheets.map((j) => (j.id === id ? { ...j, ...data } : j)),
+          jobSheets: state.jobSheets.map((j) =>
+            j.id === id || j.jobNumber === id ? { ...j, ...data } : j
+          ),
         })),
       setSelectedJobSheet: (selectedJobSheet) => set({ selectedJobSheet }),
       setLoading: (isLoading) => set({ isLoading }),

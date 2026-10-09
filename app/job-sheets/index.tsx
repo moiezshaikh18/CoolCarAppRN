@@ -91,27 +91,6 @@ export default function JobSheetsScreen() {
     }
   };
 
-  const handleQuickMarkDone = async (job: JobSheet, e: any) => {
-    e?.stopPropagation?.();
-    const nowIso = new Date().toISOString();
-    updateJobSheet(job.id, {
-      status: 'COMPLETED',
-      updatedAt: nowIso,
-    });
-
-    try {
-      const entId = enterpriseId || 'enterprise-cool-car';
-      const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('../../src/services/firebase/firebase.config');
-      await setDoc(
-        doc(db, 'enterprises', entId, 'jobSheets', job.id),
-        { status: 'COMPLETED', updatedAt: nowIso },
-        { merge: true }
-      );
-    } catch (err) {
-      console.log('[JobSheets] Status update notice:', err);
-    }
-  };
 
   // Firestore real-time listener
   useEffect(() => {
@@ -287,55 +266,36 @@ export default function JobSheetsScreen() {
             <View
               style={[
                 styles.cardStatusBadge,
-                isPaid
+                item.status === 'COMPLETED'
                   ? styles.statusPaid
-                  : isPending
-                  ? styles.statusPending
                   : styles.statusNeutral,
               ]}
             >
               <Text
                 style={[
                   styles.cardStatusText,
-                  isPaid
+                  item.status === 'COMPLETED'
                     ? styles.statusTextPaid
-                    : isPending
-                    ? styles.statusTextPending
                     : styles.statusTextNeutral,
                 ]}
               >
-                {isPaid ? 'Paid' : isPending ? 'Pending' : 'Open'}
+                {item.status === 'COMPLETED' ? 'Completed' : 'In Progress'}
               </Text>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              {item.status !== 'COMPLETED' && (
-                <TouchableOpacity
-                  onPress={(e) => handleQuickMarkDone(item, e)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 3,
-                    backgroundColor: '#10B981',
-                    paddingHorizontal: 8,
-                    paddingVertical: 5,
-                    borderRadius: 10,
-                  }}
-                >
-                  <CheckCircle2 size={12} color="#FFFFFF" strokeWidth={2.5} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>Done</Text>
-                </TouchableOpacity>
-              )}
+            {isPending && item.status === 'COMPLETED' ? (
+              <Text style={{ fontSize: 10, fontWeight: '700', color: '#F59E0B', marginTop: 1 }}>
+                Due: {formatCurrency(item.pendingAmount ?? 0, currencySymbol)}
+              </Text>
+            ) : null}
 
-              <TouchableOpacity
-                onPress={(e) => handlePrintItem(item, e)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.cardPrintButton}
-              >
-                <Printer size={15} color="#64748B" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={(e) => handlePrintItem(item, e)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.cardPrintButton}
+            >
+              <Printer size={15} color="#64748B" />
+            </TouchableOpacity>
           </View>
         </View>
       </TouchableOpacity>

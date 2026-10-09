@@ -275,7 +275,17 @@ export default function JobSheetDetailsScreen() {
       status: 'COMPLETED',
       updatedAt: nowIso,
     });
-    setDbJob((prev) => (prev ? { ...prev, status: 'COMPLETED', updatedAt: nowIso } : null));
+    if (job.jobNumber) {
+      updateJobSheet(job.jobNumber, {
+        status: 'COMPLETED',
+        updatedAt: nowIso,
+      });
+    }
+    setDbJob({
+      ...job,
+      status: 'COMPLETED',
+      updatedAt: nowIso,
+    });
 
     try {
       const entId = enterpriseId || 'enterprise-cool-car';
@@ -286,6 +296,13 @@ export default function JobSheetDetailsScreen() {
         { status: 'COMPLETED', updatedAt: nowIso },
         { merge: true }
       );
+      if (job.jobNumber && job.jobNumber !== job.id) {
+        await setDoc(
+          doc(db, 'enterprises', entId, 'jobSheets', job.jobNumber),
+          { status: 'COMPLETED', updatedAt: nowIso },
+          { merge: true }
+        );
+      }
     } catch (e) {
       console.log('[JobDetail] Firebase status update error:', e);
     }
@@ -601,7 +618,7 @@ export default function JobSheetDetailsScreen() {
           >
             {isDone && <CheckCircle2 size={12} color="#10B981" />}
             <Text style={{ color: isDone ? '#10B981' : '#93C5FD', fontSize: 11, fontWeight: '800' }}>
-              {isDone ? 'Done' : 'In Progress'}
+              {isDone ? 'Completed' : 'In Progress'}
             </Text>
           </View>
 

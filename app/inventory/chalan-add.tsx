@@ -459,7 +459,7 @@ export default function AddPurchaseChalanScreen() {
 
             {/* Vendor Name */}
             <Text style={{ fontSize: 12, fontWeight: '700', color: textMuted, marginBottom: 6 }}>
-              Supplier / Vendor Name *
+              Supplier / Vendor Name (Manual Entry / Preset) *
             </Text>
             <TextInput
               value={vendorName}
@@ -478,7 +478,32 @@ export default function AddPurchaseChalanScreen() {
               }}
             />
 
+            {/* Vendor Contact / Phone */}
+            <Text style={{ fontSize: 12, fontWeight: '700', color: textMuted, marginBottom: 6 }}>
+              Vendor Contact / Phone (Optional)
+            </Text>
+            <TextInput
+              value={vendorPhone}
+              onChangeText={setVendorPhone}
+              placeholder="e.g. 9822001122"
+              placeholderTextColor="#94A3B8"
+              keyboardType="phone-pad"
+              style={{
+                backgroundColor: inputBg,
+                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                fontSize: 14,
+                fontWeight: '700',
+                color: textPrimary,
+                marginBottom: 10,
+              }}
+            />
+
             {/* Quick Vendor Chips */}
+            <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, marginBottom: 6 }}>
+              Quick Presets:
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
               {VENDOR_PRESETS.map((v) => (
                 <TouchableOpacity
@@ -759,23 +784,49 @@ export default function AddPurchaseChalanScreen() {
                       })}
                     </ScrollView>
 
-                    {/* Custom Car Input Fallback */}
-                    <TextInput
-                      value={item.assignedVehicleNumber}
-                      onChangeText={(val) => updateItem(index, 'assignedVehicleNumber', val)}
-                      placeholder="Or enter custom Car No (e.g. MH01AB1122)"
-                      placeholderTextColor="#94A3B8"
-                      style={{
-                        backgroundColor: inputBg,
-                        borderRadius: 10,
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        fontSize: 12,
-                        fontWeight: '700',
-                        color: textPrimary,
-                        marginTop: 4,
-                      }}
-                    />
+                    {/* Explicit Manual Vehicle Details Entry Option */}
+                    <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: cardBorder }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: textMuted, textTransform: 'uppercase', marginBottom: 6 }}>
+                        ✏️ Or Enter Vehicle Details Manually:
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <View style={{ flex: 1.2 }}>
+                          <TextInput
+                            value={item.assignedVehicleNumber === 'General Stock' ? '' : item.assignedVehicleNumber}
+                            onChangeText={(val) => updateItem(index, 'assignedVehicleNumber', val || 'General Stock')}
+                            placeholder="Vehicle Reg (e.g. MH12AB1234)"
+                            placeholderTextColor="#94A3B8"
+                            autoCapitalize="characters"
+                            style={{
+                              backgroundColor: inputBg,
+                              borderRadius: 10,
+                              paddingHorizontal: 10,
+                              paddingVertical: 8,
+                              fontSize: 12,
+                              fontWeight: '700',
+                              color: textPrimary,
+                            }}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <TextInput
+                            value={item.assignedVehicleModel === 'Workshop Stock' ? '' : item.assignedVehicleModel}
+                            onChangeText={(val) => updateItem(index, 'assignedVehicleModel', val || 'Car')}
+                            placeholder="Car Model (e.g. Innova)"
+                            placeholderTextColor="#94A3B8"
+                            style={{
+                              backgroundColor: inputBg,
+                              borderRadius: 10,
+                              paddingHorizontal: 10,
+                              paddingVertical: 8,
+                              fontSize: 12,
+                              fontWeight: '700',
+                              color: textPrimary,
+                            }}
+                          />
+                        </View>
+                      </View>
+                    </View>
                   </View>
                 </View>
               );
@@ -1107,11 +1158,42 @@ export default function AddPurchaseChalanScreen() {
               <TextInput
                 value={vehicleSearchQuery}
                 onChangeText={setVehicleSearchQuery}
-                placeholder="Search by car reg or model..."
+                placeholder="Search car or type custom reg..."
                 placeholderTextColor="#94A3B8"
+                autoCapitalize="characters"
                 style={{ flex: 1, color: textPrimary, fontSize: 14, fontWeight: '600' }}
               />
             </View>
+
+            {vehicleSearchQuery.trim().length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (vehicleSelectIndex !== null) {
+                    setItemVehicle(vehicleSelectIndex, vehicleSearchQuery.trim().toUpperCase(), 'Custom Vehicle');
+                  }
+                  setVehicleSelectIndex(null);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: 12,
+                  borderRadius: 14,
+                  backgroundColor: '#153580',
+                  marginBottom: 10,
+                }}
+              >
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>
+                    + Tag Manual: {vehicleSearchQuery.trim().toUpperCase()}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+                    Assign part to this custom vehicle number
+                  </Text>
+                </View>
+                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
+              </TouchableOpacity>
+            )}
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {availableVehicles
