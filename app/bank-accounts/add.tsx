@@ -98,7 +98,11 @@ export default function AddBankAccountScreen() {
     });
   };
 
+  const isSubmittingRef = React.useRef(false);
+
   const handleSave = async () => {
+    if (isSubmittingRef.current || loading) return;
+
     if (!accountName.trim()) {
       showAlert('Required', 'Please enter an account nickname (e.g. Primary Current Account)', 'warning');
       return;
@@ -109,9 +113,45 @@ export default function AddBankAccountScreen() {
       return;
     }
 
+    // Check for duplicate account already in store
+    const existingAccounts = useBankAccountStore.getState().accounts || [];
+    const isDuplicate = existingAccounts.some((a) => {
+      if (accountType === 'CASH_IN_HAND') {
+        return a.accountType === 'CASH_IN_HAND';
+      }
+      const sameBank = (a.bankName || '').toLowerCase().trim() === bankName.toLowerCase().trim();
+      const sameName = (a.accountName || '').toLowerCase().trim() === accountName.toLowerCase().trim();
+      const sameNum = accountNumber.trim() && a.accountNumber?.trim() === accountNumber.trim();
+      return sameBank && (sameName || sameNum);
+    });
+
+    if (isDuplicate) {
+      showAlert(
+        'Account Already Exists',
+        accountType === 'CASH_IN_HAND'
+          ? 'A Cash Counter account is already registered in your workshop.'
+          : `An account "${accountName.trim()}" for ${bankName.trim()} already exists in your ledger.`,
+        'warning'
+      );
+      return;
+    }
+
+    isSubmittingRef.current = true;
     setLoading(true);
+
     const entId = enterpriseId || 'enterprise-cool-car';
-    const accId = `acc_${Date.now()}`;
+    // Generate an idempotent deterministic slug ID so rapid retries cannot create duplicate documents
+    const cleanSlug = (
+      accountType === 'CASH_IN_HAND'
+        ? 'cash_counter'
+        : `${bankName.trim()}_${accountName.trim()}_${accountNumber.trim().slice(-4)}`
+    )
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .slice(0, 45);
+
+    const accId = `acc_${cleanSlug}`;
 
     const newAcc: BankAccount = {
       id: accId,
@@ -132,13 +172,16 @@ export default function AddBankAccountScreen() {
     try {
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
-      await setDoc(doc(db, 'enterprises', entId, 'bankAccounts', accId), newAcc);
+      const { cleanFirestoreData } = await import('../../src/services/firebase/firestore.service');
+      await setDoc(doc(db, 'enterprises', entId, 'bankAccounts', accId), cleanFirestoreData(newAcc), { merge: true });
     } catch (err) {
       console.log('[AddBankAccount] Firestore error:', err);
     }
 
     addAccount(newAcc);
     setLoading(false);
+    isSubmittingRef.current = false;
+
     showAlert(
       'Bank Account Linked!',
       `"${newAcc.accountName}" has been successfully added to your garage ledger.\nAll UPI and swipe payments can now be credited to this account.`,

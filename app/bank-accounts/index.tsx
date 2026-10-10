@@ -325,21 +325,19 @@ export default function BankAccountsScreen() {
                           This Month Inward
                         </Text>
                       </View>
-                      {!isCash && (
-                        <TouchableOpacity
-                          onPress={() => handleDeleteAccount(acc.id, acc.accountName)}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 16,
-                            backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Trash2 size={15} color="#DC2626" />
-                        </TouchableOpacity>
-                      )}
+                      <TouchableOpacity
+                        onPress={() => handleDeleteAccount(acc.id, acc.accountName || acc.bankName || 'Account')}
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: isDark ? '#450A0A' : '#FEE2E2',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Trash2 size={15} color="#DC2626" />
+                      </TouchableOpacity>
                     </View>
                   </View>
 

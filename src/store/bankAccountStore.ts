@@ -39,9 +39,22 @@ export const useBankAccountStore = create<BankAccountStore>()(
       isLoading: false,
       error: null,
 
-      setAccounts: (accounts) => set({ accounts }),
+      setAccounts: (accounts) => {
+        const unique = new Map<string, BankAccount>();
+        (accounts || []).forEach((a) => {
+          if (a && a.id) unique.set(a.id, a);
+        });
+        set({ accounts: Array.from(unique.values()) });
+      },
       addAccount: (account) =>
-        set((state) => ({ accounts: [account, ...state.accounts] })),
+        set((state) => {
+          if (state.accounts.some((a) => a.id === account.id)) {
+            return {
+              accounts: state.accounts.map((a) => (a.id === account.id ? { ...a, ...account } : a)),
+            };
+          }
+          return { accounts: [account, ...state.accounts] };
+        }),
       updateAccount: (id, data) =>
         set((state) => ({
           accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...data } : a)),
