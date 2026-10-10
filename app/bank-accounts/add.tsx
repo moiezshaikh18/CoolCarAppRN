@@ -27,6 +27,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
+import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { usePermissions } from '../../src/hooks/usePermissions';
 import { AccountType, BankAccount } from '../../src/types/bankAccount.types';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
@@ -44,13 +45,16 @@ export default function AddBankAccountScreen() {
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { addAccount } = useBankAccountStore();
-  const { canViewBankBalances } = usePermissions();
+  const { canViewBankBalances, isOwner, isStaff } = usePermissions();
+  const activeMember = useEnterpriseStore((s) => s.activeMember);
 
   React.useEffect(() => {
-    if (!canViewBankBalances) {
+    // Only enforce restriction once we know the user's actual role.
+    // activeMember === null means store hasn't loaded yet — don't redirect prematurely.
+    if (activeMember !== null && isStaff && !canViewBankBalances) {
       router.back();
     }
-  }, [canViewBankBalances]);
+  }, [activeMember, isStaff, canViewBankBalances]);
 
   const [accountType, setAccountType] = useState<AccountType>('CURRENT');
   const [accountName, setAccountName] = useState('');

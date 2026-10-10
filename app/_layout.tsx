@@ -1,5 +1,7 @@
 // ============================================================
 // Root Layout — App entry with providers
+// Central Firestore real-time listeners (employees, bank accounts)
+// that persist throughout the entire app lifecycle.
 // ============================================================
 
 import '../global.css';
@@ -24,17 +26,44 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }, 300);
 
-    // Sync Firebase Auth State
+    // -------------------------------------------------------
+    // Central Firebase Auth State Observer
+    // Keeps authStore in sync across the full app lifecycle.
+    // -------------------------------------------------------
     let unsubAuth: (() => void) | undefined;
+
     (async () => {
       try {
         const { onAuthStateChanged } = await import('firebase/auth');
         const { auth } = await import('../src/services/firebase/firebase.config');
         const { useAuthStore } = await import('../src/store/authStore');
 
-        unsubAuth = onAuthStateChanged(auth, (fbUser) => {
+        unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
           if (fbUser) {
             useAuthStore.getState().setFirebaseUid(fbUser.uid);
+            // Ensure authState stays 'authenticated' if it was persisted as such
+            const currentState = useAuthStore.getState().authState;
+            if (currentState !== 'authenticated') {
+              // Try to fetch user profile to confirm
+              try {
+                const { getUserProfile } = await import('../src/services/firebase/auth.service');
+                const profile = await getUserProfile(fbUser.uid);
+                if (profile) {
+                  useAuthStore.getState().setUser(profile);
+                  useAuthStore.getState().setAuthState('authenticated');
+                }
+              } catch {
+                // offline — leave existing persisted state intact
+              }
+            }
+          } else {
+            // Firebase says no user — only reset if we previously thought we were authenticated
+            const currentState = useAuthStore.getState().authState;
+            if (currentState === 'authenticated') {
+              useAuthStore.getState().setAuthState('unauthenticated');
+              useAuthStore.getState().setUser(null);
+              useAuthStore.getState().setFirebaseUid(null);
+            }
           }
         });
       } catch (e) {
@@ -42,9 +71,60 @@ export default function RootLayout() {
       }
     })();
 
+    // -------------------------------------------------------
+    // Central Firestore Real-Time Listeners
+    // Keeps employees and bank accounts in sync on all devices.
+    // -------------------------------------------------------
+    let unsubEmployees: (() => void) | undefined;
+    let unsubBankAccounts: (() => void) | undefined;
+
+    (async () => {
+      try {
+        const { collection, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../src/services/firebase/firebase.config');
+        const { useEmployeeStore } = await import('../src/store/employeeStore');
+        const { useBankAccountStore } = await import('../src/store/bankAccountStore');
+        const { useEnterpriseStore } = await import('../src/store/enterpriseStore');
+
+        // Wait briefly for stores to hydrate before setting up listeners
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        const entId =
+          useEnterpriseStore.getState().activeEnterprise?.id || 'enterprise-cool-car';
+
+        // Listen to employees collection
+        unsubEmployees = onSnapshot(
+          collection(db, 'enterprises', entId, 'employees'),
+          (snap) => {
+            if (!snap.empty) {
+              const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+              useEmployeeStore.getState().setEmployees(list);
+            }
+          },
+          (err) => console.log('[Layout] Employees listener error:', err.message)
+        );
+
+        // Listen to bank accounts collection
+        unsubBankAccounts = onSnapshot(
+          collection(db, 'enterprises', entId, 'bankAccounts'),
+          (snap) => {
+            if (!snap.empty) {
+              const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+              useBankAccountStore.getState().setAccounts(list);
+            }
+          },
+          (err) => console.log('[Layout] BankAccounts listener error:', err.message)
+        );
+      } catch (e) {
+        console.log('[Layout] Firestore listeners notice:', e);
+      }
+    })();
+
     return () => {
       clearTimeout(timer);
       unsubAuth?.();
+      unsubEmployees?.();
+      unsubBankAccounts?.();
     };
   }, []);
 
@@ -87,4 +167,3 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-

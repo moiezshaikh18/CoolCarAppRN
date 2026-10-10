@@ -110,30 +110,17 @@ export default function OTPScreen() {
     } catch {}
 
     // Check if phone matches any registered employee / staff member
-    // First try Firestore (cross-device), then fall back to local store
-    let matchedEmployee: any = null;
     try {
-      const { collection, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../../src/services/firebase/firebase.config');
-      const { useEnterpriseStore } = await import('../../src/store/enterpriseStore');
-      const entId = useEnterpriseStore.getState().activeEnterprise?.id || 'enterprise-cool-car';
-      const snapAll = await getDocs(collection(db, 'enterprises', entId, 'employees'));
-      matchedEmployee = snapAll.docs
-        .map((d) => ({ id: d.id, ...d.data() as any }))
-        .find((emp: any) => (emp.phone || '').replace(/\D/g, '') === cleanDigits) || null;
-    } catch {
-      // Firestore unavailable — fall back to local store
-      try {
-        const { useEmployeeStore } = await import('../../src/store/employeeStore');
-        matchedEmployee = useEmployeeStore.getState().employees.find(
-          (emp) => emp.phone.replace(/\D/g, '') === cleanDigits
-        ) || null;
-      } catch {}
-    }
-    if (matchedEmployee) {
-      userRole = 'STAFF';
-      ownerName = matchedEmployee.name;
-    }
+      const { useEmployeeStore } = await import('../../src/store/employeeStore');
+      const employees = useEmployeeStore.getState().employees;
+      const matchedEmployee = employees.find(
+        (emp) => emp.phone.replace(/\D/g, '') === cleanDigits
+      );
+      if (matchedEmployee) {
+        userRole = 'STAFF';
+        ownerName = matchedEmployee.name;
+      }
+    } catch {}
 
     const mockUser = {
       uid: 'user-phone-' + Date.now(),
