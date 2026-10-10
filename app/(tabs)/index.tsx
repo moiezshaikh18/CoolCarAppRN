@@ -91,7 +91,7 @@ export default function DashboardScreen() {
   const { employees, setEmployees } = useEmployeeStore();
   const { accounts } = useBankAccountStore();
   const { expenses, setExpenses } = useExpenseStore();
-  const { chalans, addChalan } = useChalanStore();
+  const { chalans, setChalans, addChalan } = useChalanStore();
   const { jobSheets: storeJobSheets, setJobSheets } = useJobSheetStore();
 
   const [rawTab, setRawTab] = useState<'jobs' | 'expenses' | 'chalans'>('jobs');
@@ -113,6 +113,7 @@ export default function DashboardScreen() {
   useEffect(() => {
     let unsubJobs: (() => void) | undefined;
     let unsubExp: (() => void) | undefined;
+    let unsubChalan: (() => void) | undefined;
 
     const syncDashboard = async () => {
       try {
@@ -136,7 +137,7 @@ export default function DashboardScreen() {
           }
         );
 
-        // Sync Expenses
+        // Sync General Expenses
         const expRef = collection(db, 'enterprises', entId, 'expenses');
         unsubExp = onSnapshot(
           query(expRef, orderBy('createdAt', 'desc')),
@@ -151,6 +152,22 @@ export default function DashboardScreen() {
             console.log('[Dashboard] Expenses onSnapshot error:', err.message);
           }
         );
+
+        // Sync Purchase Chalans (Separate collection for spare parts inventory procurement)
+        const chalanRef = collection(db, 'enterprises', entId, 'chalans');
+        unsubChalan = onSnapshot(
+          query(chalanRef, orderBy('createdAt', 'desc')),
+          (snap) => {
+            const list: any[] = [];
+            snap.forEach((doc) => {
+              list.push({ id: doc.id, ...(doc.data() as any) });
+            });
+            setChalans(list);
+          },
+          (err) => {
+            console.log('[Dashboard] Chalans onSnapshot error:', err.message);
+          }
+        );
       } catch (err) {
         console.log('[Dashboard] Firestore listener error:', err);
       }
@@ -160,6 +177,7 @@ export default function DashboardScreen() {
     return () => {
       unsubJobs?.();
       unsubExp?.();
+      unsubChalan?.();
     };
   }, [enterpriseId]);
 
@@ -195,9 +213,27 @@ export default function DashboardScreen() {
     [employees]
   );
 
+  // General Workshop Operational Expenses ONLY (Tea, rent, electricity, tools)
+  // Purchase Chalans are strictly isolated in their own section!
+  const generalExpenses = useMemo(() => {
+    return expenses.filter(
+      (exp) =>
+        !exp.id?.startsWith('exp_chalan') &&
+        exp.categoryId !== 'cat_parts' &&
+        !exp.categoryName?.toLowerCase().includes('spare parts purchase') &&
+        !exp.categoryName?.toLowerCase().includes('chalan')
+    );
+  }, [expenses]);
+
   const todayExpensesTotal = useMemo(
-    () => expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0),
-    [expenses]
+    () => generalExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0),
+    [generalExpenses]
+  );
+
+  // Total Spare Parts Purchases (Chalans) - Tracked Separately
+  const totalChalansPurchased = useMemo(
+    () => chalans.reduce((sum, c) => sum + (Number(c.totalAmount) || 0), 0),
+    [chalans]
   );
 
   const todayCollections = useMemo(
@@ -601,7 +637,7 @@ export default function DashboardScreen() {
                         <Receipt size={18} color="#FFFFFF" />
                       </View>
                       <Text style={{ fontSize: 11, fontWeight: '900', color: '#EF4444' }}>
-                        {canViewReports ? `-${formatCurrency(todayExpensesTotal, currencySymbol)}` : `${expenses.length} Records`}
+                        {canViewReports ? `-${formatCurrency(todayExpensesTotal, currencySymbol)}` : `${generalExpenses.length} Records`}
                       </Text>
                     </View>
 
@@ -645,7 +681,7 @@ export default function DashboardScreen() {
                           <Package size={18} color="#FFFFFF" />
                         </View>
                         <Text style={{ fontSize: 11, fontWeight: '900', color: '#7C3AED' }}>
-                          {chalans.length} Chalans
+                          {totalChalansPurchased > 0 ? formatCurrency(totalChalansPurchased, currencySymbol) : `${chalans.length} Chalans`}
                         </Text>
                       </View>
 
@@ -754,7 +790,7 @@ export default function DashboardScreen() {
                       color: activeTab === 'expenses' ? (isDark ? '#000000' : '#FFFFFF') : '#64748B',
                     }}
                   >
-                    Expenses ({expenses.length})
+                    Expenses ({generalExpenses.length})
                   </Text>
                 </TouchableOpacity>
               )}
@@ -899,12 +935,12 @@ export default function DashboardScreen() {
           {/* TAB CONTENT: EXPENSES */}
           {activeTab === 'expenses' && (
             <View style={{ gap: 10 }}>
-              {expenses.length === 0 ? (
+              {generalExpenses.length === 0 ? (
                 <View style={{ padding: 24, alignItems: 'center' }}>
                   <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '700' }}>No Expenses Logged Today</Text>
                 </View>
               ) : (
-                expenses.slice(0, 8).map((exp) => (
+                generalExpenses.slice(0, 8).map((exp) => (
                   <View
                     key={exp.id}
                     style={{

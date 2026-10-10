@@ -35,3 +35,17 @@ export interface PurchaseChalan {
   updatedAt: string;
 }
 
+export interface DealerSummary {
+  id: string;
+  name: string;
+  phone?: string;
+  totalPurchases: number;
+  totalPaid: number;
+  totalPending: number;
+  chalanCount: number;
+  lastPurchaseDate?: string;
+  purchasedParts?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+

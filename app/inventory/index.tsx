@@ -36,13 +36,16 @@ import {
   QrCode,
   X,
   Trash2,
+  Phone,
+  Wrench,
 } from 'lucide-react-native';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useChalanStore } from '../../src/store/chalanStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
 import { formatCurrency } from '../../src/utils/currency';
-import { PurchaseChalan } from '../../src/types/chalan.types';
+import { PurchaseChalan, DealerSummary } from '../../src/types/chalan.types';
+import { aggregateDealerPurchases } from '../../src/services/dealer.service';
 
 export default function InventoryScreen() {
   const { isDark } = useTheme();
@@ -53,6 +56,8 @@ export default function InventoryScreen() {
   const activeAccounts = useMemo(() => accounts.filter((a) => a.isActive), [accounts]);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'CHALANS' | 'DEALERS'>('CHALANS');
+  const [dealerDateRange, setDealerDateRange] = useState<'MONTH' | 'YEAR' | 'ALL'>('MONTH');
 
   // Live Firestore Sync for Chalans
   useEffect(() => {
@@ -129,6 +134,43 @@ export default function InventoryScreen() {
         )
     );
   }, [chalans, searchQuery]);
+
+  // Aggregate Dealer Purchases based on Selected Date Range (Month / Year / All Time)
+  const dealerSummaries = useMemo(() => {
+    const now = new Date();
+    let start: string | undefined = undefined;
+    let end: string | undefined = undefined;
+
+    if (dealerDateRange === 'MONTH') {
+      const yr = now.getFullYear();
+      const mo = String(now.getMonth() + 1).padStart(2, '0');
+      start = `${yr}-${mo}-01`;
+    } else if (dealerDateRange === 'YEAR') {
+      start = `${now.getFullYear()}-01-01`;
+    }
+
+    return aggregateDealerPurchases(chalans, start, end);
+  }, [chalans, dealerDateRange]);
+
+  // Filtered Dealers by Search Query
+  const filteredDealers = useMemo(() => {
+    if (!searchQuery.trim()) return dealerSummaries;
+    const q = searchQuery.toLowerCase().trim();
+    return dealerSummaries.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        (d.phone && d.phone.includes(q)) ||
+        (d.purchasedParts && d.purchasedParts.some((p) => p.toLowerCase().includes(q)))
+    );
+  }, [dealerSummaries, searchQuery]);
+
+  const dealerPeriodPurchases = useMemo(() => {
+    return filteredDealers.reduce((sum, d) => sum + d.totalPurchases, 0);
+  }, [filteredDealers]);
+
+  const dealerPeriodDue = useMemo(() => {
+    return filteredDealers.reduce((sum, d) => sum + d.totalPending, 0);
+  }, [filteredDealers]);
 
   const handleOpenClearDue = (chalan: PurchaseChalan) => {
     setSelectedChalan(chalan);
@@ -370,6 +412,171 @@ export default function InventoryScreen() {
     );
   };
 
+  const renderDealerCard = ({ item }: { item: DealerSummary }) => {
+    const isSettled = item.totalPending <= 0;
+
+    return (
+      <View
+        style={{
+          backgroundColor: cardBg,
+          borderRadius: 22,
+          padding: 16,
+          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: cardBorder,
+          shadowColor: '#000',
+          shadowOpacity: 0.03,
+          shadowRadius: 8,
+          elevation: 2,
+        }}
+      >
+        {/* Dealer Header: Name, Phone & Status */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Building2 size={16} color={isDark ? '#60A5FA' : '#153580'} />
+              <Text style={{ fontSize: 16, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A' }}>
+                {item.name}
+              </Text>
+            </View>
+
+            {item.phone ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                <Phone size={11} color="#64748B" />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
+                  {item.phone}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Pending Due / Cleared Badge */}
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 12,
+              backgroundColor: isSettled
+                ? 'rgba(16, 185, 129, 0.15)'
+                : 'rgba(239, 68, 68, 0.15)',
+            }}
+          >
+            <Text
+              style={{
+                color: isSettled ? '#10B981' : '#EF4444',
+                fontSize: 11,
+                fontWeight: '800',
+              }}
+            >
+              {isSettled ? '✓ Cleared' : `Due: ${formatCurrency(item.totalPending, currencySymbol)}`}
+            </Text>
+          </View>
+        </View>
+
+        {/* Purchase Metrics Breakdown */}
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: isDark ? '#1A2234' : '#F8FAFC',
+            borderRadius: 14,
+            padding: 12,
+            marginBottom: 10,
+            justifyContent: 'space-between',
+          }}
+        >
+          <View>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+              Total Purchases
+            </Text>
+            <Text style={{ fontSize: 15, fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A', marginTop: 2 }}>
+              {formatCurrency(item.totalPurchases, currencySymbol)}
+            </Text>
+          </View>
+
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+              Paid Amount
+            </Text>
+            <Text style={{ fontSize: 15, fontWeight: '900', color: '#10B981', marginTop: 2 }}>
+              {formatCurrency(item.totalPaid, currencySymbol)}
+            </Text>
+          </View>
+
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+              Chalans
+            </Text>
+            <Text style={{ fontSize: 15, fontWeight: '900', color: '#7C3AED', marginTop: 2 }}>
+              {item.chalanCount} Orders
+            </Text>
+          </View>
+        </View>
+
+        {/* Purchased Parts List */}
+        {item.purchasedParts && item.purchasedParts.length > 0 && (
+          <View style={{ marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+              <Wrench size={11} color="#64748B" />
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>
+                Goods / Parts Purchased ({item.purchasedParts.length}):
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {item.purchasedParts.map((part, idx) => (
+                <View
+                  key={idx}
+                  style={{
+                    backgroundColor: isDark ? '#242834' : '#EEF2F6',
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#E2E8F0' : '#334155' }}>
+                    {part}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Card Footer */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingTop: 8,
+            borderTopWidth: 1,
+            borderTopColor: cardBorder,
+          }}
+        >
+          {item.lastPurchaseDate ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Calendar size={11} color="#64748B" />
+              <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
+                Last Purchase: {item.lastPurchaseDate}
+              </Text>
+            </View>
+          ) : <View />}
+
+          <TouchableOpacity
+            onPress={() => {
+              setSearchQuery(item.name);
+              setViewMode('CHALANS');
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '800', color: isDark ? '#60A5FA' : '#153580' }}>
+              View Chalans →
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: sheetBg }}>
       <StatusBar barStyle="light-content" backgroundColor={canvasBg} />
@@ -404,7 +611,7 @@ export default function InventoryScreen() {
                 Purchase Chalans
               </Text>
               <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600' }}>
-                Spare Parts Inward Purchases
+                Spare Parts Inward Purchases & Khata
               </Text>
             </View>
           </View>
@@ -433,7 +640,96 @@ export default function InventoryScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Monthly Purchase Spend Card */}
+        {/* View Mode Toggle Pills */}
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: 'rgba(255, 255, 255, 0.16)',
+            borderRadius: 16,
+            padding: 3,
+            marginBottom: 10,
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => setViewMode('CHALANS')}
+            style={{
+              flex: 1,
+              paddingVertical: 8,
+              borderRadius: 13,
+              backgroundColor: viewMode === 'CHALANS' ? '#FFFFFF' : 'transparent',
+              alignItems: 'center',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '800',
+                color: viewMode === 'CHALANS' ? '#153580' : 'rgba(255, 255, 255, 0.85)',
+              }}
+            >
+              All Chalans ({chalans.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setViewMode('DEALERS')}
+            style={{
+              flex: 1,
+              paddingVertical: 8,
+              borderRadius: 13,
+              backgroundColor: viewMode === 'DEALERS' ? '#FFFFFF' : 'transparent',
+              alignItems: 'center',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '800',
+                color: viewMode === 'DEALERS' ? '#153580' : 'rgba(255, 255, 255, 0.85)',
+              }}
+            >
+              Dealer Purchases ({dealerSummaries.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Date Range Selector (When in Dealer Mode) */}
+        {viewMode === 'DEALERS' && (
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
+            {[
+              { id: 'MONTH' as const, label: 'This Month' },
+              { id: 'YEAR' as const, label: 'This Year' },
+              { id: 'ALL' as const, label: 'All Time' },
+            ].map((pill) => {
+              const isSelected = dealerDateRange === pill.id;
+              return (
+                <TouchableOpacity
+                  key={pill.id}
+                  onPress={() => setDealerDateRange(pill.id)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                    backgroundColor: isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.14)',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '800',
+                      color: isSelected ? '#153580' : 'rgba(255, 255, 255, 0.8)',
+                    }}
+                  >
+                    {pill.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Spend / Procurement Summary Card */}
         <View
           style={{
             backgroundColor: 'rgba(255, 255, 255, 0.12)',
@@ -444,17 +740,30 @@ export default function InventoryScreen() {
             borderColor: 'rgba(255, 255, 255, 0.15)',
           }}
         >
-          <Text style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 12, fontWeight: '600' }}>
-            This Month Total Parts Purchases
+          <Text style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+            {viewMode === 'CHALANS'
+              ? 'This Month Total Parts Purchases'
+              : dealerDateRange === 'MONTH'
+              ? 'This Month Dealer Procurement'
+              : dealerDateRange === 'YEAR'
+              ? 'This Year Dealer Procurement'
+              : 'All-Time Dealer Procurement'}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 4 }}>
             <Text style={{ color: '#FFFFFF', fontSize: 26, fontWeight: '900', letterSpacing: -0.5 }}>
-              {formatCurrency(monthlyPurchaseTotal, currencySymbol)}
+              {formatCurrency(viewMode === 'CHALANS' ? monthlyPurchaseTotal : dealerPeriodPurchases, currencySymbol)}
             </Text>
             <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12, fontWeight: '700' }}>
-              {chalans.length} Chalans
+              {viewMode === 'CHALANS'
+                ? `${chalans.length} Chalans`
+                : `${filteredDealers.length} Active Dealers`}
             </Text>
           </View>
+          {viewMode === 'DEALERS' && dealerPeriodDue > 0 && (
+            <Text style={{ color: '#FCA5A5', fontSize: 11, fontWeight: '800', marginTop: 4 }}>
+              Total Balance Due to Dealers: {formatCurrency(dealerPeriodDue, currencySymbol)}
+            </Text>
+          )}
         </View>
 
         {/* Search Input */}
@@ -473,14 +782,18 @@ export default function InventoryScreen() {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search by chalan #, vendor, or part..."
+            placeholder={
+              viewMode === 'CHALANS'
+                ? 'Search by chalan #, vendor, or part...'
+                : 'Search dealer name, phone, or parts...'
+            }
             placeholderTextColor="rgba(255,255,255,0.7)"
             style={{ flex: 1, color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
           />
         </View>
       </View>
 
-      {/* Main Content Sheet with ZERO Blue Bleed */}
+      {/* Main Content Sheet */}
       <View
         style={{
           flex: 1,
@@ -492,18 +805,20 @@ export default function InventoryScreen() {
         }}
       >
         <FlatList
-          data={filteredChalans}
+          data={viewMode === 'CHALANS' ? (filteredChalans as any[]) : (filteredDealers as any[])}
           keyExtractor={(item) => item.id}
-          renderItem={renderChalanCard}
+          renderItem={viewMode === 'CHALANS' ? (renderChalanCard as any) : (renderDealerCard as any)}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 40 }}
           ListEmptyComponent={
             <View style={{ padding: 32, alignItems: 'center' }}>
               <Package size={36} color={isDark ? '#475569' : '#94A3B8'} />
               <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginTop: 10 }}>
-                No purchase chalans logged
+                {viewMode === 'CHALANS' ? 'No purchase chalans logged' : 'No dealer purchases found'}
               </Text>
               <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4, textAlign: 'center' }}>
-                Tap &quot;+ Add&quot; above to record an inward spare parts purchase chalan.
+                {viewMode === 'CHALANS'
+                  ? 'Tap "+ Add" above to record an inward spare parts purchase chalan.'
+                  : 'Save chalans with dealer names to track purchases by month, year, or range.'}
               </Text>
             </View>
           }

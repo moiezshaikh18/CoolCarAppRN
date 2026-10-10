@@ -37,7 +37,6 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useChalanStore } from '../../src/store/chalanStore';
 import { useBankAccountStore } from '../../src/store/bankAccountStore';
-import { useExpenseStore } from '../../src/store/expenseStore';
 import { useVehicleStore } from '../../src/store/vehicleStore';
 import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { BankPaymentSelector } from '../../src/components/common/BankPaymentSelector';
@@ -47,14 +46,7 @@ import { formatCurrency } from '../../src/utils/currency';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
 import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
 import { usePermissions } from '../../src/hooks/usePermissions';
-
-const VENDOR_PRESETS = [
-  'National Auto Spares',
-  'Metro Car AC Emporium',
-  'Sharma Motor Parts',
-  'Bosch Genuine Distributor',
-  'Subros Authorized Spares',
-];
+import { getDealersFromFirestore, upsertDealerInFirestore } from '../../src/services/dealer.service';
 
 interface FormChalanItem {
   id: string;
@@ -79,7 +71,6 @@ export default function AddPurchaseChalanScreen() {
 
   const { addChalan } = useChalanStore();
   const { accounts, debitAccount } = useBankAccountStore();
-  const { addExpense } = useExpenseStore();
   const directoryVehicles = useVehicleStore((s) => s.vehicles);
   const activeJobs = useJobSheetStore((s) => s.jobSheets);
 
@@ -106,6 +97,30 @@ export default function AddPurchaseChalanScreen() {
   const [vendorPhone, setVendorPhone] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Dealer Directory Auto-Suggestions from DB
+  const [dealerList, setDealerList] = useState<Array<{ name: string; phone?: string }>>([]);
+  const [showDealerSuggestions, setShowDealerSuggestions] = useState(false);
+
+  React.useEffect(() => {
+    const entId = enterpriseId || 'enterprise-cool-car';
+    getDealersFromFirestore(entId).then((dealers) => {
+      const mapped = dealers.map((d) => ({ name: d.name, phone: d.phone }));
+      const chalansList = useChalanStore.getState().chalans;
+      chalansList.forEach((c) => {
+        if (c.vendorName && !mapped.some((m) => m.name.toLowerCase() === c.vendorName.toLowerCase())) {
+          mapped.push({ name: c.vendorName, phone: c.vendorPhone });
+        }
+      });
+      setDealerList(mapped);
+    });
+  }, [enterpriseId]);
+
+  const dealerSuggestions = useMemo(() => {
+    if (!vendorName.trim()) return [];
+    const q = vendorName.toLowerCase().trim();
+    return dealerList.filter((d) => d.name.toLowerCase().includes(q) && d.name.toLowerCase() !== q);
+  }, [vendorName, dealerList]);
+
   const now = new Date();
   const [date, setDate] = useState(now.toISOString().split('T')[0]);
   const [time, setTime] = useState(
@@ -124,13 +139,14 @@ export default function AddPurchaseChalanScreen() {
     },
   ]);
 
-  // Payment Settlement
+  // Payment Settlement: DEFAULT TO UNPAID / CREDIT
+  const [paymentStatusOption, setPaymentStatusOption] = useState<'UNPAID' | 'PAID' | 'PARTIAL'>('UNPAID');
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('UPI');
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || 'bank-cash');
   const [selectedAccountName, setSelectedAccountName] = useState<string>(
     accounts[0]?.accountName || 'Cash Counter'
   );
-  const [amountPaidCustom, setAmountPaidCustom] = useState<string | null>(null);
+  const [amountPaidCustom, setAmountPaidCustom] = useState<string>('0');
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
@@ -165,7 +181,15 @@ export default function AddPurchaseChalanScreen() {
     }, 0);
   }, [items]);
 
-  const effectiveAmountPaid = amountPaidCustom !== null ? parseFloat(amountPaidCustom) || 0 : grandTotal;
+  // Effective Paid Amount: 0 when UNPAID, grandTotal when PAID, custom when PARTIAL
+  const effectiveAmountPaid = useMemo(() => {
+    if (grandTotal === 0) return 0;
+    if (paymentStatusOption === 'UNPAID') return 0;
+    if (paymentStatusOption === 'PAID') return grandTotal;
+    const parsed = parseFloat(amountPaidCustom);
+    return isNaN(parsed) ? 0 : Math.min(grandTotal, Math.max(0, parsed));
+  }, [paymentStatusOption, amountPaidCustom, grandTotal]);
+
   const remainingDue = Math.max(0, grandTotal - effectiveAmountPaid);
 
   const addItemRow = () => {
@@ -246,8 +270,8 @@ export default function AddPurchaseChalanScreen() {
     });
 
     const calculatedTotal = compiledItems.reduce((sum, it) => sum + it.totalPrice, 0);
-    const paidAmount = Math.min(calculatedTotal, effectiveAmountPaid);
-    const pendingDue = Math.max(0, calculatedTotal - paidAmount);
+    const actualPaid = Math.min(calculatedTotal, effectiveAmountPaid);
+    const pendingDue = Math.max(0, calculatedTotal - actualPaid);
 
     const entId = enterpriseId || 'enterprise-cool-car';
     const newChalan: PurchaseChalan = {
@@ -259,11 +283,11 @@ export default function AddPurchaseChalanScreen() {
       time,
       items: compiledItems,
       totalAmount: calculatedTotal,
-      amountPaid: paidAmount,
+      amountPaid: actualPaid,
       pendingAmount: pendingDue,
-      paymentMode: paidAmount > 0 ? (paymentMode as any) : 'PENDING',
-      bankAccountId: paidAmount > 0 ? selectedAccountId : undefined,
-      bankAccountName: paidAmount > 0 ? selectedAccountName : undefined,
+      paymentMode: actualPaid > 0 ? (paymentMode as any) : 'PENDING',
+      bankAccountId: actualPaid > 0 ? selectedAccountId : undefined,
+      bankAccountName: actualPaid > 0 ? selectedAccountName : undefined,
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -271,47 +295,36 @@ export default function AddPurchaseChalanScreen() {
 
     addChalan(newChalan);
 
-    const expId = `exp_chalan_${Date.now()}`;
-    const expData = {
-      id: expId,
-      enterpriseId: entId,
-      categoryId: 'cat_parts',
-      categoryName: `Spare Parts Purchase (${chalanNumber.trim()})`,
-      amount: paidAmount,
-      description: `Chalan ${chalanNumber.trim()} from ${vendorName.trim()} (${compiledItems.length} items)`,
-      spentBy: 'Workshop Store',
-      time,
-      paymentMode: paymentMode,
-      paymentAccountId: selectedAccountId,
-      paymentAccountName: selectedAccountName,
-      date,
-      voided: false,
-      createdBy: 'Workshop Store',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Auto-debit bank account if payment made
-    if (paidAmount > 0) {
-      debitAccount(selectedAccountId, paidAmount);
-      addExpense(expData as any);
+    // Auto-debit bank account ONLY if payment was made
+    if (actualPaid > 0) {
+      debitAccount(selectedAccountId, actualPaid);
     }
 
-    // Cloud Firestore Sync
+    // Cloud Firestore Sync (Save Chalan & Upsert Dealer Directory)
+    // Chalans are recorded in their own collection and NOT bundled into Daily Expenses!
     try {
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
       await setDoc(doc(db, 'enterprises', entId, 'chalans', newChalan.id), newChalan);
-      if (paidAmount > 0) {
-        await setDoc(doc(db, 'enterprises', entId, 'expenses', expId), expData);
-      }
+
+      // Auto-save Dealer in DB for month/year purchasing analytics
+      await upsertDealerInFirestore(
+        entId,
+        vendorName.trim(),
+        vendorPhone.trim(),
+        calculatedTotal,
+        actualPaid,
+        pendingDue,
+        date,
+        compiledItems.map((it) => it.partName)
+      );
     } catch (cloudErr) {
       console.log('[SaveChalan] Firestore sync notice:', cloudErr);
     }
 
     showAlert(
       'Chalan Saved Successfully',
-      `Chalan ${newChalan.chalanNumber} for ${compiledItems.length} items (Total: ₹${calculatedTotal.toLocaleString()}) recorded.`,
+      `Chalan ${newChalan.chalanNumber} for ${compiledItems.length} items recorded.\nTotal: ₹${calculatedTotal.toLocaleString()} | Paid: ₹${actualPaid.toLocaleString()} | Due: ₹${pendingDue.toLocaleString()}`,
       'success',
       [{ text: 'View Chalans', style: 'default', onPress: () => router.replace('/inventory') }]
     );
@@ -455,14 +468,18 @@ export default function AddPurchaseChalanScreen() {
               </View>
             </View>
 
-            {/* Vendor Name */}
+            {/* Dealer / Supplier Name */}
             <Text style={{ fontSize: 12, fontWeight: '700', color: textMuted, marginBottom: 6 }}>
-              Supplier / Vendor Name (Manual Entry / Preset) *
+              Dealer / Supplier Name *
             </Text>
             <TextInput
               value={vendorName}
-              onChangeText={setVendorName}
-              placeholder="e.g. National Auto Spares"
+              onChangeText={(val) => {
+                setVendorName(val);
+                setShowDealerSuggestions(true);
+              }}
+              onFocus={() => setShowDealerSuggestions(true)}
+              placeholder="e.g. National Auto Spares / Bosch Spares"
               placeholderTextColor="#94A3B8"
               style={{
                 backgroundColor: inputBg,
@@ -472,13 +489,58 @@ export default function AddPurchaseChalanScreen() {
                 fontSize: 15,
                 fontWeight: '700',
                 color: textPrimary,
-                marginBottom: 10,
+                marginBottom: showDealerSuggestions && dealerSuggestions.length > 0 ? 4 : 10,
               }}
             />
 
+            {/* Live Dealer Suggestions Dropdown from Database */}
+            {showDealerSuggestions && dealerSuggestions.length > 0 && (
+              <View
+                style={{
+                  backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                  borderRadius: 14,
+                  padding: 8,
+                  marginBottom: 10,
+                  borderWidth: 1,
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#CBD5E1',
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '700', color: textMuted, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  Previously Saved Dealers (Tap to Select):
+                </Text>
+                {dealerSuggestions.slice(0, 4).map((d) => (
+                  <TouchableOpacity
+                    key={d.name}
+                    onPress={() => {
+                      setVendorName(d.name);
+                      if (d.phone) setVendorPhone(d.phone);
+                      setShowDealerSuggestions(false);
+                    }}
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 8,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: textPrimary }}>
+                      🏢 {d.name}
+                    </Text>
+                    {d.phone ? (
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: textMuted }}>
+                        📞 {d.phone}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
             {/* Vendor Contact / Phone */}
             <Text style={{ fontSize: 12, fontWeight: '700', color: textMuted, marginBottom: 6 }}>
-              Vendor Contact / Phone (Optional)
+              Dealer Contact / Phone (Optional)
             </Text>
             <TextInput
               value={vendorPhone}
@@ -494,38 +556,9 @@ export default function AddPurchaseChalanScreen() {
                 fontSize: 14,
                 fontWeight: '700',
                 color: textPrimary,
-                marginBottom: 10,
+                marginBottom: 6,
               }}
             />
-
-            {/* Quick Vendor Chips */}
-            <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, marginBottom: 6 }}>
-              Quick Presets:
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
-              {VENDOR_PRESETS.map((v) => (
-                <TouchableOpacity
-                  key={v}
-                  onPress={() => setVendorName(v)}
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 14,
-                    backgroundColor: vendorName === v ? '#153580' : isDark ? '#222D42' : '#E2E8F0',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontWeight: '700',
-                      color: vendorName === v ? '#FFFFFF' : textPrimary,
-                    }}
-                  >
-                    {v}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
           </View>
 
           {/* Section: Items with Multi-Car Tagging (10-N Items) */}
@@ -780,41 +813,56 @@ export default function AddPurchaseChalanScreen() {
                       </View>
                     </View>
 
-                    {/* Quick Garage Cars One-Tap Suggestions */}
-                    {availableVehicles.length > 0 && (
-                      <View>
-                        <Text style={{ fontSize: 10, fontWeight: '700', color: textMuted, marginBottom: 5 }}>
-                          Quick Tag from Workshop Cars:
-                        </Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                          {availableVehicles.map((vp) => {
-                            const isSelected = item.assignedVehicleNumber === vp.reg;
-                            return (
+                    {/* Live Vehicle Auto-Suggestions from Garage Database */}
+                    {item.assignedVehicleNumber !== 'General Stock' &&
+                      item.assignedVehicleNumber.trim().length >= 2 &&
+                      (() => {
+                        const q = item.assignedVehicleNumber.toLowerCase().trim();
+                        const matching = availableVehicles.filter(
+                          (v) =>
+                            v.reg !== 'General Stock' &&
+                            (v.reg.toLowerCase().includes(q) || v.model.toLowerCase().includes(q)) &&
+                            v.reg.toLowerCase() !== q
+                        );
+                        if (matching.length === 0) return null;
+                        return (
+                          <View
+                            style={{
+                              backgroundColor: isDark ? '#1C2538' : '#F1F5F9',
+                              borderRadius: 10,
+                              padding: 6,
+                              marginTop: 2,
+                              borderWidth: 1,
+                              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+                            }}
+                          >
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: textMuted, paddingHorizontal: 6, paddingVertical: 2 }}>
+                              Matching Cars in Database (Tap to Select):
+                            </Text>
+                            {matching.slice(0, 3).map((vp) => (
                               <TouchableOpacity
                                 key={vp.reg}
                                 onPress={() => setItemVehicle(index, vp.reg, vp.model)}
                                 style={{
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 5,
-                                  borderRadius: 10,
-                                  backgroundColor: isSelected ? (isDark ? '#FFFFFF' : '#0C1829') : isDark ? '#1C2538' : '#F1F5F9',
+                                  paddingVertical: 6,
+                                  paddingHorizontal: 8,
+                                  borderRadius: 6,
+                                  flexDirection: 'row',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
                                 }}
                               >
-                                <Text
-                                  style={{
-                                    fontSize: 11,
-                                    fontWeight: '700',
-                                    color: isSelected ? (isDark ? '#0C1829' : '#FFFFFF') : textPrimary,
-                                  }}
-                                >
-                                  {vp.reg} {vp.reg !== 'General Stock' && vp.model ? `(${vp.model.split(' ')[0]})` : ''}
+                                <Text style={{ fontSize: 12, fontWeight: '800', color: textPrimary }}>
+                                  🚗 {vp.reg}
+                                </Text>
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: textMuted }}>
+                                  {vp.model}
                                 </Text>
                               </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                      </View>
-                    )}
+                            ))}
+                          </View>
+                        );
+                      })()}
                   </View>
                 </View>
               );
@@ -867,33 +915,142 @@ export default function AddPurchaseChalanScreen() {
               </Text>
             </View>
 
-            {/* Amount Paid Now Input */}
+            {/* Payment Choice Toggle: Unpaid / Credit vs Paid in Full vs Partial */}
+            <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, marginBottom: 8, textTransform: 'uppercase' }}>
+              Select Payment Action:
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+              {/* Option 1: Unpaid / Credit (Default) */}
+              <TouchableOpacity
+                onPress={() => {
+                  setPaymentStatusOption('UNPAID');
+                  setAmountPaidCustom('0');
+                }}
+                activeOpacity={0.8}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: paymentStatusOption === 'UNPAID' ? '#EF4444' : (isDark ? '#1C2538' : '#F1F5F9'),
+                  borderWidth: 1,
+                  borderColor: paymentStatusOption === 'UNPAID' ? '#EF4444' : cardBorder,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: paymentStatusOption === 'UNPAID' ? '#FFFFFF' : textPrimary,
+                  }}
+                >
+                  ⏳ Unpaid / Credit
+                </Text>
+              </TouchableOpacity>
+
+              {/* Option 2: Fully Paid */}
+              <TouchableOpacity
+                onPress={() => {
+                  setPaymentStatusOption('PAID');
+                  setAmountPaidCustom(String(grandTotal));
+                }}
+                activeOpacity={0.8}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: paymentStatusOption === 'PAID' ? '#00C896' : (isDark ? '#1C2538' : '#F1F5F9'),
+                  borderWidth: 1,
+                  borderColor: paymentStatusOption === 'PAID' ? '#00C896' : cardBorder,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: paymentStatusOption === 'PAID' ? '#FFFFFF' : textPrimary,
+                  }}
+                >
+                  ✓ Fully Paid
+                </Text>
+              </TouchableOpacity>
+
+              {/* Option 3: Partial Payment */}
+              <TouchableOpacity
+                onPress={() => {
+                  setPaymentStatusOption('PARTIAL');
+                  if (parseFloat(amountPaidCustom) === 0 || amountPaidCustom === String(grandTotal)) {
+                    setAmountPaidCustom(String(Math.round(grandTotal / 2)));
+                  }
+                }}
+                activeOpacity={0.8}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: paymentStatusOption === 'PARTIAL' ? '#F59E0B' : (isDark ? '#1C2538' : '#F1F5F9'),
+                  borderWidth: 1,
+                  borderColor: paymentStatusOption === 'PARTIAL' ? '#F59E0B' : cardBorder,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: paymentStatusOption === 'PARTIAL' ? '#FFFFFF' : textPrimary,
+                  }}
+                >
+                  💵 Partial Paid
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Amount Paid Now */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: textMuted }}>
                 Amount Paid Now:
               </Text>
-              <View style={{ width: 140 }}>
-                <TextInput
-                  value={amountPaidCustom !== null ? amountPaidCustom : String(grandTotal)}
-                  onChangeText={(val) => setAmountPaidCustom(val)}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor="#94A3B8"
+              {paymentStatusOption === 'PARTIAL' ? (
+                <View style={{ width: 140 }}>
+                  <TextInput
+                    value={amountPaidCustom}
+                    onChangeText={(val) => setAmountPaidCustom(val.replace(/[^0-9]/g, ''))}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      backgroundColor: inputBg,
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      fontSize: 16,
+                      fontWeight: '900',
+                      color: '#F59E0B',
+                      textAlign: 'right',
+                      borderWidth: 1,
+                      borderColor: '#F59E0B',
+                    }}
+                  />
+                </View>
+              ) : (
+                <Text
                   style={{
-                    backgroundColor: inputBg,
-                    borderRadius: 12,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: '900',
-                    color: '#00C896',
-                    textAlign: 'right',
+                    color: effectiveAmountPaid > 0 ? '#00C896' : textMuted,
                   }}
-                />
-              </View>
+                >
+                  ₹{effectiveAmountPaid.toLocaleString()}
+                </Text>
+              )}
             </View>
 
-            {/* Remaining Pending to Vendor */}
+            {/* Remaining Pending to Vendor / Accurate Payment Status */}
             <View
               style={{
                 flexDirection: 'row',
@@ -904,11 +1061,30 @@ export default function AddPurchaseChalanScreen() {
                 borderTopColor: cardBorder,
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: remainingDue > 0 ? '#EF4444' : '#00C896' }}>
-                {remainingDue > 0 ? 'Balance Due to Vendor:' : 'Payment Status:'}
+              <Text style={{ fontSize: 13, fontWeight: '700', color: textMuted }}>
+                {remainingDue > 0 ? 'Balance Due to Dealer:' : 'Payment Status:'}
               </Text>
-              <Text style={{ fontSize: 15, fontWeight: '900', color: remainingDue > 0 ? '#EF4444' : '#00C896' }}>
-                {remainingDue > 0 ? `₹${remainingDue.toLocaleString()}` : 'Fully Paid ✓'}
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: '900',
+                  color:
+                    grandTotal === 0
+                      ? textMuted
+                      : effectiveAmountPaid === 0
+                      ? '#EF4444'
+                      : remainingDue > 0
+                      ? '#F59E0B'
+                      : '#00C896',
+                }}
+              >
+                {grandTotal === 0
+                  ? 'Pending Parts'
+                  : effectiveAmountPaid === 0
+                  ? `Unpaid / Credit (₹${grandTotal.toLocaleString()} Due)`
+                  : remainingDue > 0
+                  ? `₹${remainingDue.toLocaleString()} Due`
+                  : 'Fully Paid ✓'}
               </Text>
             </View>
           </View>
