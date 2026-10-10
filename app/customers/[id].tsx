@@ -3,7 +3,7 @@
 // Directly matching media_1790189780212.png center screen
 // ============================================================
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useEnterprise } from '../../src/hooks/useEnterprise';
 import { useCustomerStore } from '../../src/store/customerStore';
 import { useVehicleStore } from '../../src/store/vehicleStore';
+import { useJobSheetStore } from '../../src/store/jobSheetStore';
 import { GlassCard } from '../../src/components/common/GlassCard';
 import { formatCurrency } from '../../src/utils/currency';
 import { getInitials } from '../../src/utils/formatters';
@@ -42,11 +43,128 @@ export default function CustomerDetailsScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const { customers, removeCustomer } = useCustomerStore();
   const { vehicles } = useVehicleStore();
+  const { jobSheets } = useJobSheetStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'fleet'>('overview');
+  const [liveCustomer, setLiveCustomer] = useState<any>(null);
+
+  // Live Firestore Sync for Customer, Vehicles & JobSheets
+  useEffect(() => {
+    if (!params.id) return;
+    let unsubscribeCust: (() => void) | undefined;
+    let unsubscribeVeh: (() => void) | undefined;
+    let unsubscribeJobs: (() => void) | undefined;
+
+    const syncCustomerData = async () => {
+      try {
+        const entId = enterpriseId || 'enterprise-cool-car';
+        const { doc, collection, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+
+        // Customer Doc
+        unsubscribeCust = onSnapshot(doc(db, 'enterprises', entId, 'customers', params.id as string), (snap) => {
+          if (snap.exists()) {
+            setLiveCustomer({ id: snap.id, ...snap.data() });
+          }
+        });
+
+        // Vehicles
+        unsubscribeVeh = onSnapshot(collection(db, 'enterprises', entId, 'vehicles'), (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+          useVehicleStore.getState().setVehicles(list);
+        });
+
+        // JobSheets
+        unsubscribeJobs = onSnapshot(collection(db, 'enterprises', entId, 'jobSheets'), (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+          useJobSheetStore.getState().setJobSheets(list);
+        });
+      } catch (err) {
+        console.log('[CustomerDetails] Firestore sync notice:', err);
+      }
+    };
+
+    syncCustomerData();
+    return () => {
+      unsubscribeCust?.();
+      unsubscribeVeh?.();
+      unsubscribeJobs?.();
+    };
+  }, [params.id, enterpriseId]);
 
   const customer = useMemo(() => {
-    return customers.find((c) => c.id === params.id) || null;
-  }, [params.id, customers]);
+    return liveCustomer || customers.find((c) => c.id === params.id) || null;
+  }, [liveCustomer, params.id, customers]);
+
+  // Live aggregated customer financial metrics from Job Sheets
+  const customerJobs = useMemo(() => {
+    if (!customer) return [];
+    const custPhone = customer.phone ? customer.phone.replace(/\D/g, '') : '';
+    const custName = customer.name ? customer.name.toLowerCase().trim() : '';
+    return jobSheets.filter((j) => {
+      if (j.customerId && j.customerId === customer.id) return true;
+      if (custPhone && j.customerPhone && j.customerPhone.replace(/\D/g, '') === custPhone) return true;
+      if (custName && j.customerName && j.customerName.toLowerCase().trim() === custName) return true;
+      return false;
+    });
+  }, [customer, jobSheets]);
+
+  const totalBilled = useMemo(() => {
+    if (customerJobs.length > 0) {
+      return customerJobs.reduce((sum, j: any) => sum + (Number(j.finalAmount || j.estimatedAmount || j.amount) || 0), 0);
+    }
+    return Number(customer?.totalSpent) || 0;
+  }, [customer, customerJobs]);
+
+  const totalPaid = useMemo(() => {
+    if (customerJobs.length > 0) {
+      return customerJobs.reduce((sum, j: any) => sum + (Number(j.totalPaid || j.paidAmount) || 0), 0);
+    }
+    return Number(customer?.totalPaid) || 0;
+  }, [customer, customerJobs]);
+
+  const totalPending = useMemo(() => {
+    if (customerJobs.length > 0) {
+      return customerJobs.reduce((sum, j: any) => {
+        const billed = Number(j.finalAmount || j.estimatedAmount || j.amount) || 0;
+        const paid = Number(j.totalPaid || j.paidAmount) || 0;
+        const p = j.pendingAmount !== undefined ? Number(j.pendingAmount) : Math.max(0, billed - paid);
+        return sum + p;
+      }, 0);
+    }
+    return Number(customer?.pendingAmount) || 0;
+  }, [customer, customerJobs]);
+
+  const totalJobsCount = customerJobs.length > 0 ? customerJobs.length : (customer?.totalJobs || 0);
+
+  // Live vehicles associated with this customer
+  const customerVehicles = useMemo(() => {
+    if (!customer) return [];
+    const custPhone = customer.phone ? customer.phone.replace(/\D/g, '') : '';
+    const custName = customer.name ? customer.name.toLowerCase().trim() : '';
+
+    const list: any[] = vehicles.filter((v) => {
+      if (v.customerId && v.customerId === customer.id) return true;
+      if (custPhone && v.customerPhone && v.customerPhone.replace(/\D/g, '') === custPhone) return true;
+      if (custName && v.customerName && v.customerName.toLowerCase().trim() === custName) return true;
+      return false;
+    });
+
+    // Also include vehicles from customer's job sheets if not yet registered in directory
+    customerJobs.forEach((j: any) => {
+      const reg = (j.vehicleNumber || j.vehicleRegNumber || '').trim().toUpperCase();
+      if (reg && !list.some((v) => (v.registrationNumber || '').toUpperCase() === reg)) {
+        list.push({
+          id: `veh-job-${j.id}`,
+          registrationNumber: reg,
+          model: j.vehicleModel || 'Vehicle',
+          make: (j.vehicleModel || '').split(' ')[0] || 'Car',
+          modelYear: '',
+        });
+      }
+    });
+
+    return list;
+  }, [customer, vehicles, customerJobs]);
 
   const canvasBg = isDark ? '#070A0F' : '#153580';
   const sheetBg = isDark ? '#111622' : '#FFFFFF';
@@ -188,24 +306,24 @@ export default function CustomerDetailsScreen() {
             {customer.phone}
           </Text>
 
-          {/* Lifetime Spent */}
+          {/* Lifetime Spent / Total Billed */}
           <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 12, marginBottom: 8 }}>
             <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -1 }}>
-              {formatCurrency(customer.totalSpent, currencySymbol)}
+              {formatCurrency(totalBilled, currencySymbol)}
             </Text>
           </View>
 
           <View
             style={{
-              backgroundColor: customer.pendingAmount > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 200, 150, 0.2)',
+              backgroundColor: totalPending > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 200, 150, 0.2)',
               paddingHorizontal: 12,
               paddingVertical: 5,
               borderRadius: 16,
               marginBottom: 20,
             }}
           >
-            <Text style={{ color: customer.pendingAmount > 0 ? '#EF4444' : '#00C896', fontSize: 12, fontWeight: '800' }}>
-              {customer.pendingAmount > 0 ? `Pending Due: ${formatCurrency(customer.pendingAmount, currencySymbol)}` : 'All Accounts Settled'}
+            <Text style={{ color: totalPending > 0 ? '#EF4444' : '#00C896', fontSize: 12, fontWeight: '800' }}>
+              {totalPending > 0 ? `Pending Due: ${formatCurrency(totalPending, currencySymbol)}` : 'All Accounts Settled'}
             </Text>
           </View>
 
@@ -256,7 +374,12 @@ export default function CustomerDetailsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => router.push('/job-sheets/create')}
+              onPress={() =>
+                router.push({
+                  pathname: '/job-sheets/create',
+                  params: { customerId: customer.id, customerName: customer.name, customerPhone: customer.phone },
+                })
+              }
               activeOpacity={0.8}
               style={{ alignItems: 'center', gap: 6 }}
             >
@@ -278,7 +401,12 @@ export default function CustomerDetailsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => router.push('/vehicles/add')}
+              onPress={() =>
+                router.push({
+                  pathname: '/vehicles/add',
+                  params: { customerId: customer.id, customerName: customer.name },
+                })
+              }
               activeOpacity={0.8}
               style={{ alignItems: 'center', gap: 6 }}
             >
@@ -338,7 +466,7 @@ export default function CustomerDetailsScreen() {
                   color: activeTab === 'fleet' ? (isDark ? '#FFFFFF' : '#0C1829') : '#94A3B8',
                 }}
               >
-                Vehicles Fleet ({((customer as any).vehicles?.length) || 2})
+                Vehicles Fleet ({customerVehicles.length})
               </Text>
             </TouchableOpacity>
           </View>
@@ -350,14 +478,14 @@ export default function CustomerDetailsScreen() {
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
                   <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Total Billed</Text>
                   <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
-                    {formatCurrency(customer.totalSpent, currencySymbol)}
+                    {formatCurrency(totalBilled, currencySymbol)}
                   </Text>
                 </GlassCard>
 
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
                   <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Total Paid</Text>
                   <Text style={{ color: '#00C896', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
-                    {formatCurrency(customer.totalPaid, currencySymbol)}
+                    {formatCurrency(totalPaid, currencySymbol)}
                   </Text>
                 </GlassCard>
               </View>
@@ -366,14 +494,14 @@ export default function CustomerDetailsScreen() {
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
                   <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Total Jobs</Text>
                   <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 17, fontWeight: '900', marginTop: 2 }}>
-                    {customer.totalJobs} Work Orders
+                    {totalJobsCount} Work Orders
                   </Text>
                 </GlassCard>
 
                 <GlassCard variant={isDark ? 'navy' : 'sand'} padding={16} style={{ flex: 1, borderRadius: 22 }}>
                   <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '600' }}>Last Visit</Text>
                   <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800', marginTop: 2 }}>
-                    {customer.lastVisit ? String(customer.lastVisit) : 'Never'}
+                    {customer.lastVisit ? String(customer.lastVisit) : (customerJobs.length > 0 ? String(customerJobs[0].date) : 'Never')}
                   </Text>
                 </GlassCard>
               </View>
@@ -388,60 +516,77 @@ export default function CustomerDetailsScreen() {
                   Billing Address
                 </Text>
                 <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 14, fontWeight: '700', marginTop: 4 }}>
-                  {customer.address}
+                  {customer.address || 'Workshop Customer'}
                 </Text>
               </GlassCard>
             </View>
           ) : (
             <View style={{ gap: 10 }}>
-              {(((customer as any).vehicles) || []).map((v: any) => (
-                <TouchableOpacity
-                  key={v.id}
-                  onPress={() => router.push(`/vehicles/${v.id}`)}
-                  activeOpacity={0.8}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    borderRadius: 22,
-                    backgroundColor: isDark ? '#141926' : '#F8FAFD',
-                    borderWidth: 1,
-                    borderColor: cardBorder,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View
-                      style={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: 21,
-                        backgroundColor: isDark ? '#1C2538' : '#0C1829',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Car size={18} color="#FFFFFF" />
+              {customerVehicles.length === 0 ? (
+                <View style={{ padding: 32, alignItems: 'center' }}>
+                  <Car size={36} color={isDark ? '#475569' : '#94A3B8'} />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#94A3B8' : '#64748B', marginTop: 10 }}>
+                    No Vehicles Registered
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4, textAlign: 'center' }}>
+                    Tap &quot;Add Car&quot; above to link a vehicle to {customer.name}.
+                  </Text>
+                </View>
+              ) : (
+                customerVehicles.map((v: any) => (
+                  <TouchableOpacity
+                    key={v.id}
+                    onPress={() => router.push(v.id.startsWith('veh-job-') ? '/vehicles' : `/vehicles/${v.id}`)}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      borderRadius: 22,
+                      backgroundColor: isDark ? '#141926' : '#F8FAFD',
+                      borderWidth: 1,
+                      borderColor: cardBorder,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View
+                        style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: 21,
+                          backgroundColor: isDark ? '#1C2538' : '#0C1829',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Car size={18} color="#FFFFFF" />
+                      </View>
+                      <View>
+                        <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800' }}>
+                          {v.model || v.make || 'Vehicle'}
+                        </Text>
+                        <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+                          {v.registrationNumber} {v.modelYear || v.year ? `• ${v.modelYear || v.year}` : ''}
+                        </Text>
+                      </View>
                     </View>
-                    <View>
-                      <Text style={{ color: isDark ? '#FFFFFF' : '#0C1829', fontSize: 15, fontWeight: '800' }}>
-                        {v.model}
-                      </Text>
-                      <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                        {v.reg} • {v.year}
-                      </Text>
-                    </View>
-                  </View>
-                  <ChevronRight size={18} color="#64748B" />
-                </TouchableOpacity>
-              ))}
+                    <ChevronRight size={18} color="#64748B" />
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
           )}
 
           {/* New Job CTA */}
           <TouchableOpacity
-            onPress={() => router.push('/job-sheets/create')}
+            onPress={() =>
+              router.push({
+                pathname: '/job-sheets/create',
+                params: { customerId: customer.id, customerName: customer.name, customerPhone: customer.phone },
+              })
+            }
             activeOpacity={0.88}
             style={{
               backgroundColor: primaryBtnBg,

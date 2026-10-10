@@ -218,6 +218,16 @@ export default function DashboardScreen() {
     [employees]
   );
 
+  const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const currentMonthPrefix = useMemo(() => todayIso.substring(0, 7), [todayIso]);
+
+  const toIsoDate = (d: any): string => {
+    if (!d) return '';
+    if (typeof d === 'string') return d.includes('T') ? d.split('T')[0] : d;
+    if (d instanceof Date) return d.toISOString().split('T')[0];
+    return String(d).split('T')[0];
+  };
+
   // General Workshop Operational Expenses ONLY (Tea, rent, electricity, tools)
   // Purchase Chalans are strictly isolated in their own section!
   const generalExpenses = useMemo(() => {
@@ -231,8 +241,11 @@ export default function DashboardScreen() {
   }, [expenses]);
 
   const todayExpensesTotal = useMemo(
-    () => generalExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0),
-    [generalExpenses]
+    () =>
+      generalExpenses
+        .filter((exp) => toIsoDate(exp.date) === todayIso)
+        .reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0),
+    [generalExpenses, todayIso]
   );
 
   // Total Spare Parts Purchases (Chalans) - Tracked Separately
@@ -242,15 +255,39 @@ export default function DashboardScreen() {
   );
 
   const todayCollections = useMemo(
-    () => allJobSheets.reduce((sum, j) => sum + (Number(j.paidAmount) || 0), 0),
-    [allJobSheets]
+    () =>
+      allJobSheets
+        .filter((j) => toIsoDate(j.date) === todayIso)
+        .reduce((sum, j) => sum + (Number(j.paidAmount) || 0), 0),
+    [allJobSheets, todayIso]
   );
 
   // Month-To-Date Aggregates (Pure Mahine Ka Till)
-  const monthRevenue = todayCollections;
-  const monthExpenses = todayExpensesTotal;
+  const monthRevenue = useMemo(
+    () =>
+      allJobSheets
+        .filter((j) => toIsoDate(j.date).startsWith(currentMonthPrefix))
+        .reduce((sum, j) => sum + (Number(j.paidAmount) || 0), 0),
+    [allJobSheets, currentMonthPrefix]
+  );
+
+  const monthExpenses = useMemo(
+    () =>
+      generalExpenses
+        .filter((exp) => toIsoDate(exp.date).startsWith(currentMonthPrefix))
+        .reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0),
+    [generalExpenses, currentMonthPrefix]
+  );
+
   const monthNetProfit = monthRevenue - monthExpenses;
-  const monthCarsServiced = allJobSheets.length;
+  const monthCarsServiced = useMemo(
+    () =>
+      allJobSheets.filter((j) => {
+        const jDate = j.date ? (j.date.includes('T') ? j.date.split('T')[0] : j.date) : '';
+        return jDate.startsWith(currentMonthPrefix);
+      }).length,
+    [allJobSheets, currentMonthPrefix]
+  );
 
   // Filtered Job Sheets by Vehicle Registration Number / Name / Model
   const filteredJobSheets = useMemo(() => {

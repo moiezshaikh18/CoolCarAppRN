@@ -4,7 +4,7 @@
 // Calculates Billed Revenue, Outflow & Net Profit between dates
 // ============================================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -50,17 +50,70 @@ import { Alert, ActivityIndicator } from 'react-native';
 
 export default function ReportsScreen() {
   const { theme, isDark } = useTheme();
-  const { currencySymbol } = useEnterprise();
+  const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
   const { onScroll: onHideNavScroll } = useHideOnScroll();
 
-
-  const { expenses } = useExpenseStore();
-  const { jobSheets } = useJobSheetStore();
-  const { chalans } = useChalanStore();
-  const { payments } = usePaymentStore();
+  const { expenses, setExpenses } = useExpenseStore();
+  const { jobSheets, setJobSheets } = useJobSheetStore();
+  const { chalans, setChalans } = useChalanStore();
+  const { payments, setPayments } = usePaymentStore();
   const { accounts } = useBankAccountStore();
   const [isExporting, setIsExporting] = useState(false);
+
+  // Live Firestore Sync for Reports data
+  useEffect(() => {
+    let unsubscribeJobs: (() => void) | undefined;
+    let unsubscribeExpenses: (() => void) | undefined;
+    let unsubscribeChalans: (() => void) | undefined;
+    let unsubscribePayments: (() => void) | undefined;
+
+    const syncReportsData = async () => {
+      try {
+        const entId = enterpriseId || 'enterprise-cool-car';
+        const { collection, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+
+        // 1. Job Sheets
+        const jobsRef = collection(db, 'enterprises', entId, 'jobSheets');
+        unsubscribeJobs = onSnapshot(jobsRef, (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+          setJobSheets(list);
+        });
+
+        // 2. Expenses
+        const expRef = collection(db, 'enterprises', entId, 'expenses');
+        unsubscribeExpenses = onSnapshot(expRef, (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+          setExpenses(list);
+        });
+
+        // 3. Purchase Chalans
+        const chalanRef = collection(db, 'enterprises', entId, 'chalans');
+        unsubscribeChalans = onSnapshot(chalanRef, (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+          setChalans(list);
+        });
+
+        // 4. Payments
+        const payRef = collection(db, 'enterprises', entId, 'payments');
+        unsubscribePayments = onSnapshot(payRef, (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+          setPayments(list);
+        });
+      } catch (err) {
+        console.log('[Reports] Firestore sync notice:', err);
+      }
+    };
+
+    syncReportsData();
+    return () => {
+      if (unsubscribeJobs) unsubscribeJobs();
+      if (unsubscribeExpenses) unsubscribeExpenses();
+      if (unsubscribeChalans) unsubscribeChalans();
+      if (unsubscribePayments) unsubscribePayments();
+    };
+  }, [enterpriseId]);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const firstOfMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
@@ -68,13 +121,13 @@ export default function ReportsScreen() {
   // Date Range state
   const [fromDate, setFromDate] = useState(firstOfMonthStr);
   const [toDate, setToDate] = useState(todayStr);
-  const [rangeMode, setRangeMode] = useState<'MONTH' | 'TODAY' | 'WEEK' | 'CUSTOM'>('MONTH');
+  const [rangeMode, setRangeMode] = useState<'MONTH' | 'TODAY' | 'WEEK' | 'YEAR' | 'CUSTOM'>('MONTH');
 
   // Calendar Modal states
   const [calendarTarget, setCalendarTarget] = useState<'FROM' | 'TO' | null>(null);
 
   // Set predefined ranges
-  const setQuickRange = (mode: 'TODAY' | 'WEEK' | 'MONTH') => {
+  const setQuickRange = (mode: 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR') => {
     setRangeMode(mode);
     const today = new Date();
     const todayIso = today.toISOString().split('T')[0];
@@ -87,6 +140,8 @@ export default function ReportsScreen() {
       setFromDate(past7);
     } else if (mode === 'MONTH') {
       setFromDate(firstOfMonthStr);
+    } else if (mode === 'YEAR') {
+      setFromDate(`${today.getFullYear()}-01-01`);
     }
   };
 
@@ -105,6 +160,18 @@ export default function ReportsScreen() {
       return d >= fromDate && d <= toDate;
     });
   }, [expenses, fromDate, toDate]);
+
+  // Operational Expenses ONLY (Tea, rent, electricity, maintenance)
+  // Chalans strictly excluded from general expenses!
+  const generalExpensesList = useMemo(() => {
+    return filteredExpenses.filter(
+      (e) =>
+        !e.id?.startsWith('exp_chalan') &&
+        e.categoryId !== 'cat_parts' &&
+        !e.categoryName?.toLowerCase().includes('spare parts purchase') &&
+        !e.categoryName?.toLowerCase().includes('chalan')
+    );
+  }, [filteredExpenses]);
 
   const filteredChalans = useMemo(() => {
     return chalans.filter((c) => {
@@ -125,10 +192,37 @@ export default function ReportsScreen() {
   const totalCollected = filteredJobs.reduce((sum, j) => sum + (j.totalPaid || 0), 0);
   const totalPendingReceivables = filteredJobs.reduce((sum, j) => sum + (j.pendingAmount || 0), 0);
 
-  const totalExpenseOutflow = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalChalanPaid = filteredChalans.reduce((sum, c) => sum + c.amountPaid, 0);
-  const totalChalanPending = filteredChalans.reduce((sum, c) => sum + c.pendingAmount, 0);
+  // Dedicated Inward Parts Purchases metrics
+  const totalChalanPurchases = filteredChalans.reduce((sum, c) => sum + (Number(c.totalAmount) || 0), 0);
+  const totalChalanPaid = filteredChalans.reduce((sum, c) => sum + (Number(c.amountPaid) || 0), 0);
+  const totalChalanPending = filteredChalans.reduce((sum, c) => sum + (Number(c.pendingAmount) || 0), 0);
 
+  // Operational General Expenses & Salaries
+  const staffSalaryExpenses = useMemo(() => {
+    return generalExpensesList
+      .filter(
+        (e) =>
+          e.categoryId === 'cat-salary' ||
+          e.categoryId === 'cat-advance' ||
+          e.categoryName?.toLowerCase().includes('salary') ||
+          e.categoryName?.toLowerCase().includes('advance')
+      )
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  }, [generalExpensesList]);
+
+  const generalExpenses = useMemo(() => {
+    return generalExpensesList
+      .filter(
+        (e) =>
+          e.categoryId !== 'cat-salary' &&
+          e.categoryId !== 'cat-advance' &&
+          !e.categoryName?.toLowerCase().includes('salary') &&
+          !e.categoryName?.toLowerCase().includes('advance')
+      )
+      .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  }, [generalExpensesList]);
+
+  const totalExpenseOutflow = generalExpenses + staffSalaryExpenses;
   const totalOutflow = totalExpenseOutflow + totalChalanPaid;
   const netSurplus = totalCollected - totalOutflow;
 
@@ -161,16 +255,6 @@ export default function ReportsScreen() {
     });
     return Array.from(map.values());
   }, [filteredPayments]);
-
-  const staffSalaryExpenses = useMemo(() => {
-    return filteredExpenses
-      .filter((e) => e.categoryId === 'cat-salary' || e.categoryId === 'cat-advance' || e.categoryName?.toLowerCase().includes('salary') || e.categoryName?.toLowerCase().includes('advance'))
-      .reduce((sum, e) => sum + e.amount, 0);
-  }, [filteredExpenses]);
-
-  const generalExpenses = useMemo(() => {
-    return Math.max(0, totalExpenseOutflow - staffSalaryExpenses);
-  }, [totalExpenseOutflow, staffSalaryExpenses]);
 
   const handleExportPdf = async () => {
     try {
@@ -289,6 +373,21 @@ export default function ReportsScreen() {
           >
             <Text style={{ fontSize: 11, fontWeight: '800', color: rangeMode === 'MONTH' ? '#0C1829' : '#FFFFFF' }}>
               This Month
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setQuickRange('YEAR')}
+            style={{
+              flex: 1,
+              paddingVertical: 7,
+              borderRadius: 14,
+              backgroundColor: rangeMode === 'YEAR' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.2)',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '800', color: rangeMode === 'YEAR' ? '#0C1829' : '#FFFFFF' }}>
+              This Year
             </Text>
           </TouchableOpacity>
 
@@ -705,12 +804,19 @@ export default function ReportsScreen() {
                   <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#E2E8F0' : '#1E293B' }}>
                     Inward Parts Purchases
                   </Text>
-                  <Text style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>From vendor chalans</Text>
+                  <Text style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>
+                    {filteredChalans.length} vendor chalan(s)
+                  </Text>
                 </View>
               </View>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
-                {formatCurrency(totalChalanPaid, currencySymbol)}
-              </Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#FFFFFF' : '#0C1829' }}>
+                  {formatCurrency(totalChalanPurchases, currencySymbol)}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#64748B', marginTop: 1 }}>
+                  Paid: {formatCurrency(totalChalanPaid, currencySymbol)} • Due: {formatCurrency(totalChalanPending, currencySymbol)}
+                </Text>
+              </View>
             </View>
 
             {/* Staff Salaries & Advances */}

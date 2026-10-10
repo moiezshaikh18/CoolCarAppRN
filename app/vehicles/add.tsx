@@ -10,7 +10,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Modal,
   StatusBar,
@@ -30,7 +29,6 @@ import { useVehicleStore } from '../../src/store/vehicleStore';
 import { useCustomerStore } from '../../src/store/customerStore';
 import { FuelType, Vehicle } from '../../src/types/vehicle.types';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
-import { DynamicCarIllustration } from '../../src/components/common/CarIllustrations';
 
 const POPULAR_MAKES = ['Maruti', 'Hyundai', 'Tata', 'Mahindra', 'Honda', 'Toyota', 'Kia'];
 const FUEL_TYPES: { label: string; value: FuelType }[] = [
@@ -45,18 +43,28 @@ export default function AddVehicleScreen() {
   const { theme, isDark } = useTheme();
   const { enterpriseId } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ customerId?: string }>();
+  const params = useLocalSearchParams<{ customerId?: string; customerName?: string; customerPhone?: string }>();
   const { addVehicle } = useVehicleStore();
   const { customers } = useCustomerStore();
 
-  const preselectedCustomer = useMemo(() => {
-    if (params.customerId) {
-      return customers.find((c) => c.id === params.customerId);
-    }
-    return null;
-  }, [params.customerId, customers]);
+  const [chosenCustomer, setChosenCustomer] = useState<any>(null);
 
-  const [selectedCustomer, setSelectedCustomer] = useState(preselectedCustomer || customers[0] || null);
+  const selectedCustomer = useMemo(() => {
+    if (chosenCustomer) return chosenCustomer;
+    if (params.customerId) {
+      const found = customers.find((c) => c.id === params.customerId);
+      if (found) return found;
+      if (params.customerName) {
+        return {
+          id: params.customerId,
+          name: params.customerName,
+          phone: params.customerPhone || '',
+        };
+      }
+    }
+    return customers[0] || null;
+  }, [chosenCustomer, params.customerId, params.customerName, params.customerPhone, customers]);
+
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
 
@@ -138,8 +146,9 @@ export default function AddVehicleScreen() {
     try {
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
+      const { cleanFirestoreData } = await import('../../src/services/firebase/firestore.service');
       const vehRef = doc(db, 'enterprises', entId, 'vehicles', newVehId);
-      await setDoc(vehRef, vehicleObj);
+      await setDoc(vehRef, cleanFirestoreData(vehicleObj));
     } catch (err) {
       console.log('[AddVehicle] Firestore sync error/offline:', err);
     }
@@ -656,7 +665,7 @@ export default function AddVehicleScreen() {
                     <TouchableOpacity
                       key={cust.id}
                       onPress={() => {
-                        setSelectedCustomer(cust);
+                        setChosenCustomer(cust);
                         setCustomerModalVisible(false);
                       }}
                       style={{

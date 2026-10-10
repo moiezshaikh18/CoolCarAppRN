@@ -544,7 +544,10 @@ export default function CreateJobSheetScreen() {
         phone: finalCustPhone,
         address: '',
         totalVisits: 1,
+        totalJobs: 1,
         totalSpent: totalBillDue,
+        totalPaid: Math.max(0, totalBillDue - actualPending),
+        pendingAmount: actualPending,
         outstandingBalance: actualPending,
         isActive: true,
         createdAt: new Date().toISOString(),
@@ -594,15 +597,16 @@ export default function CreateJobSheetScreen() {
       try {
         const { doc, setDoc } = await import('firebase/firestore');
         const { db } = await import('../../src/services/firebase/firebase.config');
+        const { cleanFirestoreData } = await import('../../src/services/firebase/firestore.service');
 
         // Write JobSheet
-        await setDoc(doc(db, 'enterprises', entId, 'jobSheets', newJobId), newJob);
+        await setDoc(doc(db, 'enterprises', entId, 'jobSheets', newJobId), cleanFirestoreData(newJob));
 
         // Auto-save Customer in directory
-        await setDoc(doc(db, 'enterprises', entId, 'customers', custId), customerData, { merge: true });
+        await setDoc(doc(db, 'enterprises', entId, 'customers', custId), cleanFirestoreData(customerData), { merge: true });
 
         // Auto-save Vehicle in fleet
-        await setDoc(doc(db, 'enterprises', entId, 'vehicles', vehId), vehicleData, { merge: true });
+        await setDoc(doc(db, 'enterprises', entId, 'vehicles', vehId), cleanFirestoreData(vehicleData), { merge: true });
 
         // Write Payment if applicable
         if (actualPaid > 0) {
