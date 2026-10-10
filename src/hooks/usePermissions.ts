@@ -31,12 +31,12 @@ export function usePermissions(): UserPermissions {
     const isAdmin = rawRole === 'ADMIN' || isOwner;
     const isStaff = !isOwner && !isAdmin;
 
-    const userPhoneClean = (user?.phone || activeMember?.phone || '').replace(/\D/g, '');
+    const userPhoneClean = (user?.phone || activeMember?.phone || '').replace(/\D/g, '').slice(-10);
     const userName = user?.displayName || activeMember?.displayName || 'User';
 
     // Look up staff profile if role is STAFF
     const matchedEmployee = employees.find((emp) => {
-      const empPhoneClean = (emp.phone || '').replace(/\D/g, '');
+      const empPhoneClean = (emp.phone || '').replace(/\D/g, '').slice(-10);
       return (
         (userPhoneClean && empPhoneClean === userPhoneClean) ||
         (emp.name && userName && emp.name.toLowerCase() === userName.toLowerCase())

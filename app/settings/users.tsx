@@ -34,6 +34,15 @@ import { useEmployeeStore } from '../../src/store/employeeStore';
 import { UserRole } from '../../src/types/enterprise.types';
 import { formatRoleLabel } from '../../src/utils/formatters';
 import { Employee } from '../../src/types/employee.types';
+import {
+  getDynamicOwners,
+  addDynamicOwner,
+  removeDynamicOwner,
+  RegisteredOwner,
+  normalizePhone10,
+  formatIndianPhone,
+  BASELINE_OWNER_NUMBERS,
+} from '../../src/services/authWhitelist.service';
 
 interface TeamMember {
   id: string;
@@ -41,6 +50,7 @@ interface TeamMember {
   phone: string;
   role: UserRole;
   isActive: boolean;
+  isBaseline?: boolean;
 }
 
 const ROLES: { role: UserRole; label: string; desc: string }[] = [
@@ -58,10 +68,19 @@ export default function UsersRolesScreen() {
   const { user } = useAuthStore();
   const { employees, setEmployees, addEmployee, deleteEmployee } = useEmployeeStore();
 
+  const [ownersList, setOwnersList] = useState<RegisteredOwner[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('EMPLOYEE');
+
+  // Sync Dynamic Owners from Firestore
+  useEffect(() => {
+    const entId = activeEnterprise?.id || 'enterprise-cool-car';
+    getDynamicOwners(entId).then((owners) => {
+      setOwnersList(owners);
+    });
+  }, [activeEnterprise?.id]);
 
   // Live Firestore Sync for Employees
   useEffect(() => {
@@ -87,18 +106,36 @@ export default function UsersRolesScreen() {
     };
   }, [activeEnterprise?.id, setEmployees]);
 
-  // Unified Team Members (Owner + Registered Employees)
+  // Unified Team Members (Dynamic Owners + Registered Employees)
   const members: TeamMember[] = useMemo(() => {
-    const list: TeamMember[] = [
-      {
-        id: 'owner-me',
-        name: `${user?.displayName || 'Workshop Owner'} (You)`,
-        phone: user?.phone || activeEnterprise?.phone || '+91 98765 43210',
+    const list: TeamMember[] = [];
+    const myPhone10 = normalizePhone10(user?.phone || '');
+
+    // 1. Dynamic & Baseline Owners
+    const ownersToShow = ownersList.length > 0 ? ownersList : BASELINE_OWNER_NUMBERS.map((b) => ({
+      id: `owner-base-${b.phone}`,
+      phone: b.phone,
+      formattedPhone: formatIndianPhone(b.phone),
+      name: b.name,
+      role: 'OWNER' as const,
+      isActive: true,
+      createdAt: '2026-01-01',
+    }));
+
+    ownersToShow.forEach((owner) => {
+      const isMe = normalizePhone10(owner.phone) === myPhone10;
+      const isBase = BASELINE_OWNER_NUMBERS.some((b) => b.phone === normalizePhone10(owner.phone));
+      list.push({
+        id: owner.id,
+        name: isMe ? `${owner.name} (You)` : owner.name,
+        phone: owner.formattedPhone,
         role: 'OWNER',
         isActive: true,
-      },
-    ];
+        isBaseline: isBase,
+      });
+    });
 
+    // 2. Registered Employees
     employees.forEach((emp) => {
       let role: UserRole = 'EMPLOYEE';
       if (emp.role?.toLowerCase().includes('manager')) role = 'MANAGER';
@@ -116,25 +153,58 @@ export default function UsersRolesScreen() {
     });
 
     return list;
-  }, [user, activeEnterprise, employees]);
+  }, [user, ownersList, employees]);
 
   const handleAddMember = async () => {
     if (!newName.trim()) {
-      Alert.alert('Required', 'Please enter staff member name');
+      Alert.alert('Required', 'Please enter staff member or owner name');
       return;
     }
     if (!newPhone.trim() || newPhone.replace(/\D/g, '').length < 10) {
-      Alert.alert('Required', 'Please enter valid 10-digit phone number');
+      Alert.alert('Required', 'Please enter valid 10-digit mobile number');
       return;
     }
 
-    const clean10 = newPhone.replace(/\D/g, '').slice(-10);
+    const clean10 = normalizePhone10(newPhone);
+    const entId = activeEnterprise?.id || 'enterprise-cool-car';
+
+    // Adding a new Owner dynamically
+    if (newRole === 'OWNER') {
+      try {
+        const addedOwner = await addDynamicOwner(clean10, newName.trim(), entId);
+        setOwnersList((prev) => [
+          ...prev.filter((o) => normalizePhone10(o.phone) !== clean10),
+          addedOwner,
+        ]);
+        setNewName('');
+        setNewPhone('');
+        setNewRole('EMPLOYEE');
+        setModalVisible(false);
+        Alert.alert(
+          'Owner Added 👑',
+          `${newName.trim()} (+91 ${clean10}) has been registered as Workshop Owner in Firestore. They can now log in with full owner privileges.`
+        );
+        return;
+      } catch (err: any) {
+        Alert.alert('Error', err.message || 'Failed to add owner.');
+        return;
+      }
+    }
+
+    // Adding a new Employee / Staff Member
     const newEmployee: Employee = {
       id: `emp-${Date.now()}`,
-      enterpriseId: activeEnterprise?.id || 'enterprise-cool-car',
+      enterpriseId: entId,
       name: newName.trim(),
       phone: `+91 ${clean10}`,
-      role: newRole === 'MANAGER' ? 'Workshop Manager' : newRole === 'ACCOUNTANT' ? 'Accountant' : newRole === 'ADMIN' ? 'Workshop Admin' : 'Mechanic / Technician',
+      role:
+        newRole === 'MANAGER'
+          ? 'Workshop Manager'
+          : newRole === 'ACCOUNTANT'
+          ? 'Accountant'
+          : newRole === 'ADMIN'
+          ? 'Workshop Admin'
+          : 'Mechanic / Technician',
       salaryType: 'MONTHLY',
       salaryAmount: 20000,
       joiningDate: new Date().toISOString().slice(0, 10),
@@ -146,7 +216,8 @@ export default function UsersRolesScreen() {
       isActive: true,
       privileges: {
         canCreateJobSheets: true,
-        canRecordExpenses: newRole === 'ADMIN' || newRole === 'MANAGER' || newRole === 'ACCOUNTANT',
+        canRecordExpenses:
+          newRole === 'ADMIN' || newRole === 'MANAGER' || newRole === 'ACCOUNTANT',
         canManageChalans: newRole === 'ADMIN' || newRole === 'MANAGER',
         canViewBankBalances: newRole === 'ADMIN' || newRole === 'ACCOUNTANT',
         canViewReports: newRole === 'ADMIN' || newRole === 'ACCOUNTANT',
@@ -158,7 +229,6 @@ export default function UsersRolesScreen() {
     addEmployee(newEmployee);
 
     try {
-      const entId = activeEnterprise?.id || 'enterprise-cool-car';
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
       await setDoc(doc(db, 'enterprises', entId, 'employees', newEmployee.id), newEmployee);
@@ -170,14 +240,48 @@ export default function UsersRolesScreen() {
     setNewPhone('');
     setNewRole('EMPLOYEE');
     setModalVisible(false);
-    Alert.alert('Added', `${newEmployee.name} added as ${formatRoleLabel(newRole)}.`);
+    Alert.alert('Added', `${newEmployee.name} registered as ${formatRoleLabel(newRole)}.`);
   };
 
-  const handleRemoveMember = (id: string, name: string) => {
-    if (id === 'owner-me') {
-      Alert.alert('Action Restricted', 'Owner account cannot be removed.');
+  const handleRemoveMember = (id: string, name: string, phone: string, role: UserRole) => {
+    const cleanPhone = normalizePhone10(phone);
+    const currentUserPhone = normalizePhone10(user?.phone || '');
+
+    if (role === 'OWNER') {
+      if (cleanPhone === currentUserPhone) {
+        Alert.alert('Action Restricted', 'You cannot remove your own active owner account.');
+        return;
+      }
+      if (BASELINE_OWNER_NUMBERS.some((b) => b.phone === cleanPhone)) {
+        Alert.alert('Action Restricted', 'Baseline workshop owner account cannot be deleted.');
+        return;
+      }
+      Alert.alert(
+        'Revoke Owner Access',
+        `Are you sure you want to remove ${name} as Workshop Owner? They will no longer be authorized to log in.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Revoke',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const entId = activeEnterprise?.id || 'enterprise-cool-car';
+                await removeDynamicOwner(cleanPhone, entId);
+                setOwnersList((prev) =>
+                  prev.filter((o) => normalizePhone10(o.phone) !== cleanPhone)
+                );
+                Alert.alert('Revoked', `${name} owner access has been revoked.`);
+              } catch (err: any) {
+                Alert.alert('Error', err.message || 'Failed to remove owner.');
+              }
+            },
+          },
+        ]
+      );
       return;
     }
+
     Alert.alert('Remove Team Member', `Are you sure you want to revoke access and delete ${name}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -360,9 +464,11 @@ export default function UsersRolesScreen() {
                     </View>
                   </View>
 
-                  {!isOwner && (
+                  {(!member.isBaseline && !member.name.includes('(You)')) && (
                     <TouchableOpacity
-                      onPress={() => handleRemoveMember(member.id, member.name)}
+                      onPress={() =>
+                        handleRemoveMember(member.id, member.name, member.phone, member.role)
+                      }
                       style={{
                         width: 38,
                         height: 38,

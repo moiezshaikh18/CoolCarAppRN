@@ -24,6 +24,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE } from '../../src/features/enterprise/mockEnterprise';
+import { verifyPhoneNumberAccess, formatIndianPhone } from '../../src/services/authWhitelist.service';
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 45;
@@ -35,7 +36,9 @@ export default function OTPScreen() {
   const { setUser, setAuthState } = useAuthStore();
   const { setActiveEnterprise, setActiveMember } = useEnterpriseStore();
 
-  const [currentPhone, setCurrentPhone] = useState(params.phone || '+91 98765 43210');
+  const [currentPhone, setCurrentPhone] = useState(
+    params.phone ? formatIndianPhone(params.phone) : '+91 87934 36778'
+  );
   const [showChangeModal, setShowChangeModal] = useState(false);
   const [newPhoneInput, setNewPhoneInput] = useState('');
 
@@ -96,50 +99,54 @@ export default function OTPScreen() {
       return;
     }
 
-    let ownerName = 'Workshop Owner';
-    const cleanDigits = currentPhone.replace(/\D/g, '');
-    let ownerEmail = `${cleanDigits}@coolcar.in`;
-    let userRole = 'OWNER';
+    const entId = useEnterpriseStore.getState().activeEnterprise?.id || 'enterprise-cool-car';
 
-    try {
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const n = await AsyncStorage.getItem('cool_car_saved_owner_name');
-      const e = await AsyncStorage.getItem('cool_car_saved_owner_email');
-      if (n) ownerName = n;
-      if (e) ownerEmail = e;
-    } catch {}
+    // Verify phone number access against Dynamic Owners & Registered Staff
+    const access = await verifyPhoneNumberAccess(currentPhone, entId);
 
-    // Check if phone matches any registered employee / staff member
-    // First try Firestore (cross-device), then fall back to local store
-    let matchedEmployee: any = null;
-    try {
-      const { collection, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../../src/services/firebase/firebase.config');
-      const { useEnterpriseStore } = await import('../../src/store/enterpriseStore');
-      const entId = useEnterpriseStore.getState().activeEnterprise?.id || 'enterprise-cool-car';
-      const snapAll = await getDocs(collection(db, 'enterprises', entId, 'employees'));
-      matchedEmployee = snapAll.docs
-        .map((d) => ({ id: d.id, ...d.data() as any }))
-        .find((emp: any) => (emp.phone || '').replace(/\D/g, '') === cleanDigits) || null;
-    } catch {
-      // Firestore unavailable — fall back to local store
-      try {
-        const { useEmployeeStore } = await import('../../src/store/employeeStore');
-        matchedEmployee = useEmployeeStore.getState().employees.find(
-          (emp) => emp.phone.replace(/\D/g, '') === cleanDigits
-        ) || null;
-      } catch {}
-    }
-    if (matchedEmployee) {
-      userRole = 'STAFF';
-      ownerName = matchedEmployee.name;
+    if (!access.allowed) {
+      Alert.alert(
+        'Access Denied 🔒',
+        access.denialReason || 'Unauthorized mobile number.',
+        [
+          {
+            text: 'Change Number',
+            onPress: () => {
+              setOtp(Array(OTP_LENGTH).fill(''));
+              setShowChangeModal(true);
+            },
+          },
+          {
+            text: 'OK',
+            onPress: () => {
+              setOtp(Array(OTP_LENGTH).fill(''));
+              inputs.current[0]?.focus();
+            },
+          },
+        ]
+      );
+      return;
     }
 
-    const mockUser = {
-      uid: 'user-phone-' + Date.now(),
-      phone: currentPhone,
-      displayName: ownerName,
-      email: ownerEmail,
+    // Sign into Firebase Auth anonymously if needed to establish auth state
+    try {
+      const { signInAnonymously } = await import('firebase/auth');
+      const { auth } = await import('../../src/services/firebase/firebase.config');
+      await signInAnonymously(auth);
+    } catch (authErr) {
+      console.log('[OTP] Firebase auth notice:', authErr);
+    }
+
+    const { auth } = await import('../../src/services/firebase/firebase.config');
+    const currentUid =
+      auth.currentUser?.uid ||
+      (access.employeeId ? `staff-${access.employeeId}` : `owner-${access.phone}`);
+
+    const authenticatedUser = {
+      uid: currentUid,
+      phone: access.formattedPhone,
+      displayName: access.displayName,
+      email: `${access.phone}@coolcar.in`,
       enterpriseIds: [MOCK_ENTERPRISE.id],
       activeEnterpriseId: MOCK_ENTERPRISE.id,
       isActive: true,
@@ -147,14 +154,14 @@ export default function OTPScreen() {
       updatedAt: new Date().toISOString(),
     };
 
-    setUser(mockUser);
+    setUser(authenticatedUser);
     setActiveEnterprise(MOCK_ENTERPRISE);
     setActiveMember({
-      userId: mockUser.uid,
+      userId: currentUid,
       enterpriseId: MOCK_ENTERPRISE.id,
-      role: userRole as any,
-      displayName: ownerName,
-      phone: currentPhone,
+      role: access.role,
+      displayName: access.displayName,
+      phone: access.formattedPhone,
       isActive: true,
       joinedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

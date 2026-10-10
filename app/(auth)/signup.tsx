@@ -23,6 +23,11 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE } from '../../src/features/enterprise/mockEnterprise';
+import {
+  verifyPhoneNumberAccess,
+  formatIndianPhone,
+  normalizePhone10,
+} from '../../src/services/authWhitelist.service';
 
 export default function SignupScreen() {
   const { isDark } = useTheme();
@@ -41,21 +46,46 @@ export default function SignupScreen() {
       return;
     }
 
+    if (password.trim().length < 6) {
+      Alert.alert('Invalid Password', 'Password must be at least 6 characters.');
+      return;
+    }
+
+    const cleanDigits = normalizePhone10(identifier);
+    const entId = useEnterpriseStore.getState().activeEnterprise?.id || 'enterprise-cool-car';
+
+    if (cleanDigits.length !== 10) {
+      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    // Verify phone number in Whitelist
+    const access = await verifyPhoneNumberAccess(cleanDigits, entId);
+    if (!access.allowed) {
+      Alert.alert(
+        'Access Denied 🔒',
+        'Account registration is restricted to authorized Cool Car Garage owners and invited staff members.\n\nPlease contact the Workshop Owner to get your mobile number registered.'
+      );
+      return;
+    }
+
+    const displayNameToUse = fullName.trim() || access.displayName;
+
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      await AsyncStorage.setItem('cool_car_saved_owner_name', fullName.trim());
-      await AsyncStorage.setItem('cool_car_saved_owner_email', identifier.trim());
+      await AsyncStorage.setItem('cool_car_saved_owner_name', displayNameToUse);
+      await AsyncStorage.setItem('cool_car_saved_owner_email', `${cleanDigits}@coolcar.in`);
       await AsyncStorage.setItem('cool_car_saved_owner_password', password.trim());
     } catch {}
 
     const { auth } = await import('../../src/services/firebase/firebase.config');
-    const currentUid = auth.currentUser?.uid || 'user-new-' + Date.now();
+    const currentUid = auth.currentUser?.uid || `user-${Date.now()}`;
 
     const newUser = {
       uid: currentUid,
-      phone: identifier.includes('@') ? '9876543210' : identifier.trim(),
-      displayName: fullName.trim(),
-      email: identifier.includes('@') ? identifier.trim() : 'owner@garage.com',
+      phone: access.formattedPhone,
+      displayName: displayNameToUse,
+      email: `${cleanDigits}@coolcar.in`,
       enterpriseIds: [MOCK_ENTERPRISE.id],
       activeEnterpriseId: MOCK_ENTERPRISE.id,
       isActive: true,
@@ -68,9 +98,9 @@ export default function SignupScreen() {
     setActiveMember({
       userId: currentUid,
       enterpriseId: MOCK_ENTERPRISE.id,
-      role: 'OWNER',
-      displayName: fullName.trim(),
-      phone: newUser.phone,
+      role: access.role,
+      displayName: displayNameToUse,
+      phone: access.formattedPhone,
       isActive: true,
       joinedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

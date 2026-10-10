@@ -23,6 +23,12 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useAuthStore } from '../../src/store/authStore';
 import { useEnterpriseStore } from '../../src/store/enterpriseStore';
 import { MOCK_ENTERPRISE } from '../../src/features/enterprise/mockEnterprise';
+import {
+  verifyPhoneNumberAccess,
+  formatIndianPhone,
+  normalizePhone10,
+  getDynamicOwners,
+} from '../../src/services/authWhitelist.service';
 
 export default function LoginScreen() {
   const { isDark } = useTheme();
@@ -53,7 +59,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!identifier.trim()) {
-      Alert.alert('Required', 'Please enter your email or phone number.');
+      Alert.alert('Required', 'Please enter your email or mobile number.');
       return;
     }
 
@@ -67,11 +73,67 @@ export default function LoginScreen() {
       return;
     }
 
+    const entId = useEnterpriseStore.getState().activeEnterprise?.id || 'enterprise-cool-car';
     const isEmail = identifier.includes('@');
-    const userPhone = !isEmail ? identifier.trim() : '9876543210';
-    let savedEmail = isEmail ? identifier.trim() : `${identifier.trim()}@coolcar.in`;
-    let savedName = 'Workshop Owner';
-    let userRole = 'OWNER';
+    const cleanDigits = normalizePhone10(identifier);
+
+    let accessRole: 'OWNER' | 'ADMIN' | 'MANAGER' | 'ACCOUNTANT' | 'EMPLOYEE' = 'EMPLOYEE';
+    let accessName = 'Workshop User';
+    let accessPhone = identifier.trim();
+    let accessEmail = isEmail ? identifier.trim() : `${cleanDigits}@coolcar.in`;
+
+    if (!isEmail && cleanDigits.length === 10) {
+      // Mobile Number Login — Verify via Whitelist
+      const access = await verifyPhoneNumberAccess(cleanDigits, entId);
+      if (!access.allowed) {
+        Alert.alert('Access Denied 🔒', access.denialReason || 'Unauthorized mobile number.');
+        return;
+      }
+      accessRole = access.role;
+      accessName = access.displayName;
+      accessPhone = access.formattedPhone;
+      accessEmail = `${cleanDigits}@coolcar.in`;
+    } else if (isEmail) {
+      // Email Login — verify against owners or active employees
+      const allOwners = await getDynamicOwners(entId);
+      const isOwnerEmail =
+        identifier.toLowerCase().includes('owner') ||
+        allOwners.some((o) => `${o.phone}@coolcar.in` === identifier.toLowerCase());
+
+      if (isOwnerEmail) {
+        accessRole = 'OWNER';
+        accessName = 'Workshop Owner';
+        accessPhone = allOwners[0]?.formattedPhone || '+91 87934 36778';
+      } else {
+        // Check employees
+        const { useEmployeeStore } = await import('../../src/store/employeeStore');
+        const employees = useEmployeeStore.getState().employees;
+        const matched = employees.find(
+          (e) =>
+            e.name.toLowerCase() === identifier.split('@')[0].toLowerCase() &&
+            e.status !== 'LEFT' &&
+            e.isActive !== false
+        );
+        if (matched) {
+          accessRole = matched.role?.toLowerCase().includes('manager')
+            ? 'MANAGER'
+            : matched.role?.toLowerCase().includes('admin')
+            ? 'ADMIN'
+            : 'EMPLOYEE';
+          accessName = matched.name;
+          accessPhone = matched.phone;
+        } else {
+          Alert.alert(
+            'Access Denied 🔒',
+            'This email account is not registered in Cool Car Garage.\n\nPlease contact the Workshop Owner to get registered.'
+          );
+          return;
+        }
+      }
+    } else {
+      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number or email address.');
+      return;
+    }
 
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
@@ -83,27 +145,8 @@ export default function LoginScreen() {
       if (!savedPass) {
         await AsyncStorage.setItem('cool_car_saved_owner_password', password.trim());
       }
-
-      const n = await AsyncStorage.getItem('cool_car_saved_owner_name');
-      if (n) savedName = n;
-      await AsyncStorage.setItem('cool_car_saved_owner_email', identifier.trim());
-    } catch {}
-
-    // Check if logging in as an employee / staff member
-    try {
-      const { useEmployeeStore } = await import('../../src/store/employeeStore');
-      const employees = useEmployeeStore.getState().employees;
-      const cleanInput = identifier.trim().replace(/\D/g, '');
-      const matchedEmployee = employees.find(
-        (emp) =>
-          (cleanInput && emp.phone.replace(/\D/g, '') === cleanInput) ||
-          emp.name.toLowerCase() === identifier.trim().toLowerCase()
-      );
-
-      if (matchedEmployee) {
-        userRole = 'STAFF';
-        savedName = matchedEmployee.name;
-      }
+      await AsyncStorage.setItem('cool_car_saved_owner_name', accessName);
+      await AsyncStorage.setItem('cool_car_saved_owner_email', accessEmail);
     } catch {}
 
     try {
@@ -115,13 +158,13 @@ export default function LoginScreen() {
     }
 
     const { auth } = await import('../../src/services/firebase/firebase.config');
-    const currentUid = auth.currentUser?.uid || 'user-demo-1';
+    const currentUid = auth.currentUser?.uid || `user-${Date.now()}`;
 
-    const mockUser = {
+    const authenticatedUser = {
       uid: currentUid,
-      phone: userPhone,
-      displayName: savedName,
-      email: savedEmail,
+      phone: accessPhone,
+      displayName: accessName,
+      email: accessEmail,
       enterpriseIds: [MOCK_ENTERPRISE.id],
       activeEnterpriseId: MOCK_ENTERPRISE.id,
       isActive: true,
@@ -129,14 +172,14 @@ export default function LoginScreen() {
       updatedAt: new Date().toISOString(),
     };
 
-    setUser(mockUser);
+    setUser(authenticatedUser);
     setActiveEnterprise(MOCK_ENTERPRISE);
     setActiveMember({
       userId: currentUid,
       enterpriseId: MOCK_ENTERPRISE.id,
-      role: userRole as any,
-      displayName: savedName,
-      phone: userPhone,
+      role: accessRole,
+      displayName: accessName,
+      phone: accessPhone,
       isActive: true,
       joinedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -147,10 +190,21 @@ export default function LoginScreen() {
 
   const handlePhoneOTPFlow = () => {
     const trimmed = identifier.trim();
-    const phoneToUse = trimmed && !trimmed.includes('@') ? trimmed : '+91 98765 43210';
+    const cleanDigits = normalizePhone10(trimmed);
+
+    if (!cleanDigits || cleanDigits.length !== 10) {
+      Alert.alert(
+        'Mobile Number Required',
+        'Please enter your registered 10-digit mobile number in the "Email / Phone" field above to receive an OTP.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    const formatted = formatIndianPhone(cleanDigits);
     router.push({
       pathname: '/(auth)/otp',
-      params: { phone: phoneToUse, verificationId: 'mock-verification-id' },
+      params: { phone: formatted },
     });
   };
 
