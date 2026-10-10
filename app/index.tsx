@@ -64,8 +64,8 @@ export default function Index() {
     );
   }
 
-  // Authenticated and have enterprise — go directly to dashboard
-  if (authState === 'authenticated' && user && activeEnterprise) {
+  // Authenticated — go directly to dashboard
+  if (user || authState === 'authenticated') {
     return <Redirect href="/(tabs)" />;
   }
 

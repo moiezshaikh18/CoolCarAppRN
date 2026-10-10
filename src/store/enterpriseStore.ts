@@ -24,9 +24,20 @@ interface EnterpriseStore {
   reset: () => void;
 }
 
+import { MOCK_ENTERPRISE } from '../features/enterprise/mockEnterprise';
+
 const initialState = {
-  activeEnterprise: null,
-  activeMember: null,
+  activeEnterprise: MOCK_ENTERPRISE,
+  activeMember: {
+    userId: 'owner',
+    enterpriseId: MOCK_ENTERPRISE.id,
+    role: 'OWNER' as const,
+    displayName: 'Workshop Owner',
+    phone: '+91 98765 43210',
+    isActive: true,
+    joinedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
   enterprises: [],
   isLoading: false,
   error: null,
@@ -52,6 +63,11 @@ export const useEnterpriseStore = create<EnterpriseStore>()(
         activeMember: state.activeMember,
         enterprises: state.enterprises,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && !state.activeEnterprise) {
+          state.activeEnterprise = MOCK_ENTERPRISE;
+        }
+      },
     }
   )
 );

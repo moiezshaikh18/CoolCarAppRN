@@ -19,11 +19,20 @@ import {
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowRight } from 'lucide-react-native';
+import { useAuthStore } from '../../src/store/authStore';
 
 const { width } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
+
+  React.useEffect(() => {
+    const user = useAuthStore.getState().user;
+    const authState = useAuthStore.getState().authState;
+    if (user || authState === 'authenticated') {
+      router.replace('/(tabs)');
+    }
+  }, []);
 
   const handleNext = () => {
     router.replace('/(auth)/login');

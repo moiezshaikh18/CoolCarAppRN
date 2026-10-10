@@ -35,6 +35,13 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   React.useEffect(() => {
+    const user = useAuthStore.getState().user;
+    const authState = useAuthStore.getState().authState;
+    if (user || authState === 'authenticated') {
+      router.replace('/(tabs)');
+      return;
+    }
+
     (async () => {
       try {
         const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;

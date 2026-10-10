@@ -41,10 +41,8 @@ export default function RootLayout() {
         unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
           if (fbUser) {
             useAuthStore.getState().setFirebaseUid(fbUser.uid);
-            // Ensure authState stays 'authenticated' if it was persisted as such
             const currentState = useAuthStore.getState().authState;
             if (currentState !== 'authenticated') {
-              // Try to fetch user profile to confirm
               try {
                 const { getUserProfile } = await import('../src/services/firebase/auth.service');
                 const profile = await getUserProfile(fbUser.uid);
@@ -56,15 +54,10 @@ export default function RootLayout() {
                 // offline — leave existing persisted state intact
               }
             }
-          } else {
-            // Firebase says no user — only reset if we previously thought we were authenticated
-            const currentState = useAuthStore.getState().authState;
-            if (currentState === 'authenticated') {
-              useAuthStore.getState().setAuthState('unauthenticated');
-              useAuthStore.getState().setUser(null);
-              useAuthStore.getState().setFirebaseUid(null);
-            }
           }
+          // Note: If fbUser is null, DO NOT wipe the local auth store.
+          // The user session is persisted locally in Zustand AsyncStorage.
+          // Explicit logout only happens when the user clicks 'Sign Out'.
         });
       } catch (e) {
         console.log('[Layout] Auth sync notice:', e);

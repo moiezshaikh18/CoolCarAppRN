@@ -47,19 +47,23 @@ export const useAuthStore = create<AuthStore>()(
     {
       name: 'auth-store',
       storage: createJSONStorage(() => AsyncStorage),
-      // Only persist safe, non-sensitive data
       partialize: (state) => ({
         user: state.user,
         firebaseUid: state.firebaseUid,
-        authState: state.authState === 'authenticated' ? 'authenticated' : 'loading',
+        authState: state.user ? 'authenticated' : 'unauthenticated',
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.user) {
+          state.authState = 'authenticated';
+        }
+      },
     }
   )
 );
 
 // Selectors
 export const selectUser = (state: AuthStore) => state.user;
-export const selectAuthState = (state: AuthStore) => state.authState;
-export const selectIsAuthenticated = (state: AuthStore) =>
-  state.authState === 'authenticated' && state.user !== null;
+export const selectAuthState = (state: AuthStore) =>
+  state.user ? 'authenticated' : state.authState;
+export const selectIsAuthenticated = (state: AuthStore) => Boolean(state.user);
 

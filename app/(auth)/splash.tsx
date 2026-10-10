@@ -31,7 +31,7 @@ export default function SplashScreen() {
   const handleNext = () => {
     const authState = useAuthStore.getState().authState;
     const user = useAuthStore.getState().user;
-    if (authState === 'authenticated' && user) {
+    if (user || authState === 'authenticated') {
       router.replace('/(tabs)');
     } else {
       router.replace('/(auth)/welcome');
@@ -39,18 +39,20 @@ export default function SplashScreen() {
   };
 
   useEffect(() => {
+    const authState = useAuthStore.getState().authState;
+    const user = useAuthStore.getState().user;
+    if (user || authState === 'authenticated') {
+      router.replace('/(tabs)');
+      return;
+    }
+
     // Smooth cinematic zoom & fade entrance
     opacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) });
     scale.value = withTiming(1, { duration: 1800, easing: Easing.out(Easing.quad) });
 
-    // For already-authenticated users: shorter delay then jump to dashboard
-    const authState = useAuthStore.getState().authState;
-    const user = useAuthStore.getState().user;
-    const isAuth = authState === 'authenticated' && user;
-
     const timer = setTimeout(() => {
       handleNext();
-    }, isAuth ? 1200 : 2400); // Faster for already-logged-in users
+    }, 2400);
 
     return () => clearTimeout(timer);
   }, []);
