@@ -8,22 +8,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BankAccount, AccountTransaction } from '../types/bankAccount.types';
 
-const INITIAL_BANK_ACCOUNTS: BankAccount[] = [
-  {
-    id: 'bank-cash',
-    enterpriseId: 'enterprise-cool-car',
-    accountName: 'Cash Counter Register',
-    bankName: 'Cash in Hand',
-    accountNumber: 'CASH-001',
-    accountType: 'CASH_IN_HAND',
-    openingBalance: 0,
-    currentBalance: 0,
-    isDefault: true,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+const INITIAL_BANK_ACCOUNTS: BankAccount[] = [];
 
 interface BankAccountStore {
   accounts: BankAccount[];

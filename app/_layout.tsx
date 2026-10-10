@@ -89,10 +89,8 @@ export default function RootLayout() {
         unsubEmployees = onSnapshot(
           collection(db, 'enterprises', entId, 'employees'),
           (snap) => {
-            if (!snap.empty) {
-              const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
-              useEmployeeStore.getState().setEmployees(list);
-            }
+            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+            useEmployeeStore.getState().setEmployees(list);
           },
           (err) => console.log('[Layout] Employees listener error:', err.message)
         );
@@ -101,10 +99,8 @@ export default function RootLayout() {
         unsubBankAccounts = onSnapshot(
           collection(db, 'enterprises', entId, 'bankAccounts'),
           (snap) => {
-            if (!snap.empty) {
-              const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
-              useBankAccountStore.getState().setAccounts(list);
-            }
+            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+            useBankAccountStore.getState().setAccounts(list);
           },
           (err) => console.log('[Layout] BankAccounts listener error:', err.message)
         );

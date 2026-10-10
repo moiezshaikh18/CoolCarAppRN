@@ -38,55 +38,6 @@ const MODE_TABS: { label: string; value: PaymentMode | 'ALL'; icon: any }[] = [
   { label: 'Swipe', value: 'CARD_SWIPE', icon: CreditCard },
 ];
 
-const DEFAULT_PAYMENTS: Payment[] = [
-  {
-    id: 'pay-001',
-    enterpriseId: 'enterprise-cool-car',
-    jobSheetId: 'JS-2026-001',
-    customerId: 'cust-001',
-    vehicleId: 'veh-001',
-    amount: 8500,
-    paymentMode: 'CASH',
-    paymentAccountName: 'Cash Counter Register',
-    date: new Date().toISOString(),
-    referenceNumber: 'CSH-001',
-    voided: false,
-    createdBy: 'user-owner-001',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'pay-002',
-    enterpriseId: 'enterprise-cool-car',
-    jobSheetId: 'JS-2026-002',
-    customerId: 'cust-002',
-    vehicleId: 'veh-002',
-    amount: 1700,
-    paymentMode: 'UPI',
-    paymentAccountId: 'acc-hdfc-01',
-    paymentAccountName: 'HDFC Bank - 8923',
-    date: new Date().toISOString(),
-    referenceNumber: 'UPI-9821334',
-    voided: false,
-    createdBy: 'user-owner-001',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'pay-003',
-    enterpriseId: 'enterprise-cool-car',
-    jobSheetId: 'JS-2026-003',
-    customerId: 'cust-003',
-    vehicleId: 'veh-003',
-    amount: 14200,
-    paymentMode: 'CARD_SWIPE',
-    paymentAccountId: 'acc-icici-01',
-    paymentAccountName: 'ICICI Bank - 4401',
-    date: new Date().toISOString(),
-    referenceNumber: 'POS-77124',
-    voided: false,
-    createdBy: 'user-owner-001',
-    createdAt: new Date().toISOString(),
-  },
-];
 
 export default function PaymentsScreen() {
   const { isDark } = useTheme();

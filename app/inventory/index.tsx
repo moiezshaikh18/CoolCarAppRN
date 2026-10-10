@@ -4,7 +4,7 @@
 // (Parts stock/inventory section removed per user request)
 // ============================================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -48,11 +48,33 @@ export default function InventoryScreen() {
   const { isDark } = useTheme();
   const { enterpriseId, currencySymbol } = useEnterprise();
   const insets = useSafeAreaInsets();
-  const { chalans, updateChalan, deleteChalan } = useChalanStore();
+  const { chalans, updateChalan, deleteChalan, setChalans } = useChalanStore();
   const accounts = useBankAccountStore((s) => s.accounts);
   const activeAccounts = useMemo(() => accounts.filter((a) => a.isActive), [accounts]);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Live Firestore Sync for Chalans
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    const fetchChalans = async () => {
+      try {
+        const entId = enterpriseId || 'enterprise-cool-car';
+        const { collection, onSnapshot, query, orderBy } = await import('firebase/firestore');
+        const { db } = await import('../../src/services/firebase/firebase.config');
+
+        const chalanRef = collection(db, 'enterprises', entId, 'chalans');
+        unsubscribe = onSnapshot(query(chalanRef, orderBy('createdAt', 'desc')), (snap) => {
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+          setChalans(list);
+        });
+      } catch (err) {
+        console.log('[Chalans] Firestore sync notice:', err);
+      }
+    };
+    fetchChalans();
+    return () => unsubscribe?.();
+  }, [enterpriseId, setChalans]);
 
   const handleDeleteChalan = (id: string, chalanNum: string) => {
     Alert.alert(

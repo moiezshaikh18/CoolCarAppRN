@@ -63,10 +63,8 @@ export default function BankAccountsScreen() {
         const { db } = await import('../../src/services/firebase/firebase.config');
         const ref = collection(db, 'enterprises', entId, 'bankAccounts');
         unsub = onSnapshot(ref, (snap) => {
-          if (!snap.empty) {
-            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
-            setAccounts(list);
-          }
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+          setAccounts(list);
         }, (err) => console.log('[BankAccounts] listener error:', err));
       } catch (e) {
         console.log('[BankAccounts] sync notice:', e);

@@ -74,10 +74,8 @@ export default function UsersRolesScreen() {
 
         const staffRef = collection(db, 'enterprises', entId, 'employees');
         unsubscribe = onSnapshot(staffRef, (snap) => {
-          if (!snap.empty) {
-            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Employee));
-            setEmployees(list);
-          }
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Employee));
+          setEmployees(list);
         });
       } catch (err) {
         console.log('[UsersRoles] Firestore sync notice:', err);

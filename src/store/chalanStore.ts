@@ -13,6 +13,7 @@ const INITIAL_CHALANS: PurchaseChalan[] = [];
 interface ChalanStore {
   chalans: PurchaseChalan[];
   isLoading: boolean;
+  setChalans: (chalans: PurchaseChalan[]) => void;
   addChalan: (chalan: PurchaseChalan) => void;
   updateChalan: (id: string, data: Partial<PurchaseChalan>) => void;
   deleteChalan: (id: string) => void;
@@ -25,6 +26,8 @@ export const useChalanStore = create<ChalanStore>()(
     (set, get) => ({
       chalans: INITIAL_CHALANS,
       isLoading: false,
+
+      setChalans: (chalans) => set({ chalans }),
 
       addChalan: (chalan) =>
         set((state) => ({ chalans: [chalan, ...state.chalans] })),

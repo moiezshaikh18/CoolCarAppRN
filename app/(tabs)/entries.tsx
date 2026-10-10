@@ -150,13 +150,11 @@ export default function EntriesScreen() {
         // Expenses
         const expRef = collection(db, 'enterprises', entId, 'expenses');
         unsubscribeExpenses = onSnapshot(expRef, (snap) => {
-          if (!snap.empty) {
-            const list = snap.docs.map((d) => ({
-              id: d.id,
-              ...d.data(),
-            })) as any[];
-            setExpenses(list);
-          }
+          const list = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+          })) as any[];
+          setExpenses(list);
         });
       } catch (err) {
         console.log('[Entries] Firestore sync error:', err);
