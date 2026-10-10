@@ -156,11 +156,16 @@ export default function DashboardScreen() {
         // Sync Purchase Chalans (Separate collection for spare parts inventory procurement)
         const chalanRef = collection(db, 'enterprises', entId, 'chalans');
         unsubChalan = onSnapshot(
-          query(chalanRef, orderBy('createdAt', 'desc')),
+          chalanRef,
           (snap) => {
             const list: any[] = [];
             snap.forEach((doc) => {
               list.push({ id: doc.id, ...(doc.data() as any) });
+            });
+            list.sort((a, b) => {
+              const timeA = new Date(a.createdAt || a.date || 0).getTime();
+              const timeB = new Date(b.createdAt || b.date || 0).getTime();
+              return timeB - timeA;
             });
             setChalans(list);
           },
@@ -1013,7 +1018,7 @@ export default function DashboardScreen() {
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ fontSize: 11, color: isDark ? '#60A5FA' : '#153580', fontWeight: '700' }}>
-                      {chalan.items.length} parts • Tagged: {chalan.items.map((i) => i.assignedVehicleNumber).slice(0, 2).join(', ')}
+                      {Array.isArray(chalan.items) ? chalan.items.length : 0} parts • Tagged: {Array.isArray(chalan.items) ? chalan.items.map((i) => i.assignedVehicleNumber).slice(0, 2).join(', ') : 'None'}
                     </Text>
                     <Text style={{ fontSize: 11, color: chalan.pendingAmount === 0 ? '#00C896' : '#EF4444', fontWeight: '800' }}>
                       {chalan.pendingAmount === 0 ? '✓ Paid' : `Due: ₹${chalan.pendingAmount}`}

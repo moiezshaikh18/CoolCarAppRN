@@ -65,16 +65,27 @@ export default function InventoryScreen() {
     const fetchChalans = async () => {
       try {
         const entId = enterpriseId || 'enterprise-cool-car';
-        const { collection, onSnapshot, query, orderBy } = await import('firebase/firestore');
+        const { collection, onSnapshot } = await import('firebase/firestore');
         const { db } = await import('../../src/services/firebase/firebase.config');
 
         const chalanRef = collection(db, 'enterprises', entId, 'chalans');
-        unsubscribe = onSnapshot(query(chalanRef, orderBy('createdAt', 'desc')), (snap) => {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
-          setChalans(list);
-        });
+        unsubscribe = onSnapshot(
+          chalanRef,
+          (snap) => {
+            const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+            list.sort((a, b) => {
+              const timeA = new Date(a.createdAt || a.date || 0).getTime();
+              const timeB = new Date(b.createdAt || b.date || 0).getTime();
+              return timeB - timeA;
+            });
+            setChalans(list);
+          },
+          (err) => {
+            console.log('[Chalans] Firestore sync notice:', err);
+          }
+        );
       } catch (err) {
-        console.log('[Chalans] Firestore sync notice:', err);
+        console.log('[Chalans] Firestore init notice:', err);
       }
     };
     fetchChalans();
@@ -121,18 +132,21 @@ export default function InventoryScreen() {
 
   // Filtered Chalans by search query
   const filteredChalans = useMemo(() => {
+    if (!Array.isArray(chalans)) return [];
     if (!searchQuery.trim()) return chalans;
-    const q = searchQuery.toLowerCase();
-    return chalans.filter(
-      (c) =>
-        c.chalanNumber.toLowerCase().includes(q) ||
-        c.vendorName.toLowerCase().includes(q) ||
-        c.items.some(
-          (it) =>
-            it.partName.toLowerCase().includes(q) ||
-            (it.assignedVehicleNumber && it.assignedVehicleNumber.toLowerCase().includes(q))
-        )
-    );
+    const q = searchQuery.toLowerCase().trim();
+    return chalans.filter((c) => {
+      const numMatch = c.chalanNumber ? c.chalanNumber.toLowerCase().includes(q) : false;
+      const vendorMatch = c.vendorName ? c.vendorName.toLowerCase().includes(q) : false;
+      const itemMatch = Array.isArray(c.items)
+        ? c.items.some(
+            (it) =>
+              (it.partName && it.partName.toLowerCase().includes(q)) ||
+              (it.assignedVehicleNumber && it.assignedVehicleNumber.toLowerCase().includes(q))
+          )
+        : false;
+      return numMatch || vendorMatch || itemMatch;
+    });
   }, [chalans, searchQuery]);
 
   // Aggregate Dealer Purchases based on Selected Date Range (Month / Year / All Time)
@@ -198,13 +212,15 @@ export default function InventoryScreen() {
     try {
       const newPaid = (selectedChalan.amountPaid || 0) + payingNow;
       const newPending = Math.max(0, selectedChalan.pendingAmount - payingNow);
-      const updates = {
+      const updates: Record<string, any> = {
         amountPaid: newPaid,
         pendingAmount: newPending,
         paymentMode: payMode,
-        bankAccountId: payMode !== 'CASH' ? selectedBankId : undefined,
         updatedAt: new Date().toISOString(),
       };
+      if (payMode !== 'CASH' && selectedBankId) {
+        updates.bankAccountId = selectedBankId;
+      }
 
       updateChalan(selectedChalan.id, updates);
 
@@ -234,7 +250,8 @@ export default function InventoryScreen() {
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(12, 24, 41, 0.08)';
 
   const renderChalanCard = ({ item }: { item: PurchaseChalan }) => {
-    const isFullyPaid = item.pendingAmount <= 0;
+    const isFullyPaid = (item.pendingAmount || 0) <= 0;
+    const safeItems = Array.isArray(item.items) ? item.items : [];
 
     return (
       <View
@@ -267,7 +284,7 @@ export default function InventoryScreen() {
                 }}
               >
                 <Text style={{ color: '#153580', fontSize: 10, fontWeight: '800' }}>
-                  {item.items.length} {item.items.length === 1 ? 'part' : 'parts'}
+                  {safeItems.length} {safeItems.length === 1 ? 'part' : 'parts'}
                 </Text>
               </View>
             </View>
@@ -299,7 +316,7 @@ export default function InventoryScreen() {
                   fontWeight: '800',
                 }}
               >
-                {isFullyPaid ? 'Paid' : `Due: ${formatCurrency(item.pendingAmount, currencySymbol)}`}
+                {isFullyPaid ? 'Paid' : `Due: ${formatCurrency(item.pendingAmount || 0, currencySymbol)}`}
               </Text>
             </View>
 
@@ -329,7 +346,7 @@ export default function InventoryScreen() {
             gap: 6,
           }}
         >
-          {item.items.map((part) => (
+          {safeItems.map((part) => (
             <View
               key={part.id}
               style={{

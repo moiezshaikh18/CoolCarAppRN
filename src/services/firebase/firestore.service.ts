@@ -31,6 +31,28 @@ import { db } from './firebase.config';
 // ─── Generic Helpers ──────────────────────────────────────────
 
 /**
+ * Recursively strip undefined properties from an object or array
+ * so that Firebase Firestore setDoc/addDoc/updateDoc never throws:
+ * "Unsupported field value: undefined"
+ */
+export function cleanFirestoreData<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanFirestoreData(item)) as unknown as T;
+  }
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = cleanFirestoreData(value);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
+/**
  * Fetch a document by path
  */
 export async function fetchDoc<T>(path: string): Promise<T | null> {

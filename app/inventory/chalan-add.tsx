@@ -13,6 +13,7 @@ import {
   ScrollView,
   Alert,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,6 +44,7 @@ import { BankPaymentSelector } from '../../src/components/common/BankPaymentSele
 import { ChalanItem, PurchaseChalan } from '../../src/types/chalan.types';
 import { PaymentMode } from '../../src/types/payment.types';
 import { formatCurrency } from '../../src/utils/currency';
+import { cleanFirestoreData } from '../../src/services/firebase/firestore.service';
 import { ThemedAlert, ThemedAlertProps } from '../../src/components/common/ThemedAlert';
 import { CalendarPickerModal } from '../../src/components/common/CalendarPickerModal';
 import { usePermissions } from '../../src/hooks/usePermissions';
@@ -150,6 +152,7 @@ export default function AddPurchaseChalanScreen() {
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [alertConfig, setAlertConfig] = useState<ThemedAlertProps>({
     visible: false,
     title: '',
@@ -168,7 +171,12 @@ export default function AddPurchaseChalanScreen() {
       message,
       type,
       buttons: buttons || [{ text: 'OK', style: 'default' }],
-      onClose: () => setAlertConfig((prev) => ({ ...prev, visible: false })),
+      onClose: () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        if (type === 'success') {
+          router.replace('/inventory');
+        }
+      },
     });
   };
 
@@ -235,6 +243,8 @@ export default function AddPurchaseChalanScreen() {
   };
 
   const handleSaveChalan = async () => {
+    if (isSubmitting) return;
+
     if (!chalanNumber.trim()) {
       showAlert('Chalan No Required', 'Please enter a chalan number.', 'warning');
       return;
@@ -264,7 +274,7 @@ export default function AddPurchaseChalanScreen() {
         quantity: q,
         unitPrice: p,
         totalPrice: q * p,
-        assignedVehicleNumber: it.assignedVehicleNumber.trim() || 'General Stock',
+        assignedVehicleNumber: it.assignedVehicleNumber?.trim() || 'General Stock',
         assignedVehicleModel: it.assignedVehicleModel || 'Workshop Stock',
       };
     });
@@ -286,26 +296,27 @@ export default function AddPurchaseChalanScreen() {
       amountPaid: actualPaid,
       pendingAmount: pendingDue,
       paymentMode: actualPaid > 0 ? (paymentMode as any) : 'PENDING',
-      bankAccountId: actualPaid > 0 ? selectedAccountId : undefined,
-      bankAccountName: actualPaid > 0 ? selectedAccountName : undefined,
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ...(actualPaid > 0 && selectedAccountId ? { bankAccountId: selectedAccountId } : {}),
+      ...(actualPaid > 0 && selectedAccountName ? { bankAccountName: selectedAccountName } : {}),
     };
 
-    addChalan(newChalan);
-
-    // Auto-debit bank account ONLY if payment was made
-    if (actualPaid > 0) {
-      debitAccount(selectedAccountId, actualPaid);
-    }
-
-    // Cloud Firestore Sync (Save Chalan & Upsert Dealer Directory)
-    // Chalans are recorded in their own collection and NOT bundled into Daily Expenses!
+    setIsSubmitting(true);
     try {
+      addChalan(newChalan);
+
+      // Auto-debit bank account ONLY if payment was made
+      if (actualPaid > 0 && selectedAccountId) {
+        debitAccount(selectedAccountId, actualPaid);
+      }
+
+      // Cloud Firestore Sync (Save Chalan & Upsert Dealer Directory)
+      // Chalans are recorded in their own collection and NOT bundled into Daily Expenses!
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../src/services/firebase/firebase.config');
-      await setDoc(doc(db, 'enterprises', entId, 'chalans', newChalan.id), newChalan);
+      await setDoc(doc(db, 'enterprises', entId, 'chalans', newChalan.id), cleanFirestoreData(newChalan));
 
       // Auto-save Dealer in DB for month/year purchasing analytics
       await upsertDealerInFirestore(
@@ -318,16 +329,19 @@ export default function AddPurchaseChalanScreen() {
         date,
         compiledItems.map((it) => it.partName)
       );
-    } catch (cloudErr) {
-      console.log('[SaveChalan] Firestore sync notice:', cloudErr);
-    }
 
-    showAlert(
-      'Chalan Saved Successfully',
-      `Chalan ${newChalan.chalanNumber} for ${compiledItems.length} items recorded.\nTotal: ₹${calculatedTotal.toLocaleString()} | Paid: ₹${actualPaid.toLocaleString()} | Due: ₹${pendingDue.toLocaleString()}`,
-      'success',
-      [{ text: 'View Chalans', style: 'default', onPress: () => router.replace('/inventory') }]
-    );
+      showAlert(
+        'Chalan Saved Successfully',
+        `Chalan ${newChalan.chalanNumber} for ${compiledItems.length} items recorded.\nTotal: ₹${calculatedTotal.toLocaleString()} | Paid: ₹${actualPaid.toLocaleString()} | Due: ₹${pendingDue.toLocaleString()}`,
+        'success',
+        [{ text: 'Done', style: 'default', onPress: () => router.replace('/inventory') }]
+      );
+    } catch (err: any) {
+      console.log('[SaveChalan] Error:', err);
+      showAlert('Save Error', err?.message || 'Could not save purchase chalan. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canvasBg = isDark ? '#000000' : '#F4F6F9';
@@ -1129,9 +1143,10 @@ export default function AddPurchaseChalanScreen() {
           {/* Submit Button */}
           <TouchableOpacity
             onPress={handleSaveChalan}
+            disabled={isSubmitting}
             activeOpacity={0.88}
             style={{
-              backgroundColor: '#153580',
+              backgroundColor: isSubmitting ? '#94A3B8' : '#153580',
               borderRadius: 24,
               paddingVertical: 18,
               alignItems: 'center',
@@ -1143,9 +1158,13 @@ export default function AddPurchaseChalanScreen() {
               elevation: 4,
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
-              Save Purchase Chalan (₹{grandTotal.toLocaleString()})
-            </Text>
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900' }}>
+                Save Purchase Chalan (₹{grandTotal.toLocaleString()})
+              </Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </View>

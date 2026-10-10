@@ -43,17 +43,16 @@ export async function upsertDealerInFirestore(
 
   try {
     const dealerDocRef = doc(db, 'enterprises', enterpriseId, 'dealers', docId);
-    await setDoc(
-      dealerDocRef,
-      {
-        id: docId,
-        name: trimmedName,
-        phone: phone.trim() || undefined,
-        lastPurchaseDate: purchaseDate,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    const dealerData: Record<string, any> = {
+      id: docId,
+      name: trimmedName,
+      lastPurchaseDate: purchaseDate,
+      updatedAt: new Date().toISOString(),
+    };
+    if (phone && phone.trim()) {
+      dealerData.phone = phone.trim();
+    }
+    await setDoc(dealerDocRef, dealerData, { merge: true });
   } catch (err) {
     console.log('[DealerService] upsertDealer error:', err);
   }
@@ -109,11 +108,13 @@ export function aggregateDealerPurchases(
     }
 
     // Collect part names
-    c.items.forEach((it) => {
-      if (it.partName && !existing.purchasedParts?.includes(it.partName)) {
-        existing.purchasedParts?.push(it.partName);
-      }
-    });
+    if (Array.isArray(c.items)) {
+      c.items.forEach((it) => {
+        if (it.partName && !existing.purchasedParts?.includes(it.partName)) {
+          existing.purchasedParts?.push(it.partName);
+        }
+      });
+    }
 
     dealerMap.set(key, existing);
   });
@@ -123,3 +124,4 @@ export function aggregateDealerPurchases(
     (a, b) => b.totalPurchases - a.totalPurchases
   );
 }
+
